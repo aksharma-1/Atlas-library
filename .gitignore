@@ -1,0 +1,45 @@
+# ── Dependencies ────────────────────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ── Build outputs ────────────────────────────────────────────────────────────
+dist/
+build/
+out/
+
+# ── Environment files (NEVER commit secrets) ─────────────────────────────────
+.env
+.env.local
+.env.*.local
+apps/backend/.env
+apps/frontend/.env
+
+# ── Test & coverage ──────────────────────────────────────────────────────────
+coverage/
+*.lcov
+.nyc_output/
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ── Editor ───────────────────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# ── TypeScript incremental build info ────────────────────────────────────────
+*.tsbuildinfo
+
+# ── MongoDB local data (if stored in project) ────────────────────────────────
+data/

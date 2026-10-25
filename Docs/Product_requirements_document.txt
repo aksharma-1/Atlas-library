@@ -1,0 +1,201 @@
+# Atlas Library Management SaaS
+## Product Requirements Document (PRD)
+
+**Document status:** Initial draft — Version 0.1  
+**Product type:** Multi-tenant SaaS web application  
+**Initial customer:** Atlas Library, Indore, Madhya Pradesh, India  
+**Business model:** Subscription-based software for study-space library owners
+
+## 1. Product Vision
+
+Build a web-based management platform for study libraries serving competitive-exam aspirants. The platform will help owners manage student memberships, seat allocation, shifts, fee collections, renewals, and operational records through one centralized application.
+
+The product must support multiple independent library businesses using the same application while keeping their data strictly isolated.
+
+## 2. Business Objectives
+
+1. Reduce manual registration and paper-based membership records.
+2. Track collected fees, outstanding dues, and upcoming renewals.
+3. Prevent conflicting seat assignments and shift overlaps.
+4. Simplify the management of reserved and non-reserved memberships.
+5. Generate printable membership cards and payment receipts.
+6. Provide owners with useful operational and financial reports.
+7. Enable onboarding of additional libraries without custom development for each customer.
+
+## 3. Initial Customer Profile
+
+Atlas Library provides a quiet study environment for competitive-exam aspirants.
+
+Known facilities:
+- Individual study desks and chairs.
+- Wi-Fi connectivity.
+- Phone charging points.
+- Drinking water and RO.
+- Proper lighting.
+- CCTV surveillance.
+- Clean, maintained premises.
+- Reserved and non-reserved seating options.
+
+## 4. Initial Membership Plans
+
+| Plan | Seat type | Access | Monthly fee |
+|---|---|---|---:|
+| Full Day | Reserved | 7:00 AM–11:00 PM | ₹600 |
+| Full Day | Non-reserved | 7:00 AM–11:00 PM | ₹400 |
+| Morning Shift | Reserved | 7:00 AM–3:00 PM | ₹400 |
+| Evening Shift | Reserved | 3:00 PM–11:00 PM | ₹400 |
+| Half Day | Non-reserved | Any one shift | ₹250 |
+| Half Reserved + Half Non-Reserved | Mixed | One reserved shift and one non-reserved shift | ₹500 |
+
+All plans, fees, timings, and availability rules must be configurable by each library owner. The above values are the initial Atlas Library configuration, not global application defaults.
+
+## 5. User Roles
+
+### Platform Administrator
+- Manage registered library tenants.
+- Activate, suspend, or deactivate tenants.
+- Manage platform subscription plans.
+- View platform-level operational metrics.
+- Manage platform configuration and support access.
+
+### Library Owner / Manager
+- Configure library profile, operating hours, seats, shifts, and membership plans.
+- Register and manage students.
+- Assign seats and memberships.
+- Record fee payments, dues, renewals, and refunds.
+- Generate membership cards and receipts.
+- View reports and manage authorized staff.
+
+### Library Staff
+- Perform only the operations granted by the owner.
+- Register students, verify payments, and assist with seat allocation.
+- Access only their assigned library's records.
+
+### Student
+- Initial version: a student is a membership record managed by the library.
+- A student login portal is optional and requires a separate product decision.
+
+## 6. Core Modules
+
+1. Authentication and authorization.
+2. Tenant onboarding and library configuration.
+3. Student registration and membership management.
+4. Seat inventory and visual seating map.
+5. Membership plans and shift scheduling.
+6. Fee collection, dues, and payment history.
+7. Renewals, expiry tracking, and membership status.
+8. Membership cards and payment receipts.
+9. Dashboard and operational reports.
+10. Staff management and audit history.
+11. Platform subscription and tenant administration.
+
+## 7. Student Registration Data
+
+The initial membership form should support:
+
+- Student name.
+- Mobile number.
+- Unique membership/student identifier.
+- Assigned seat, where applicable.
+- Membership plan.
+- Seat type.
+- Shift or access schedule.
+- Joining date.
+- Membership start and end dates.
+- Monthly fee and applicable discount.
+- Payment status.
+- Membership status.
+- Optional photograph and address, if required by the owner.
+
+The membership card shown in the reference material includes seat number, name, mobile number, joining date, shift selection, and seat type. These fields should be reflected in the printable card design.
+
+## 8. Important Business Rules
+
+- Each student membership must belong to one tenant.
+- A reserved seat cannot be assigned to two active memberships for overlapping periods.
+- Non-reserved memberships use eligible seats according to configured capacity and shift rules.
+- Membership validity and payment status must be tracked separately.
+- A recorded payment must retain its amount, date, method, reference, and associated membership.
+- Renewals must preserve historical membership and payment records.
+- Expired memberships must not automatically be treated as paid or renewed.
+- Seat, shift, and membership-plan changes must not silently overwrite historical records.
+- Every library owner and staff member must be restricted to authorized tenant data.
+- Fees, plans, opening hours, shifts, and facilities must be configurable per tenant.
+
+## 9. Initial Dashboard Requirements
+
+The dashboard should show:
+
+- Total registered students.
+- Active memberships.
+- Currently occupied reserved seats.
+- Available and unavailable seats.
+- Memberships expiring soon.
+- Fees collected during a selected period.
+- Outstanding dues.
+- Recent payments.
+- Recent registrations.
+- Quick actions for registering students, collecting payments, and assigning seats.
+
+Financial figures should be derived from actual recorded transactions, not manually maintained counters.
+
+## 10. Seat Map Requirements
+
+The Atlas Library reference map depicts seats numbered from 1 to 100, with some seats marked unavailable. The production seat map should be configurable rather than hardcoded.
+
+Each seat should have:
+- A unique identifier within its library.
+- A display number or label.
+- A location or section.
+- An availability status.
+- An optional reservation assignment.
+- A history of assignments where needed.
+
+The visual map should distinguish available, occupied, reserved, blocked, and maintenance seats.
+
+**Data verification required:** The supplied image contains numbering inconsistencies, including a repeated seat number and missing numbers. The exact physical inventory must be verified before importing the final layout.
+
+## 11. Non-Functional Requirements
+
+- Responsive interface for desktop, tablet, and mobile.
+- Secure authentication and role-based access control.
+- Strict tenant-level data isolation.
+- Validated APIs and server-side authorization.
+- Safe handling of concurrent seat assignments and payment submissions.
+- Reliable database migrations and backups.
+- Audit records for important financial and membership changes.
+- Search, pagination, and filtering for growing student records.
+- Maintainable modular architecture suitable for AI-assisted development.
+- No production database schema changes through automatic destructive synchronization at application startup.
+
+## 12. Initial Scope Boundary
+
+The first release focuses on administrative operations: students, seats, plans, fees, renewals, receipts, and reports.
+
+Online payment gateway integration, biometric attendance, QR entry, WhatsApp notifications, student self-service, and mobile applications are not assumed to be part of the first release. They can be evaluated separately.
+
+## 13. Acceptance Criteria
+
+The first release is ready for initial customer testing when:
+
+1. An authorized owner can configure a library.
+2. The owner can register a student and assign a valid membership.
+3. The system prevents conflicting reserved-seat assignments.
+4. A payment can be recorded and a receipt generated.
+5. Pending dues and membership expiry can be identified accurately.
+6. Membership renewal preserves previous transactions.
+7. Unauthorized users cannot access another tenant's records.
+8. The dashboard reflects persisted data accurately.
+9. The application can be deployed and updated using documented procedures.
+
+## 14. Open Decisions
+
+The following details must be confirmed before finalizing implementation specifications:
+- Technology stack and deployment environment.
+- Exact seat inventory and physical seating layout.
+- Whether attendance/check-in is required.
+- Rules for late fees, partial payments, refunds, and discounts.
+- Whether students require their own login.
+- Whether multiple branches can belong to one library owner.
+- SaaS subscription plans and billing rules for library owners.
+- Receipt numbering, tax requirements, and language preferences.

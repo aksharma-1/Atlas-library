@@ -1,0 +1,28 @@
+{
+  "name": "atlas-library",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Atlas Library Management SaaS — multi-tenant study-library platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm -w apps/backend run dev",
+    "dev:frontend": "npm -w apps/frontend run dev",
+    "typecheck": "npm -w packages/shared run typecheck && npm -w apps/backend run typecheck && npm -w apps/frontend run typecheck",
+    "lint": "npm -w apps/backend run lint && npm -w apps/frontend run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,css}\" --ignore-path .gitignore",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md,css}\" --ignore-path .gitignore",
+    "test": "npm -w apps/backend run test && npm -w apps/frontend run test",
+    "test:backend": "npm -w apps/backend run test",
+    "test:frontend": "npm -w apps/frontend run test"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  }
+}
