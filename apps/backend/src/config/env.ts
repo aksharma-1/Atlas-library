@@ -13,6 +13,10 @@ const envSchema = z.object({
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
   /** CORS allowed origin — defaults to Vite dev server URL */
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  /** Secret used to sign JWT access tokens — must be long and random in production */
+  JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
+  /** JWT expiry duration string understood by jsonwebtoken, e.g. "24h", "7d" */
+  JWT_EXPIRES_IN: z.string().default('24h'),
 });
 
 const result = envSchema.safeParse(process.env);

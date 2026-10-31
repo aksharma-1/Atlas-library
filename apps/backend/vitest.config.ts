@@ -10,6 +10,8 @@ export default defineConfig({
       PORT: '5001',
       MONGODB_URI: 'mongodb://localhost:27017/atlas_test',
       CORS_ORIGIN: 'http://localhost:5173',
+      JWT_SECRET: 'test-jwt-secret-must-be-long-enough-1234',
+      JWT_EXPIRES_IN: '1h',
     },
     coverage: {
       provider: 'v8',

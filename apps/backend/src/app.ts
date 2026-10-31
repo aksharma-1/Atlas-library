@@ -3,8 +3,10 @@ import type { Express } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import { env } from './config/env';
 import { healthRouter } from './routes/health';
+import { authRouter } from './routes/auth';
 import { notFound } from './middleware/notFound';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -37,8 +39,12 @@ export function createApp(): Express {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // ── Cookie parsing (required for httpOnly JWT cookie) ─────────────────────
+  app.use(cookieParser());
+
   // ── API routes ─────────────────────────────────────────────────────────────
   app.use('/api/v1/health', healthRouter);
+  app.use('/api/v1/auth', authRouter);
 
   // ── Error handlers (must remain last) ─────────────────────────────────────
   app.use(notFound);

@@ -1,29 +1,33 @@
-import './App.css';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { LoginPage } from './pages/LoginPage';
+import { DashboardPage } from './pages/DashboardPage';
 
 /**
- * App — Root component (Phase 1 placeholder).
+ * App — root router.
  *
- * This will be replaced with the authenticated shell, routing,
- * and layout components in Phase 2.
+ * /           → redirects to /dashboard
+ * /login      → public login page (redirects to /dashboard if already authed)
+ * /dashboard  → protected admin dashboard
  */
 function App() {
   return (
-    <div className="app-root">
-      <div className="hero-card">
-        <div className="logo-wrap">
-          <span className="logo-icon" aria-hidden="true">
-            📚
-          </span>
-        </div>
-        <h1 className="app-title">Atlas Library</h1>
-        <p className="app-subtitle">Management System</p>
-        <div className="status-badge" role="status" aria-label="System status: ready">
-          <span className="status-dot" aria-hidden="true" />
-          <span>System ready</span>
-        </div>
-        <p className="phase-note">Phase 1 — Foundation complete</p>
-      </div>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Fallback — send unknown paths to dashboard (auth guard handles redirect) */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
