@@ -1,8 +1,7 @@
-# Netlify Configuration at Root (Monorepo context)
+# Netlify Configuration - Monorepo root context
 [build]
-  base = "apps/frontend"
+  command = "npm run build:frontend"
   publish = "apps/frontend/dist"
-  command = "npm --prefix ../.. run build:frontend"
 
 [[redirects]]
   from = "/*"
