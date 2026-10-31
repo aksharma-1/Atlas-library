@@ -1,0 +1,95 @@
+import type { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
+import { Payment } from '../models/Payment';
+import { Membership } from '../models/Membership';
+
+const recordPaymentSchema = z.object({
+  membershipId: z.string().min(1, 'Membership ID is required'),
+  amountPaise: z.number().int().min(1, 'Amount must be positive integer paise'),
+  paymentMethod: z.enum(['cash', 'upi', 'card', 'bank_transfer']),
+  transactionRef: z.string().optional(),
+  idempotencyKey: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export async function recordPayment(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const parsed = recordPaymentSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors });
+      return;
+    }
+
+    const tenantId = req.user!.tenantId;
+    const { membershipId, amountPaise, paymentMethod, transactionRef, idempotencyKey, notes } = parsed.data;
+
+    // ── Idempotency Check ───────────────────────────────────────────────────
+    if (idempotencyKey) {
+      const existing = await Payment.findOne({ tenantId, idempotencyKey });
+      if (existing) {
+        res.status(200).json({ payment: existing, note: 'Idempotent replay' });
+        return;
+      }
+    }
+
+    const membership = await Membership.findOne({ _id: membershipId, tenantId });
+    if (!membership) {
+      res.status(404).json({ error: 'Membership not found' });
+      return;
+    }
+
+    // Generate human receipt number (e.g. REC-2026-0001)
+    const count = await Payment.countDocuments({ tenantId });
+    const receiptNumber = `REC-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
+
+    const payment = await Payment.create({
+      tenantId,
+      membershipId: membership._id,
+      studentId: membership.studentId,
+      receiptNumber,
+      amountPaise,
+      paymentMethod,
+      transactionRef,
+      idempotencyKey,
+      notes,
+    });
+
+    // Update membership payment tallies
+    const newPaidPaise = membership.paidPaise + amountPaise;
+    let paymentStatus: 'paid' | 'partial' | 'pending' = 'partial';
+
+    if (newPaidPaise >= membership.feePaise) {
+      paymentStatus = 'paid';
+    } else if (newPaidPaise === 0) {
+      paymentStatus = 'pending';
+    }
+
+    membership.paidPaise = newPaidPaise;
+    membership.paymentStatus = paymentStatus;
+    await membership.save();
+
+    res.status(201).json({ payment, updatedMembership: membership });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getReceipt(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user!.tenantId;
+
+    const payment = await Payment.findOne({ _id: id, tenantId })
+      .populate('studentId', 'name mobile membershipNumber address')
+      .populate('membershipId');
+
+    if (!payment) {
+      res.status(404).json({ error: 'Payment receipt not found' });
+      return;
+    }
+
+    res.status(200).json({ payment });
+  } catch (err) {
+    next(err);
+  }
+}

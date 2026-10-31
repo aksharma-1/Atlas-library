@@ -43,28 +43,28 @@ export function DashboardPage() {
       {/* Stat cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Total Desks / Seats"
-          value={isLoading ? '…' : (stats?.totalSeats ?? 0)}
-          icon="🪑"
-          sub={`${stats?.availableSeats ?? 0} currently available`}
+          label="Total Registered Students"
+          value={isLoading ? '…' : (stats?.totalStudents ?? 0)}
+          icon="🎓"
+          sub="Enrolled library members"
         />
         <StatCard
           label="Occupied Desks"
           value={isLoading ? '…' : (stats?.occupiedSeats ?? 0)}
-          icon="👤"
-          sub="Active student allocations"
+          icon="🪑"
+          sub={`${stats?.availableSeats ?? 0} desks available`}
+        />
+        <StatCard
+          label="Dues Outstanding"
+          value={isLoading ? '…' : `₹${((stats?.duesOutstandingPaise ?? 0) / 100).toFixed(0)}`}
+          icon="💳"
+          sub="Pending fee collections"
         />
         <StatCard
           label="Active Plans"
           value={isLoading ? '…' : (stats?.totalPlans ?? 0)}
           icon="📜"
           sub="Configured library tiers"
-        />
-        <StatCard
-          label="Operational Shifts"
-          value={isLoading ? '…' : (stats?.totalShifts ?? 0)}
-          icon="⏰"
-          sub="Configured daily shifts"
         />
       </div>
 
@@ -96,14 +96,20 @@ export function DashboardPage() {
         <div className="rounded-xl border border-surface-700 bg-surface-800 p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-white">Quick Actions</h2>
-            <Link to="/plans" className="text-xs text-brand-400 hover:text-brand-300 font-medium">
-              Manage Plans →
+            <Link to="/students" className="text-xs text-brand-400 hover:text-brand-300 font-medium">
+              View Students →
             </Link>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
-              to="/seats"
+              to="/students"
               className="rounded-lg bg-brand-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-500 transition"
+            >
+              + Register Student
+            </Link>
+            <Link
+              to="/seats"
+              className="rounded-lg border border-surface-600 bg-surface-700 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:bg-surface-600 hover:text-white transition"
             >
               + Bulk Add Seats
             </Link>
@@ -112,12 +118,6 @@ export function DashboardPage() {
               className="rounded-lg border border-surface-600 bg-surface-700 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:bg-surface-600 hover:text-white transition"
             >
               + Add Membership Plan
-            </Link>
-            <Link
-              to="/plans"
-              className="rounded-lg border border-surface-600 bg-surface-700 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:bg-surface-600 hover:text-white transition"
-            >
-              + Add Operating Shift
             </Link>
           </div>
         </div>

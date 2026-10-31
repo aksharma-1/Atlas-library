@@ -13,6 +13,11 @@ import {
   seatsRouter,
   dashboardRouter,
 } from './routes/library';
+import {
+  studentsRouter,
+  membershipsRouter,
+  paymentsRouter,
+} from './routes/student.routes';
 import { notFound } from './middleware/notFound';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -55,6 +60,9 @@ export function createApp(): Express {
   app.use('/api/v1/plans', plansRouter);
   app.use('/api/v1/seats', seatsRouter);
   app.use('/api/v1/dashboard', dashboardRouter);
+  app.use('/api/v1/students', studentsRouter);
+  app.use('/api/v1/memberships', membershipsRouter);
+  app.use('/api/v1/payments', paymentsRouter);
 
   // ── Error handlers (must remain last) ─────────────────────────────────────
   app.use(notFound);

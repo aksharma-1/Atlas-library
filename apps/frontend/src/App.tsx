@@ -5,6 +5,8 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SeatsPage } from './pages/SeatsPage';
 import { PlansPage } from './pages/PlansPage';
+import { StudentsPage } from './pages/StudentsPage';
+import { StudentProfilePage } from './pages/StudentProfilePage';
 
 function App() {
   return (
@@ -40,6 +42,26 @@ function App() {
             <ProtectedRoute>
               <AppShell>
                 <PlansPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/students"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <StudentsPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/students/:id"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <StudentProfilePage />
               </AppShell>
             </ProtectedRoute>
           }

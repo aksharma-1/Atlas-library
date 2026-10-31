@@ -11,3 +11,12 @@ export type {
   SeatDTO,
   DashboardStatsDTO,
 } from './api/library';
+export type {
+  StudentDTO,
+  MembershipStatus,
+  PaymentStatus,
+  MembershipDTO,
+  PaymentMethod,
+  PaymentDTO,
+  StudentProfileDTO,
+} from './api/membership';

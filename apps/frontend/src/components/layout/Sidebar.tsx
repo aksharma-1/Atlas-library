@@ -2,9 +2,9 @@ import { NavLink } from 'react-router-dom';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: '📊' },
+  { to: '/students', label: 'Students & Members', icon: '🎓' },
   { to: '/seats', label: 'Seating Map', icon: '🪑' },
   { to: '/plans', label: 'Plans & Shifts', icon: '⚙️' },
-  { to: '/students', label: 'Students', icon: '🎓', badge: 'Phase 4' },
 ];
 
 export function Sidebar() {
