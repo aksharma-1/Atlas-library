@@ -14,7 +14,7 @@ export const AUTH_COOKIE = 'atlas_token';
 // Shared cookie options
 const cookieOptions = {
   httpOnly: true,
-  sameSite: 'strict' as const,
+  sameSite: (env.NODE_ENV === 'production' ? 'none' : 'strict') as 'none' | 'strict',
   secure: env.NODE_ENV === 'production',
   // 24 h in milliseconds (mirrors JWT_EXPIRES_IN default)
   maxAge: 24 * 60 * 60 * 1000,
@@ -60,7 +60,11 @@ export async function login(
  * Clears the auth cookie.
  */
 export function logout(_req: Request, res: Response): void {
-  res.clearCookie(AUTH_COOKIE, { httpOnly: true, sameSite: 'strict' });
+  res.clearCookie(AUTH_COOKIE, {
+    httpOnly: true,
+    sameSite: (env.NODE_ENV === 'production' ? 'none' : 'strict') as 'none' | 'strict',
+    secure: env.NODE_ENV === 'production',
+  });
   res.status(200).json({ message: 'Logged out successfully' });
 }
 
