@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    fileParallelism: false,
     // Set env vars before any module is evaluated — env.ts reads these at import time
     env: {
       NODE_ENV: 'test',

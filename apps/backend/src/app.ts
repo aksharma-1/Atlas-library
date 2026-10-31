@@ -7,6 +7,12 @@ import cookieParser from 'cookie-parser';
 import { env } from './config/env';
 import { healthRouter } from './routes/health';
 import { authRouter } from './routes/auth';
+import {
+  shiftsRouter,
+  plansRouter,
+  seatsRouter,
+  dashboardRouter,
+} from './routes/library';
 import { notFound } from './middleware/notFound';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -45,6 +51,10 @@ export function createApp(): Express {
   // ── API routes ─────────────────────────────────────────────────────────────
   app.use('/api/v1/health', healthRouter);
   app.use('/api/v1/auth', authRouter);
+  app.use('/api/v1/shifts', shiftsRouter);
+  app.use('/api/v1/plans', plansRouter);
+  app.use('/api/v1/seats', seatsRouter);
+  app.use('/api/v1/dashboard', dashboardRouter);
 
   // ── Error handlers (must remain last) ─────────────────────────────────────
   app.use(notFound);

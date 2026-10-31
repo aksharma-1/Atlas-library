@@ -121,8 +121,10 @@ describe('GET /api/v1/auth/me', () => {
       .post('/api/v1/auth/login')
       .send({ email: ADMIN_DATA.email, password: ADMIN_DATA.password });
 
+    expect(loginRes.status).toBe(200);
     const cookies = loginRes.headers['set-cookie'];
-    const cookie = Array.isArray(cookies) ? cookies[0] : (cookies as unknown as string);
+    const cookie = Array.isArray(cookies) ? cookies[0] : (cookies ? String(cookies) : '');
+    expect(cookie).toBeTruthy();
 
     const meRes = await request(app)
       .get('/api/v1/auth/me')
