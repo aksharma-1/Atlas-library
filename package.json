@@ -8,6 +8,10 @@
     "packages/*"
   ],
   "scripts": {
+    "build": "npm -w packages/shared run build && npm -w apps/backend run build && npm -w apps/frontend run build",
+    "build:backend": "npm -w packages/shared run build && npm -w apps/backend run build",
+    "build:frontend": "npm -w packages/shared run build && npm -w apps/frontend run build",
+    "start:backend": "npm -w apps/backend run start:prod",
     "dev:backend": "npm -w apps/backend run dev",
     "dev:frontend": "npm -w apps/frontend run dev",
     "typecheck": "npm -w packages/shared run typecheck && npm -w apps/backend run typecheck && npm -w apps/frontend run typecheck",

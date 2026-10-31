@@ -1,6 +1,13 @@
 import { NavLink } from 'react-router-dom';
 
-const navItems = [
+interface NavItem {
+  to: string;
+  label: string;
+  icon: string;
+  badge?: string;
+}
+
+const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: '📊' },
   { to: '/students', label: 'Students & Members', icon: '🎓' },
   { to: '/seats', label: 'Seating Map', icon: '🪑' },

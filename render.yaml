@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: atlas-library-backend
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: npm run build:backend
+    startCommand: npm run start:backend
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: CORS_ORIGIN
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 24h

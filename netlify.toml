@@ -1,0 +1,10 @@
+# Netlify Configuration at Root (Monorepo context)
+[build]
+  base = "apps/frontend"
+  publish = "apps/frontend/dist"
+  command = "npm --prefix ../.. run build:frontend"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

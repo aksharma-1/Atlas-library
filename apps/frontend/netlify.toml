@@ -1,0 +1,11 @@
+# Netlify Build Configuration for Atlas Library Frontend
+[build]
+  base = "apps/frontend"
+  publish = "dist"
+  command = "npm run build"
+
+# SPA Fallback: Redirect all routes to index.html for React Router
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
