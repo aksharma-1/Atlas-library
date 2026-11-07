@@ -95,3 +95,127 @@ export async function createMembership(req: Request, res: Response, next: NextFu
     next(err);
   }
 }
+
+export async function markMembershipLeft(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user!.tenantId;
+
+    const membership = await Membership.findOne({ _id: id, tenantId });
+    if (!membership) {
+      res.status(404).json({ error: 'Membership not found' });
+      return;
+    }
+
+    if (membership.status === 'left') {
+      res.status(400).json({ error: 'Membership is already marked as left' });
+      return;
+    }
+
+    // Free the seat if reserved
+    if (membership.seatId) {
+      await Seat.findByIdAndUpdate(membership.seatId, { status: 'available' });
+    }
+
+    membership.status = 'left';
+    await membership.save();
+
+    res.status(200).json({ message: 'Membership marked as left and seat released', membership });
+  } catch (err) {
+    next(err);
+  }
+}
+
+const addGiftDaysSchema = z.object({
+  days: z.number().int().min(1, 'Days must be at least 1'),
+  reason: z.string().optional(),
+});
+
+export async function addGiftDays(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user!.tenantId;
+
+    const parsed = addGiftDaysSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors });
+      return;
+    }
+
+    const membership = await Membership.findOne({ _id: id, tenantId });
+    if (!membership) {
+      res.status(404).json({ error: 'Membership not found' });
+      return;
+    }
+
+    // Calculate new end date by adding `days`
+    const currentEnd = new Date(membership.endDate);
+    // If already expired in the past, add from today or from currentEnd?
+    // Standard logic: extend currentEnd by X days
+    currentEnd.setDate(currentEnd.getDate() + parsed.data.days);
+    membership.endDate = currentEnd;
+
+    // If it was expired and extended into the future, reactivate if seat is free
+    if (membership.status === 'expired' && currentEnd > new Date()) {
+      membership.status = 'active';
+      if (membership.seatId) {
+        await Seat.findByIdAndUpdate(membership.seatId, { status: 'occupied' });
+      }
+    }
+
+    await membership.save();
+
+    res.status(200).json({
+      message: `Successfully added ${parsed.data.days} gift days`,
+      membership,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listMembershipsWithFilters(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const tenantId = req.user!.tenantId;
+    const { filter } = req.query;
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+
+    const query: Record<string, unknown> = { tenantId };
+
+    if (filter === 'expired') {
+      query['$or'] = [
+        { status: 'expired' },
+        { status: 'active', endDate: { $lt: startOfToday } },
+      ];
+    } else if (filter === 'expiring_3') {
+      const threeDaysLater = new Date(startOfToday.getTime() + 3 * 24 * 60 * 60 * 1000);
+      query['status'] = 'active';
+      query['endDate'] = { $gte: startOfToday, $lte: threeDaysLater };
+    } else if (filter === 'expiring_7') {
+      const sevenDaysLater = new Date(startOfToday.getTime() + 7 * 24 * 60 * 60 * 1000);
+      query['status'] = 'active';
+      query['endDate'] = { $gte: startOfToday, $lte: sevenDaysLater };
+    } else if (filter === 'dues') {
+      query['$expr'] = { $gt: ['$feePaise', '$paidPaise'] };
+    } else if (filter === 'left') {
+      query['status'] = 'left';
+    } else if (filter === 'active') {
+      query['status'] = 'active';
+      query['endDate'] = { $gte: startOfToday };
+    }
+
+    const memberships = await Membership.find(query)
+      .populate('studentId', 'name mobile email membershipNumber')
+      .populate('planId', 'name feePaise')
+      .populate('shiftId', 'name startTime endTime')
+      .populate('seatId', 'seatNumber')
+      .sort({ endDate: 1 });
+
+    res.status(200).json({ memberships });
+  } catch (err) {
+    next(err);
+  }
+}
+

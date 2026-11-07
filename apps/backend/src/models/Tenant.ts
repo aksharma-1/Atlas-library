@@ -1,4 +1,5 @@
 import { Schema, model, type Document, type Types } from 'mongoose';
+import type { SubscriptionStatus, OnboardingStep } from '@atlas/shared';
 
 export interface ITenant extends Document {
   _id: Types.ObjectId;
@@ -14,6 +15,20 @@ export interface ITenant extends Document {
   city?: string;
   /** Whether this tenant account is active */
   isActive: boolean;
+  /** Onboarding funnel step */
+  onboardingStep: OnboardingStep;
+  /** Subscription plan tier */
+  subscriptionTier?: string;
+  /** Current subscription payment status */
+  subscriptionStatus: SubscriptionStatus;
+  /** Subscription validity expiration */
+  subscriptionExpiresAt?: Date;
+  /** Last submitted UPI transaction ref (UTR) */
+  lastUtrRef?: string;
+  /** When UPI UTR was submitted */
+  lastPaymentSubmittedAt?: Date;
+  /** Max seat inventory capacity allowed */
+  maxSeats: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +65,33 @@ const tenantSchema = new Schema<ITenant>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    onboardingStep: {
+      type: String,
+      enum: ['profile', 'config', 'subscription', 'completed'] satisfies OnboardingStep[],
+      default: 'completed',
+    },
+    subscriptionTier: {
+      type: String,
+    },
+    subscriptionStatus: {
+      type: String,
+      enum: ['pending_payment', 'pending_approval', 'active', 'past_due', 'cancelled'] satisfies SubscriptionStatus[],
+      default: 'active',
+    },
+    subscriptionExpiresAt: {
+      type: Date,
+    },
+    lastUtrRef: {
+      type: String,
+      trim: true,
+    },
+    lastPaymentSubmittedAt: {
+      type: Date,
+    },
+    maxSeats: {
+      type: Number,
+      default: 100,
     },
   },
   {

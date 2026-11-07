@@ -69,3 +69,32 @@ export async function updatePlan(req: Request, res: Response, next: NextFunction
     next(err);
   }
 }
+
+export async function deletePlan(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user!.tenantId;
+
+    const plan = await Plan.findOne({ _id: id, tenantId });
+    if (!plan) {
+      res.status(404).json({ error: 'Plan not found' });
+      return;
+    }
+
+    // Check if any active membership is using this plan
+    const { Membership } = await import('../models/Membership');
+    const activeCount = await Membership.countDocuments({ tenantId, planId: id, status: 'active' });
+    if (activeCount > 0) {
+      res.status(400).json({
+        error: `Cannot delete plan "${plan.name}" because it is currently assigned to ${activeCount} active membership(s). Deactivate or reassign them first.`,
+      });
+      return;
+    }
+
+    await Plan.deleteOne({ _id: id, tenantId });
+    res.status(200).json({ message: 'Plan deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+}
+

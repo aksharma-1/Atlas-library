@@ -3,17 +3,19 @@ import { useAuth } from '../hooks/useAuth';
 
 interface Props {
   children: React.ReactNode;
+  allowPendingPayment?: boolean;
 }
 
 /**
  * ProtectedRoute — wraps pages that require authentication.
  *
- * - While session is loading → blank screen (avoids flash of login page)
+ * - While session is loading → spinner
  * - Unauthenticated → redirects to /login
+ * - Authenticated with pending payment (and not on onboarding) → redirects to /onboarding
  * - Authenticated → renders children
  */
-export function ProtectedRoute({ children }: Props) {
-  const { isAuthenticated, isLoading } = useAuth();
+export function ProtectedRoute({ children, allowPendingPayment = false }: Props) {
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -25,6 +27,11 @@ export function ProtectedRoute({ children }: Props) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Subscription Gate: If payment is pending and this page doesn't allow it, send to onboarding
+  if (!allowPendingPayment && user?.subscriptionStatus === 'pending_payment') {
+    return <Navigate to="/onboarding" replace />;
   }
 
   return <>{children}</>;

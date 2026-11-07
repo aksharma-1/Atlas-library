@@ -1,17 +1,19 @@
 import { Schema, model, type Document, type Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-export type UserRole = 'owner' | 'staff';
+export type UserRole = 'owner' | 'staff' | 'superadmin';
 
 export interface IUser extends Document {
   _id: Types.ObjectId;
-  tenantId: Types.ObjectId;
+  tenantId?: Types.ObjectId;
   name: string;
   email: string;
   /** Bcrypt-hashed password — never returned to clients */
   passwordHash: string;
   role: UserRole;
   isActive: boolean;
+  resetPasswordOtp?: string;
+  resetPasswordOtpExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
   /** Instance method: compares plain password against stored hash */
@@ -23,7 +25,7 @@ const userSchema = new Schema<IUser>(
     tenantId: {
       type: Schema.Types.ObjectId,
       ref: 'Tenant',
-      required: true,
+      required: false,
       index: true,
     },
     name: {
@@ -45,13 +47,21 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ['owner', 'staff'] satisfies UserRole[],
+      enum: ['owner', 'staff', 'superadmin'] satisfies UserRole[],
       required: true,
       default: 'staff',
     },
     isActive: {
       type: Boolean,
       default: true,
+    },
+    resetPasswordOtp: {
+      type: String,
+      select: false,
+    },
+    resetPasswordOtpExpires: {
+      type: Date,
+      select: false,
     },
   },
   {

@@ -1,8 +1,21 @@
 /**
- * Seed script — development only.
+ * Seed script — Platform Super Admin Setup & Clean Database Reset.
  *
- * Creates the default Atlas Library tenant and an admin user.
- * Safe to run multiple times — skips creation if records already exist.
+ * Clears ALL collections across the entire database:
+ * - Tenants
+ * - Users
+ * - Students
+ * - Seats
+ * - Shifts
+ * - Plans
+ * - Memberships
+ * - Payments
+ *
+ * Then creates ONLY a clean standalone Super-Admin user:
+ * - Role: 'superadmin'
+ * - Email: admin@atlas.com
+ * - Password: Admin@1234
+ * - NO tenantId or library attached (pure platform supervisor)
  *
  * Usage:
  *   npm run seed          (from repo root)
@@ -12,63 +25,58 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { Tenant } from '../models/Tenant';
 import { User } from '../models/User';
+import { Student } from '../models/Student';
+import { Seat } from '../models/Seat';
+import { Shift } from '../models/Shift';
+import { Plan } from '../models/Plan';
+import { Membership } from '../models/Membership';
+import { Payment } from '../models/Payment';
 
 const MONGODB_URI =
   process.env['MONGODB_URI'] ?? 'mongodb://localhost:27017/atlas_dev';
 
-const SEED_TENANT = {
-  name: 'Atlas Library',
-  slug: 'atlas-library-indore',
-  email: 'admin@atlas.com',
-  phone: '+91-9999999999',
-  city: 'Indore',
-};
-
-const SEED_ADMIN = {
-  name: 'Atlas Admin',
+const SUPER_ADMIN = {
+  name: 'Platform Super Admin',
   email: 'admin@atlas.com',
   password: 'Admin@1234',
-  role: 'owner' as const,
+  role: 'superadmin' as const,
 };
 
 async function seed(): Promise<void> {
   console.log('🌱  Connecting to MongoDB…');
   await mongoose.connect(MONGODB_URI);
 
-  // ── Tenant ────────────────────────────────────────────────────────────────
-  let tenant = await Tenant.findOne({ slug: SEED_TENANT.slug });
+  console.log('🧹  Purging all existing database collections…');
+  await Promise.all([
+    Tenant.deleteMany({}),
+    User.deleteMany({}),
+    Student.deleteMany({}),
+    Seat.deleteMany({}),
+    Shift.deleteMany({}),
+    Plan.deleteMany({}),
+    Membership.deleteMany({}),
+    Payment.deleteMany({}),
+  ]);
+  console.log('✅  All collections cleared successfully.');
 
-  if (tenant) {
-    console.log(`✅  Tenant already exists: "${tenant.name}" (${tenant._id})`);
-  } else {
-    tenant = await Tenant.create(SEED_TENANT);
-    console.log(`✅  Created tenant: "${tenant.name}" (${tenant._id})`);
-  }
-
-  // ── Admin user ────────────────────────────────────────────────────────────
-  const existing = await User.findOne({
-    tenantId: tenant._id,
-    email: SEED_ADMIN.email,
+  // Create pure Platform Super-Admin (no tenant attached)
+  const passwordHash = await bcrypt.hash(SUPER_ADMIN.password, 12);
+  const adminUser = await User.create({
+    name: SUPER_ADMIN.name,
+    email: SUPER_ADMIN.email,
+    passwordHash,
+    role: SUPER_ADMIN.role,
+    isActive: true,
   });
 
-  if (existing) {
-    console.log(`✅  Admin user already exists: ${existing.email}`);
-  } else {
-    const passwordHash = await bcrypt.hash(SEED_ADMIN.password, 12);
-    await User.create({
-      tenantId: tenant._id,
-      name: SEED_ADMIN.name,
-      email: SEED_ADMIN.email,
-      passwordHash,
-      role: SEED_ADMIN.role,
-    });
-    console.log(`✅  Created admin user: ${SEED_ADMIN.email}`);
-  }
+  console.log(`✅  Created standalone Super Admin user: ${adminUser.email} (ID: ${adminUser._id})`);
+  console.log('ℹ️   Super Admin has NO library attached and supervises all tenants via /admin.');
 
-  console.log('\n🔑  Dev credentials:');
-  console.log(`   Email:    ${SEED_ADMIN.email}`);
-  console.log(`   Password: ${SEED_ADMIN.password}`);
-  console.log('\n✅  Seed complete.\n');
+  console.log('\n🔑  Platform Super Admin Credentials:');
+  console.log(`   Email:    ${SUPER_ADMIN.email}`);
+  console.log(`   Password: ${SUPER_ADMIN.password}`);
+  console.log(`   URL:      http://localhost:5173/admin`);
+  console.log('\n✅  Platform reset & seed complete.\n');
 }
 
 seed()

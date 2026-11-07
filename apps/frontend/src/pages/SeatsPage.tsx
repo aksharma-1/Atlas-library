@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useSeats, useBulkCreateSeats, useUpdateSeatStatus } from '../hooks/useLibrary';
 import type { SeatStatus } from '@atlas/shared';
+import { CustomSelect, Modal } from '../components/ui';
+import { Layers } from 'lucide-react';
 
 export function SeatsPage() {
   const { data: seats = [], isLoading } = useSeats();
@@ -88,18 +90,17 @@ export function SeatsPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-slate-400">Filter:</label>
-          <select
+        <div className="flex items-center gap-2 min-w-[180px]">
+          <CustomSelect
             value={filter}
-            onChange={(e) => setFilter(e.target.value as 'all' | SeatStatus)}
-            className="rounded border border-surface-600 bg-surface-700 px-2 py-1 text-xs text-white"
-          >
-            <option value="all">All Seats ({seats.length})</option>
-            <option value="available">Available Only</option>
-            <option value="occupied">Occupied Only</option>
-            <option value="maintenance">Maintenance Only</option>
-          </select>
+            onChange={(val) => setFilter(val as 'all' | SeatStatus)}
+            options={[
+              { value: 'all', label: `All Seats (${seats.length})` },
+              { value: 'available', label: 'Available Only' },
+              { value: 'occupied', label: 'Occupied Only' },
+              { value: 'maintenance', label: 'Maintenance Only' },
+            ]}
+          />
         </div>
       </div>
 
@@ -141,83 +142,81 @@ export function SeatsPage() {
       </div>
 
       {/* Bulk Generator Modal */}
-      {showBulkModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-xl border border-surface-700 bg-surface-800 p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-1">Bulk Generate Seats</h2>
-            <p className="text-xs text-slate-400 mb-4">
-              Instantly populate a sequence of study desks for your library.
-            </p>
-
-            <form onSubmit={handleBulkSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-300">Start Number</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={startNum}
-                    onChange={(e) => setStartNum(Number(e.target.value))}
-                    className="mt-1 w-full rounded border border-surface-600 bg-surface-700 px-3 py-1.5 text-sm text-white"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-300">End Number</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={endNum}
-                    onChange={(e) => setEndNum(Number(e.target.value))}
-                    className="mt-1 w-full rounded border border-surface-600 bg-surface-700 px-3 py-1.5 text-sm text-white"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-300">Prefix (Optional)</label>
-                  <input
-                    type="text"
-                    value={prefix}
-                    onChange={(e) => setPrefix(e.target.value)}
-                    placeholder="e.g. S- or A-"
-                    className="mt-1 w-full rounded border border-surface-600 bg-surface-700 px-3 py-1.5 text-sm text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-300">Section</label>
-                  <input
-                    type="text"
-                    value={section}
-                    onChange={(e) => setSection(e.target.value)}
-                    placeholder="Main Hall"
-                    className="mt-1 w-full rounded border border-surface-600 bg-surface-700 px-3 py-1.5 text-sm text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowBulkModal(false)}
-                  className="rounded px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-surface-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={bulkCreate.isPending}
-                  className="rounded bg-brand-600 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
-                >
-                  {bulkCreate.isPending ? 'Generating…' : 'Generate Seats'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showBulkModal}
+        onClose={() => setShowBulkModal(false)}
+        title="Bulk Generate Seats"
+        subtitle="Instantly populate a sequence of study desks for your library"
+        icon={<Layers className="h-5 w-5" />}
+        maxWidth="md"
+      >
+        <form onSubmit={handleBulkSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Start Number</label>
+              <input
+                type="number"
+                min="1"
+                value={startNum}
+                onChange={(e) => setStartNum(Number(e.target.value))}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">End Number</label>
+              <input
+                type="number"
+                min="1"
+                value={endNum}
+                onChange={(e) => setEndNum(Number(e.target.value))}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+                required
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Prefix (Optional)</label>
+              <input
+                type="text"
+                value={prefix}
+                onChange={(e) => setPrefix(e.target.value)}
+                placeholder="e.g. S- or A-"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Section</label>
+              <input
+                type="text"
+                value={section}
+                onChange={(e) => setSection(e.target.value)}
+                placeholder="Main Hall"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setShowBulkModal(false)}
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={bulkCreate.isPending}
+              className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 disabled:opacity-50 shadow-sm"
+            >
+              {bulkCreate.isPending ? 'Generating…' : 'Generate Seats'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

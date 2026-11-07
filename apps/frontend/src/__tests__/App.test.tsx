@@ -32,7 +32,7 @@ describe('LoginPage', () => {
   it('renders the sign-in heading', () => {
     renderWithProviders(<LoginPage />);
     expect(
-      screen.getByRole('heading', { name: /sign in to your account/i }),
+      screen.getByRole('heading', { name: /sign in to your library account/i }),
     ).toBeInTheDocument();
   });
 
@@ -49,9 +49,9 @@ describe('LoginPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders Atlas Library branding', () => {
+  it('renders StudySpace OS platform branding', () => {
     renderWithProviders(<LoginPage />);
-    expect(screen.getByText('Atlas Library')).toBeInTheDocument();
+    expect(screen.getByText('StudySpace OS')).toBeInTheDocument();
   });
 });
 

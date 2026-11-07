@@ -2,11 +2,16 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AppShell } from './components/layout/AppShell';
 import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { OnboardingPage } from './pages/OnboardingPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SeatsPage } from './pages/SeatsPage';
 import { PlansPage } from './pages/PlansPage';
 import { StudentsPage } from './pages/StudentsPage';
 import { StudentProfilePage } from './pages/StudentProfilePage';
+import { SuperAdminPage } from './pages/SuperAdminPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { SubscriptionPage } from './pages/SubscriptionPage';
 
 function App() {
   return (
@@ -14,8 +19,30 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/login" element={<LoginPage />} />
-        
-        {/* Protected routes wrapped in AppShell layout */}
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+        {/* Platform Super-Admin Route */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowPendingPayment={true}>
+              <SuperAdminPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Onboarding Route (Authenticated, allowed with pending payment) */}
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute allowPendingPayment={true}>
+              <OnboardingPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected routes wrapped in AppShell layout (Subscription required) */}
         <Route
           path="/dashboard"
           element={
@@ -42,6 +69,17 @@ function App() {
             <ProtectedRoute>
               <AppShell>
                 <PlansPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/subscription"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <SubscriptionPage />
               </AppShell>
             </ProtectedRoute>
           }

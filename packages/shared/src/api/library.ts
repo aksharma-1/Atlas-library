@@ -49,4 +49,8 @@ export interface DashboardStatsDTO {
   totalShifts: number;
   totalStudents: number;
   duesOutstandingPaise: number;
+  dueMembersCount: number;
+  expiringIn3DaysCount: number;
+  expiringIn7DaysCount: number;
+  expiredCount: number;
 }

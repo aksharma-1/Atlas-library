@@ -2,7 +2,17 @@
 // Add new module exports here as the project grows.
 
 export type { HealthResponse } from './api/health';
-export type { LoginRequest, LoginResponse, MeResponse, AuthUser } from './api/auth';
+export type {
+  LoginRequest,
+  LoginResponse,
+  MeResponse,
+  AuthUser,
+  SubscriptionTier,
+  SubscriptionStatus,
+  OnboardingStep,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+} from './api/auth';
 export type {
   ShiftDTO,
   SeatType,
@@ -11,6 +21,14 @@ export type {
   SeatDTO,
   DashboardStatsDTO,
 } from './api/library';
+export type {
+  SaasPlanDTO,
+  SaasPlatformConfigDTO,
+  SaasPlansResponse,
+  CreateSaasPlanRequest,
+  UpdateSaasPlanRequest,
+  UpdatePlatformConfigRequest,
+} from './api/saasPlan';
 export type {
   StudentDTO,
   MembershipStatus,

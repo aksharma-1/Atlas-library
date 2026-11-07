@@ -1,45 +1,77 @@
 import { useAuth, useLogout } from '../../hooks/useAuth';
+import { useTheme } from '../../context/ThemeContext';
+import { Moon, Sun, Shield, LogOut, BookOpen } from 'lucide-react';
 
-/**
- * NavBar — top navigation bar shown in the authenticated app shell.
- * Displays the library name (from JWT) and a logout button.
- */
 export function NavBar() {
   const { user } = useAuth();
   const logout = useLogout();
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-surface-700 bg-surface-800 px-6 shadow-sm">
+    <header className="flex h-16 items-center justify-between border-b px-6 glass-panel z-20">
       {/* Brand / Library name */}
-      <div className="flex items-center gap-3">
-        <span className="text-2xl">📚</span>
+      <div className="flex items-center gap-3.5">
+        <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+          <BookOpen className="h-5 w-5" />
+        </div>
         <div>
-          <p className="text-sm font-semibold leading-tight text-white">
-            {user?.tenantName ?? 'Atlas Library'}
+          <p className="text-sm font-bold leading-tight" style={{ color: 'var(--text-main)' }}>
+            {user?.role === 'superadmin' ? 'StudySpace Platform' : (user?.tenantName ?? 'StudySpace Library')}
           </p>
-          <p className="text-xs text-slate-400">Management System</p>
+          <p className="text-xs text-slate-400">
+            {user?.role === 'superadmin' ? 'Super Admin Portal' : 'Smart Library Cloud OS'}
+          </p>
         </div>
       </div>
 
-      {/* User info + logout */}
+      {/* Center / Right controls */}
       <div className="flex items-center gap-4">
-        <div className="text-right">
-          <p className="text-sm font-medium text-white">{user?.name}</p>
-          <p className="text-xs capitalize text-slate-400">{user?.role}</p>
-        </div>
+        {/* Superadmin pill */}
+        {user?.role === 'superadmin' && (
+          <a
+            href="/admin"
+            className="rounded-xl bg-amber-500/15 border border-amber-500/30 px-3 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-500 hover:text-slate-900 transition flex items-center gap-1.5 shadow-sm"
+          >
+            <Shield className="h-3.5 w-3.5" />
+            <span>Super Admin</span>
+          </a>
+        )}
 
-        {/* Avatar initials */}
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">
-          {user?.name?.charAt(0).toUpperCase() ?? '?'}
-        </div>
-
+        {/* Dark / Light Mode Toggle Button */}
         <button
-          onClick={() => logout.mutate()}
-          disabled={logout.isPending}
-          className="rounded-md border border-surface-600 px-3 py-1.5 text-xs text-slate-300 transition hover:border-brand-500 hover:text-white disabled:opacity-50"
+          onClick={toggleTheme}
+          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+          className="rounded-xl p-2 border transition glass-card hover:border-indigo-400/40 text-slate-300 hover:text-white cursor-pointer"
         >
-          {logout.isPending ? 'Logging out…' : 'Logout'}
+          {theme === 'dark' ? (
+            <Sun className="h-4 w-4 text-amber-400 animate-spin-slow" />
+          ) : (
+            <Moon className="h-4 w-4 text-indigo-400" />
+          )}
         </button>
+
+        {/* User profile dropdown info */}
+        <div className="flex items-center gap-3 pl-2 border-l" style={{ borderColor: 'var(--glass-border)' }}>
+          <div className="text-right hidden sm:block">
+            <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{user?.name}</p>
+            <p className="text-[10px] uppercase font-semibold text-indigo-400">{user?.role}</p>
+          </div>
+
+          {/* Avatar initial */}
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-xs font-extrabold text-white shadow-md">
+            {user?.name?.charAt(0).toUpperCase() ?? 'U'}
+          </div>
+
+          {/* Logout */}
+          <button
+            onClick={() => logout.mutate()}
+            disabled={logout.isPending}
+            title="Log out"
+            className="rounded-xl p-2 border transition glass-card hover:bg-rose-500/10 hover:border-rose-500/30 text-slate-400 hover:text-rose-400 cursor-pointer disabled:opacity-50"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </header>
   );

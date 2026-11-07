@@ -10,6 +10,7 @@ const registerStudentSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   membershipNumber: z.string().optional(),
   address: z.string().optional(),
+  photoUrl: z.string().optional(),
 });
 
 export async function listStudents(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -59,6 +60,7 @@ export async function createStudent(req: Request, res: Response, next: NextFunct
       email: parsed.data.email || undefined,
       membershipNumber,
       address: parsed.data.address,
+      photoUrl: parsed.data.photoUrl,
     });
 
     res.status(201).json({ student });
@@ -99,3 +101,72 @@ export async function getStudentProfile(req: Request, res: Response, next: NextF
     next(err);
   }
 }
+
+const updateStudentSchema = z.object({
+  name: z.string().min(1, 'Name is required').trim().optional(),
+  mobile: z.string().min(10, 'Valid mobile number is required').trim().optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  membershipNumber: z.string().optional(),
+  address: z.string().optional(),
+  photoUrl: z.string().optional(),
+});
+
+export async function updateStudent(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user!.tenantId;
+
+    const parsed = updateStudentSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors });
+      return;
+    }
+
+    const student = await Student.findOneAndUpdate(
+      { _id: id, tenantId },
+      { $set: parsed.data },
+      { new: true, runValidators: true },
+    );
+
+    if (!student) {
+      res.status(404).json({ error: 'Student not found' });
+      return;
+    }
+
+    res.status(200).json({ student });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteStudent(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user!.tenantId;
+
+    const student = await Student.findOne({ _id: id, tenantId });
+    if (!student) {
+      res.status(404).json({ error: 'Student not found' });
+      return;
+    }
+
+    // Find active memberships and free occupied seats
+    const activeMemberships = await Membership.find({ studentId: id, tenantId, status: 'active' });
+    const { Seat } = await import('../models/Seat');
+    for (const m of activeMemberships) {
+      if (m.seatId) {
+        await Seat.findByIdAndUpdate(m.seatId, { status: 'available' });
+      }
+      m.status = 'cancelled';
+      await m.save();
+    }
+
+    // Delete student
+    await Student.deleteOne({ _id: id, tenantId });
+
+    res.status(200).json({ message: 'Student and related active memberships successfully removed' });
+  } catch (err) {
+    next(err);
+  }
+}
+

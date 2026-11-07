@@ -10,11 +10,12 @@ export interface StudentDTO {
   email?: string;
   membershipNumber: string;
   address?: string;
+  photoUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export type MembershipStatus = 'active' | 'expired' | 'cancelled';
+export type MembershipStatus = 'active' | 'expired' | 'cancelled' | 'left';
 export type PaymentStatus = 'paid' | 'partial' | 'pending';
 
 export interface MembershipDTO {

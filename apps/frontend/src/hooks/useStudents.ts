@@ -34,6 +34,7 @@ export function useCreateStudent() {
       email?: string;
       address?: string;
       membershipNumber?: string;
+      photoUrl?: string;
     }) => {
       const { data } = await apiClient.post<{ student: StudentDTO }>('/students', payload);
       return data.student;
@@ -87,6 +88,106 @@ export function useRecordPayment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
     },
   });
 }
+
+export function useUpdateStudent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...payload }: {
+      id: string;
+      name?: string;
+      mobile?: string;
+      email?: string;
+      address?: string;
+      membershipNumber?: string;
+      photoUrl?: string;
+    }) => {
+      const { data } = await apiClient.put<{ student: StudentDTO }>(`/students/${id}`, payload);
+      return data.student;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['students', vars.id] });
+    },
+  });
+}
+
+export function useDeleteStudent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await apiClient.delete<{ message: string }>(`/students/${id}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['seats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
+    },
+  });
+}
+
+export function useMarkMembershipLeft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ membershipId }: { membershipId: string; studentId: string }) => {
+      const { data } = await apiClient.patch<{ message: string; membership: MembershipDTO }>(
+        `/memberships/${membershipId}/left`,
+      );
+      return data;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['students', vars.studentId] });
+      queryClient.invalidateQueries({ queryKey: ['seats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
+    },
+  });
+}
+
+export function useAddGiftDays() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      membershipId,
+      days,
+      reason,
+    }: {
+      membershipId: string;
+      studentId: string;
+      days: number;
+      reason?: string;
+    }) => {
+      const { data } = await apiClient.post<{ message: string; membership: MembershipDTO }>(
+        `/memberships/${membershipId}/gift-days`,
+        { days, reason },
+      );
+      return data;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['students', vars.studentId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
+    },
+  });
+}
+
+export function useFilteredMemberships(filter?: string) {
+  return useQuery({
+    queryKey: ['filteredMemberships', filter],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ memberships: (MembershipDTO & { studentId?: StudentDTO })[] }>(
+        '/memberships',
+        {
+          params: filter && filter !== 'all' ? { filter } : undefined,
+        },
+      );
+      return data.memberships;
+    },
+  });
+}
+

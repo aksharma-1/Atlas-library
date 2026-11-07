@@ -1,41 +1,111 @@
 import { useState } from 'react';
-import { useShifts, useCreateShift, usePlans, useCreatePlan } from '../hooks/useLibrary';
+import { useShifts, useCreateShift, useUpdateShift, useDeleteShift, usePlans, useCreatePlan, useUpdatePlan, useDeletePlan } from '../hooks/useLibrary';
+import { formatTime12H } from '../utils/time';
+import type { ShiftDTO, PlanDTO } from '@atlas/shared';
+import { CustomSelect, Modal } from '../components/ui';
+import { Clock, CalendarClock } from 'lucide-react';
 
 export function PlansPage() {
   const { data: shifts = [], isLoading: shiftsLoading } = useShifts();
   const { data: plans = [], isLoading: plansLoading } = usePlans();
 
   const createShift = useCreateShift();
-  const createPlan = useCreatePlan();
+  const updateShift = useUpdateShift();
+  const deleteShift = useDeleteShift();
 
-  // Shift form
+  const createPlan = useCreatePlan();
+  const updatePlan = useUpdatePlan();
+  const deletePlan = useDeletePlan();
+
+  // Shift create form
   const [shiftName, setShiftName] = useState('');
   const [startTime, setStartTime] = useState('07:00');
   const [endTime, setEndTime] = useState('15:00');
 
-  // Plan form
+  // Plan create form
   const [planName, setPlanName] = useState('');
   const [seatType, setSeatType] = useState<'reserved' | 'non-reserved'>('reserved');
   const [feeRupees, setFeeRupees] = useState('600');
   const [selectedShiftId, setSelectedShiftId] = useState('');
   const [description, setDescription] = useState('');
 
+  // Editing Shift state
+  const [editingShift, setEditingShift] = useState<ShiftDTO | null>(null);
+  const [editShiftName, setEditShiftName] = useState('');
+  const [editShiftStartTime, setEditShiftStartTime] = useState('');
+  const [editShiftEndTime, setEditShiftEndTime] = useState('');
+
+  // Editing Plan state
+  const [editingPlan, setEditingPlan] = useState<PlanDTO | null>(null);
+  const [editPlanName, setEditPlanName] = useState('');
+  const [editPlanSeatType, setEditPlanSeatType] = useState<'reserved' | 'non-reserved'>('reserved');
+  const [editPlanFeeRupees, setEditPlanFeeRupees] = useState('');
+  const [editPlanShiftId, setEditPlanShiftId] = useState('');
+  const [editPlanDescription, setEditPlanDescription] = useState('');
+
+  // Error alerts
+  const [actionError, setActionError] = useState<string | null>(null);
+
   const handleCreateShift = (e: React.FormEvent) => {
     e.preventDefault();
     if (!shiftName.trim()) return;
+    setActionError(null);
     createShift.mutate(
       { name: shiftName, startTime, endTime },
       {
         onSuccess: () => {
           setShiftName('');
         },
+        onError: (err: any) => {
+          setActionError(err.response?.data?.error || 'Failed to create shift');
+        },
       },
     );
+  };
+
+  const handleStartEditShift = (s: ShiftDTO) => {
+    setEditingShift(s);
+    setEditShiftName(s.name);
+    setEditShiftStartTime(s.startTime);
+    setEditShiftEndTime(s.endTime);
+  };
+
+  const handleSaveEditShift = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingShift || !editShiftName.trim()) return;
+    setActionError(null);
+    updateShift.mutate(
+      {
+        id: editingShift._id,
+        name: editShiftName,
+        startTime: editShiftStartTime,
+        endTime: editShiftEndTime,
+      },
+      {
+        onSuccess: () => {
+          setEditingShift(null);
+        },
+        onError: (err: any) => {
+          setActionError(err.response?.data?.error || 'Failed to update shift');
+        },
+      },
+    );
+  };
+
+  const handleDeleteShift = (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete shift "${name}"?`)) return;
+    setActionError(null);
+    deleteShift.mutate(id, {
+      onError: (err: any) => {
+        setActionError(err.response?.data?.error || 'Failed to delete shift');
+      },
+    });
   };
 
   const handleCreatePlan = (e: React.FormEvent) => {
     e.preventDefault();
     if (!planName.trim()) return;
+    setActionError(null);
     const feePaise = Math.round(parseFloat(feeRupees || '0') * 100);
     createPlan.mutate(
       {
@@ -50,8 +120,55 @@ export function PlansPage() {
           setPlanName('');
           setDescription('');
         },
+        onError: (err: any) => {
+          setActionError(err.response?.data?.error || 'Failed to create plan');
+        },
       },
     );
+  };
+
+  const handleStartEditPlan = (p: PlanDTO) => {
+    setEditingPlan(p);
+    setEditPlanName(p.name);
+    setEditPlanSeatType(p.seatType);
+    setEditPlanFeeRupees((p.feePaise / 100).toString());
+    setEditPlanShiftId(p.shiftIds && p.shiftIds.length > 0 ? (typeof p.shiftIds[0] === 'string' ? p.shiftIds[0] : (p.shiftIds[0] as any)._id) : '');
+    setEditPlanDescription(p.description || '');
+  };
+
+  const handleSaveEditPlan = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPlan || !editPlanName.trim()) return;
+    setActionError(null);
+    const feePaise = Math.round(parseFloat(editPlanFeeRupees || '0') * 100);
+    updatePlan.mutate(
+      {
+        id: editingPlan._id,
+        name: editPlanName,
+        seatType: editPlanSeatType,
+        shiftIds: editPlanShiftId ? [editPlanShiftId] : [],
+        feePaise,
+        description: editPlanDescription,
+      },
+      {
+        onSuccess: () => {
+          setEditingPlan(null);
+        },
+        onError: (err: any) => {
+          setActionError(err.response?.data?.error || 'Failed to update plan');
+        },
+      },
+    );
+  };
+
+  const handleDeletePlan = (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete plan "${name}"?`)) return;
+    setActionError(null);
+    deletePlan.mutate(id, {
+      onError: (err: any) => {
+        setActionError(err.response?.data?.error || 'Failed to delete plan');
+      },
+    });
   };
 
   return (
@@ -63,12 +180,19 @@ export function PlansPage() {
         </p>
       </div>
 
+      {actionError && (
+        <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-400 flex items-center justify-between">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="text-red-400 font-bold hover:text-red-300">✕</button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         {/* ── Shifts Section ── */}
         <div className="rounded-xl border border-surface-700 bg-surface-800 p-6 space-y-6">
           <div>
             <h2 className="text-lg font-semibold text-white">Operational Shifts</h2>
-            <p className="text-xs text-slate-400">Define library shifts and study periods.</p>
+            <p className="text-xs text-slate-400">Define library shifts and study periods in 12-hour format.</p>
           </div>
 
           <form onSubmit={handleCreateShift} className="space-y-3 bg-surface-900/60 p-4 rounded-lg border border-surface-700">
@@ -86,7 +210,9 @@ export function PlansPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-300">Start Time</label>
+                <label className="block text-xs font-medium text-slate-300">
+                  Start Time <span className="text-[10px] text-brand-400 font-normal">({formatTime12H(startTime)})</span>
+                </label>
                 <input
                   type="time"
                   value={startTime}
@@ -96,7 +222,9 @@ export function PlansPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-300">End Time</label>
+                <label className="block text-xs font-medium text-slate-300">
+                  End Time <span className="text-[10px] text-brand-400 font-normal">({formatTime12H(endTime)})</span>
+                </label>
                 <input
                   type="time"
                   value={endTime}
@@ -124,14 +252,27 @@ export function PlansPage() {
               <p className="text-xs text-slate-500">No shifts created yet. Add one above.</p>
             ) : (
               shifts.map((s) => (
-                <div key={s._id} className="flex items-center justify-between rounded border border-surface-700 bg-surface-700/40 p-3">
+                <div key={s._id} className="flex items-center justify-between rounded border border-surface-700 bg-surface-700/40 p-3 hover:border-surface-600 transition">
                   <div>
                     <p className="text-sm font-medium text-white">{s.name}</p>
-                    <p className="text-xs text-slate-400">
-                      {s.startTime} – {s.endTime}
+                    <p className="text-xs text-brand-300 font-mono mt-0.5">
+                      {formatTime12H(s.startTime)} – {formatTime12H(s.endTime)}
                     </p>
                   </div>
-                  <span className="rounded bg-success/20 px-2 py-0.5 text-[10px] text-success">Active</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleStartEditShift(s)}
+                      className="rounded bg-surface-600 hover:bg-surface-500 px-2 py-1 text-xs text-slate-200"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteShift(s._id, s.name)}
+                      className="rounded bg-red-500/20 hover:bg-red-500/30 px-2 py-1 text-xs text-red-300"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))
             )}
@@ -142,7 +283,7 @@ export function PlansPage() {
         <div className="rounded-xl border border-surface-700 bg-surface-800 p-6 space-y-6">
           <div>
             <h2 className="text-lg font-semibold text-white">Membership Plans</h2>
-            <p className="text-xs text-slate-400">Configure plans with pricing in rupees (stored as paise).</p>
+            <p className="text-xs text-slate-400">Configure plans with pricing in rupees (unlimited capacity).</p>
           </div>
 
           <form onSubmit={handleCreatePlan} className="space-y-3 bg-surface-900/60 p-4 rounded-lg border border-surface-700">
@@ -160,43 +301,42 @@ export function PlansPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-300">Seat Type</label>
-                <select
+                <CustomSelect
+                  label="Seat Type"
                   value={seatType}
-                  onChange={(e) => setSeatType(e.target.value as 'reserved' | 'non-reserved')}
-                  className="mt-1 w-full rounded border border-surface-600 bg-surface-700 px-3 py-1.5 text-sm text-white"
-                >
-                  <option value="reserved">Reserved</option>
-                  <option value="non-reserved">Non-Reserved</option>
-                </select>
+                  onChange={(val) => setSeatType(val as 'reserved' | 'non-reserved')}
+                  options={[
+                    { value: 'reserved', label: 'Reserved' },
+                    { value: 'non-reserved', label: 'Non-Reserved' },
+                  ]}
+                />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-300">Monthly Fee (₹)</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Monthly Fee (₹)</label>
                 <input
                   type="number"
                   min="0"
                   step="1"
                   value={feeRupees}
                   onChange={(e) => setFeeRupees(e.target.value)}
-                  className="mt-1 w-full rounded border border-surface-600 bg-surface-700 px-3 py-1.5 text-sm text-white"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
                   required
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-300">Shift Assignment</label>
-              <select
+              <CustomSelect
+                label="Shift Assignment"
                 value={selectedShiftId}
-                onChange={(e) => setSelectedShiftId(e.target.value)}
-                className="mt-1 w-full rounded border border-surface-600 bg-surface-700 px-3 py-1.5 text-sm text-white"
-              >
-                <option value="">Any / Not Shift-Specific</option>
-                {shifts.map((s) => (
-                  <option key={s._id} value={s._id}>
-                    {s.name} ({s.startTime}–{s.endTime})
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedShiftId(val)}
+                options={[
+                  { value: '', label: 'Any / Not Shift-Specific' },
+                  ...shifts.map((s) => ({
+                    value: s._id,
+                    label: `${s.name} (${formatTime12H(s.startTime)} – ${formatTime12H(s.endTime)})`,
+                  })),
+                ]}
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-300">Description (Optional)</label>
@@ -226,7 +366,7 @@ export function PlansPage() {
               <p className="text-xs text-slate-500">No plans configured yet. Add one above.</p>
             ) : (
               plans.map((p) => (
-                <div key={p._id} className="flex items-center justify-between rounded border border-surface-700 bg-surface-700/40 p-3">
+                <div key={p._id} className="flex items-center justify-between rounded border border-surface-700 bg-surface-700/40 p-3 hover:border-surface-600 transition">
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-white">{p.name}</p>
@@ -236,9 +376,23 @@ export function PlansPage() {
                     </div>
                     {p.description && <p className="text-xs text-slate-400 mt-0.5">{p.description}</p>}
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-white">₹{(p.feePaise / 100).toFixed(0)}</p>
-                    <p className="text-[10px] text-slate-400">/ month</p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-white">₹{(p.feePaise / 100).toFixed(0)}</p>
+                      <p className="text-[10px] text-slate-400">/ month</p>
+                    </div>
+                    <button
+                      onClick={() => handleStartEditPlan(p)}
+                      className="rounded bg-surface-600 hover:bg-surface-500 px-2 py-1 text-xs text-slate-200"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeletePlan(p._id, p.name)}
+                      className="rounded bg-red-500/20 hover:bg-red-500/30 px-2 py-1 text-xs text-red-300"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
               ))
@@ -246,6 +400,158 @@ export function PlansPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Edit Shift Modal ── */}
+      <Modal
+        isOpen={!!editingShift}
+        onClose={() => setEditingShift(null)}
+        title="Edit Shift"
+        subtitle="Update timing or name for this operational period"
+        icon={<Clock className="h-5 w-5" />}
+        maxWidth="md"
+      >
+        <form onSubmit={handleSaveEditShift} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Shift Name</label>
+            <input
+              type="text"
+              value={editShiftName}
+              onChange={(e) => setEditShiftName(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Start Time ({formatTime12H(editShiftStartTime)})
+              </label>
+              <input
+                type="time"
+                value={editShiftStartTime}
+                onChange={(e) => setEditShiftStartTime(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                End Time ({formatTime12H(editShiftEndTime)})
+              </label>
+              <input
+                type="time"
+                value={editShiftEndTime}
+                onChange={(e) => setEditShiftEndTime(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+                required
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setEditingShift(null)}
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={updateShift.isPending}
+              className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 disabled:opacity-50 shadow-sm"
+            >
+              {updateShift.isPending ? 'Saving…' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── Edit Plan Modal ── */}
+      <Modal
+        isOpen={!!editingPlan}
+        onClose={() => setEditingPlan(null)}
+        title="Edit Plan"
+        subtitle="Update pricing, seat type, or assigned shift"
+        icon={<CalendarClock className="h-5 w-5" />}
+        maxWidth="md"
+      >
+        <form onSubmit={handleSaveEditPlan} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Plan Name</label>
+            <input
+              type="text"
+              value={editPlanName}
+              onChange={(e) => setEditPlanName(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <CustomSelect
+                label="Seat Type"
+                value={editPlanSeatType}
+                onChange={(val) => setEditPlanSeatType(val as 'reserved' | 'non-reserved')}
+                options={[
+                  { value: 'reserved', label: 'Reserved' },
+                  { value: 'non-reserved', label: 'Non-Reserved' },
+                ]}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Monthly Fee (₹)</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={editPlanFeeRupees}
+                onChange={(e) => setEditPlanFeeRupees(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+                required
+              />
+            </div>
+          </div>
+          <div>
+            <CustomSelect
+              label="Shift Assignment"
+              value={editPlanShiftId}
+              onChange={(val) => setEditPlanShiftId(val)}
+              options={[
+                { value: '', label: 'Any / Not Shift-Specific' },
+                ...shifts.map((s) => ({
+                  value: s._id,
+                  label: `${s.name} (${formatTime12H(s.startTime)} – ${formatTime12H(s.endTime)})`,
+                })),
+              ]}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Description (Optional)</label>
+            <input
+              type="text"
+              value={editPlanDescription}
+              onChange={(e) => setEditPlanDescription(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setEditingPlan(null)}
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={updatePlan.isPending}
+              className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 disabled:opacity-50 shadow-sm"
+            >
+              {updatePlan.isPending ? 'Saving…' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

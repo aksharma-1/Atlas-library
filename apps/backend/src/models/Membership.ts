@@ -61,7 +61,7 @@ const membershipSchema = new Schema<IMembership>(
     },
     status: {
       type: String,
-      enum: ['active', 'expired', 'cancelled'] satisfies MembershipStatus[],
+      enum: ['active', 'expired', 'cancelled', 'left'] satisfies MembershipStatus[],
       default: 'active',
       index: true,
     },

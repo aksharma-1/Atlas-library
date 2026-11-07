@@ -8,6 +8,7 @@ export interface IStudent extends Document {
   email?: string;
   membershipNumber: string;
   address?: string;
+  photoUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,6 +42,10 @@ const studentSchema = new Schema<IStudent>(
       trim: true,
     },
     address: {
+      type: String,
+      trim: true,
+    },
+    photoUrl: {
       type: String,
       trim: true,
     },

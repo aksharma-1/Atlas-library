@@ -39,6 +39,34 @@ export function useCreateShift() {
   });
 }
 
+export function useUpdateShift() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...shift }: { id: string; name?: string; startTime?: string; endTime?: string; isActive?: boolean }) => {
+      const { data } = await apiClient.put<{ shift: ShiftDTO }>(`/shifts/${id}`, shift);
+      return data.shift;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+    },
+  });
+}
+
+export function useDeleteShift() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await apiClient.delete<{ message: string }>(`/shifts/${id}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+    },
+  });
+}
+
 // ── Plans ────────────────────────────────────────────────────────────────────
 export function usePlans() {
   return useQuery({
@@ -62,6 +90,41 @@ export function useCreatePlan() {
     }) => {
       const { data } = await apiClient.post<{ plan: PlanDTO }>('/plans', plan);
       return data.plan;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+    },
+  });
+}
+
+export function useUpdatePlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...plan }: {
+      id: string;
+      name?: string;
+      seatType?: 'reserved' | 'non-reserved';
+      shiftIds?: string[];
+      feePaise?: number;
+      description?: string;
+      isActive?: boolean;
+    }) => {
+      const { data } = await apiClient.put<{ plan: PlanDTO }>(`/plans/${id}`, plan);
+      return data.plan;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+    },
+  });
+}
+
+export function useDeletePlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await apiClient.delete<{ message: string }>(`/plans/${id}`);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plans'] });

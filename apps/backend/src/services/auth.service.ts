@@ -32,6 +32,23 @@ export async function loginUser(
     throw new Error('Invalid email or password');
   }
 
+  if (user.role === 'superadmin') {
+    const payload: AuthUser = {
+      userId: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: 'superadmin',
+      subscriptionStatus: 'active',
+      onboardingStep: 'completed',
+    };
+
+    const token = jwt.sign(payload, env.JWT_SECRET, {
+      expiresIn: env.JWT_EXPIRES_IN,
+    } as jwt.SignOptions);
+
+    return { token, user: payload };
+  }
+
   const tenant = await Tenant.findById(user.tenantId);
 
   if (!tenant || !tenant.isActive) {
@@ -40,11 +57,16 @@ export async function loginUser(
 
   const payload: AuthUser = {
     userId: user._id.toString(),
-    tenantId: user.tenantId.toString(),
+    tenantId: user.tenantId!.toString(),
     name: user.name,
     email: user.email,
     role: user.role,
     tenantName: tenant.name,
+    onboardingStep: tenant.onboardingStep || 'completed',
+    subscriptionStatus: tenant.subscriptionStatus || 'active',
+    subscriptionTier: tenant.subscriptionTier,
+    subscriptionExpiresAt: tenant.subscriptionExpiresAt ? tenant.subscriptionExpiresAt.toISOString() : undefined,
+    maxSeats: tenant.maxSeats || 100,
   };
 
   const token = jwt.sign(payload, env.JWT_SECRET, {

@@ -16,13 +16,34 @@ export interface LoginRequest {
  *
  * NEVER includes passwordHash or any sensitive credential.
  */
+export type SubscriptionTier = 'starter' | 'growth' | 'pro' | string;
+export type SubscriptionStatus = 'pending_payment' | 'pending_approval' | 'active' | 'past_due' | 'cancelled';
+export type OnboardingStep = 'profile' | 'config' | 'subscription' | 'completed';
+
 export interface AuthUser {
   userId: string;
-  tenantId: string;
+  tenantId?: string;
   name: string;
   email: string;
-  role: 'owner' | 'staff';
-  tenantName: string;
+  role: 'owner' | 'staff' | 'superadmin';
+  tenantName?: string;
+  onboardingStep?: OnboardingStep;
+  subscriptionStatus?: SubscriptionStatus;
+  subscriptionTier?: SubscriptionTier;
+  subscriptionExpiresAt?: string;
+  maxSeats?: number;
+}
+
+/** Request payload for requesting password reset OTP / link */
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+/** Request payload for resetting password */
+export interface ResetPasswordRequest {
+  email: string;
+  otp: string;
+  newPassword: string;
 }
 
 /** Response body from POST /api/v1/auth/login */

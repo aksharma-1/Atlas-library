@@ -18,6 +18,8 @@ import {
   membershipsRouter,
   paymentsRouter,
 } from './routes/student.routes';
+import { superadminRouter } from './routes/superadmin.routes';
+import { saasPlansRouter } from './routes/saasPlan.routes';
 import { notFound } from './middleware/notFound';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -63,6 +65,8 @@ export function createApp(): Express {
   app.use('/api/v1/students', studentsRouter);
   app.use('/api/v1/memberships', membershipsRouter);
   app.use('/api/v1/payments', paymentsRouter);
+  app.use('/api/v1/saas-plans', saasPlansRouter);
+  app.use('/api/v1/superadmin', superadminRouter);
 
   // ── Error handlers (must remain last) ─────────────────────────────────────
   app.use(notFound);

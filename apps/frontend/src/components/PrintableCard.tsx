@@ -37,9 +37,17 @@ export function PrintableCard({ student, membership, tenantName = 'Atlas Library
           </div>
 
           <div className="flex gap-4 items-center">
-            <div className="h-20 w-20 rounded-lg bg-surface-700/80 border border-surface-600 flex items-center justify-center text-3xl shrink-0">
-              👤
-            </div>
+            {student.photoUrl ? (
+              <img
+                src={student.photoUrl}
+                alt={student.name}
+                className="h-20 w-20 rounded-lg object-cover border-2 border-brand-500/60 shrink-0 bg-surface-700 shadow"
+              />
+            ) : (
+              <div className="h-20 w-20 rounded-lg bg-surface-700/80 border border-surface-600 flex items-center justify-center text-3xl shrink-0">
+                👤
+              </div>
+            )}
             <div className="space-y-1">
               <p className="text-lg font-bold text-white">{student.name}</p>
               <p className="text-xs text-slate-300">📞 {student.mobile}</p>

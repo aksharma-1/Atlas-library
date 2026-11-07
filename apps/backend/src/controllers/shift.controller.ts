@@ -65,3 +65,32 @@ export async function updateShift(req: Request, res: Response, next: NextFunctio
     next(err);
   }
 }
+
+export async function deleteShift(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user!.tenantId;
+
+    const shift = await Shift.findOne({ _id: id, tenantId });
+    if (!shift) {
+      res.status(404).json({ error: 'Shift not found' });
+      return;
+    }
+
+    // Check if any active membership is using this shift
+    const { Membership } = await import('../models/Membership');
+    const activeCount = await Membership.countDocuments({ tenantId, shiftId: id, status: 'active' });
+    if (activeCount > 0) {
+      res.status(400).json({
+        error: `Cannot delete shift "${shift.name}" because it is currently assigned to ${activeCount} active membership(s). Deactivate or reassign them first.`,
+      });
+      return;
+    }
+
+    await Shift.deleteOne({ _id: id, tenantId });
+    res.status(200).json({ message: 'Shift deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+}
+
