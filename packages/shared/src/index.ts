@@ -19,6 +19,7 @@ export type {
   PlanDTO,
   SeatStatus,
   SeatDTO,
+  SeatStudentInfo,
   DashboardStatsDTO,
 } from './api/library';
 export type {

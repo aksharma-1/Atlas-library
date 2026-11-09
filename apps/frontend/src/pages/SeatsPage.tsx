@@ -1,33 +1,122 @@
-import { useState } from 'react';
-import { useSeats, useBulkCreateSeats, useUpdateSeatStatus } from '../hooks/useLibrary';
-import type { SeatStatus } from '@atlas/shared';
+import { useState, useMemo } from 'react';
+import {
+  useSeats,
+  useBulkCreateSeats,
+  useUpdateSeatStatus,
+  useShifts,
+  usePlans,
+  useChangeSeat,
+} from '../hooks/useLibrary';
+import { useStudents, useCreateMembership, useMarkMembershipLeft } from '../hooks/useStudents';
+import type { SeatDTO, SeatStatus } from '@atlas/shared';
 import { CustomSelect, Modal } from '../components/ui';
-import { Layers } from 'lucide-react';
+import {
+  Layers,
+  Clock,
+  ArrowRightLeft,
+  UserMinus,
+  MessageSquare,
+  Wrench,
+  CheckCircle2,
+  ExternalLink,
+  PlusCircle,
+  Search,
+  Filter,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export function SeatsPage() {
-  const { data: seats = [], isLoading } = useSeats();
+  // Query parameters / Filter states
+  const [selectedShiftId, setSelectedShiftId] = useState<string>('all');
+  const [selectedSection, setSelectedSection] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | SeatStatus>('all');
+  const [searchDesk, setSearchDesk] = useState<string>('');
+
+  // Queries
+  const { data: shifts = [] } = useShifts();
+  const { data: plans = [] } = usePlans();
+  const { data: students = [] } = useStudents();
+  const { data: seats = [], isLoading } = useSeats({
+    shiftId: selectedShiftId,
+    section: selectedSection,
+  });
+
+  // Mutations
   const bulkCreate = useBulkCreateSeats();
   const updateStatus = useUpdateSeatStatus();
+  const changeSeatMutation = useChangeSeat();
+  const createMembershipMutation = useCreateMembership();
+  const markLeftMutation = useMarkMembershipLeft();
 
   // Generator form
   const [startNum, setStartNum] = useState(1);
   const [endNum, setEndNum] = useState(50);
   const [prefix, setPrefix] = useState('');
-  const [section, setSection] = useState('Main Hall');
+  const [newSection, setNewSection] = useState('Main Hall');
   const [showBulkModal, setShowBulkModal] = useState(false);
 
-  // Filter
-  const [filter, setFilter] = useState<'all' | SeatStatus>('all');
+  // Drawer / Details Modal State
+  const [selectedSeat, setSelectedSeat] = useState<SeatDTO | null>(null);
 
-  const filteredSeats = seats.filter((s) => {
-    if (filter === 'all') return true;
-    return s.status === filter;
+  // Assign Student Modal
+  const [assignStudentModal, setAssignStudentModal] = useState<SeatDTO | null>(null);
+  const [assignStudentId, setAssignStudentId] = useState<string>('');
+  const [assignPlanId, setAssignPlanId] = useState<string>('');
+  const [assignShiftId, setAssignShiftId] = useState<string>('');
+  const [assignStartDate, setAssignStartDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [assignEndDate, setAssignEndDate] = useState<string>(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    return d.toISOString().slice(0, 10);
   });
+
+  // Swap / Change Seat Modal
+  const [swapModalData, setSwapModalData] = useState<{
+    membershipId: string;
+    studentName: string;
+    currentSeatNumber: string;
+  } | null>(null);
+  const [targetSeatId, setTargetSeatId] = useState<string>('');
+
+  // Extract distinct sections from all loaded seats for tabs
+  const sections = useMemo(() => {
+    const set = new Set<string>();
+    seats.forEach((s) => {
+      if (s.section) set.add(s.section);
+    });
+    return Array.from(set);
+  }, [seats]);
+
+  // Client-side search and status filter
+  const displayedSeats = useMemo(() => {
+    return seats.filter((s) => {
+      if (statusFilter !== 'all' && s.status !== statusFilter) return false;
+      if (searchDesk.trim()) {
+        const query = searchDesk.trim().toLowerCase();
+        const matchesDesk = s.seatNumber.toLowerCase().includes(query);
+        const matchesStudent = s.occupant?.name?.toLowerCase().includes(query);
+        const matchesMobile = s.occupant?.mobile?.includes(query);
+        return matchesDesk || matchesStudent || matchesMobile;
+      }
+      return true;
+    });
+  }, [seats, statusFilter, searchDesk]);
+
+  // Overall statistics for live KPI bar
+  const stats = useMemo(() => {
+    const total = seats.length;
+    const occupied = seats.filter((s) => s.status === 'occupied').length;
+    const available = seats.filter((s) => s.status === 'available').length;
+    const maintenance = seats.filter((s) => s.status === 'maintenance' || s.status === 'blocked').length;
+    const dueCount = seats.filter((s) => s.occupant?.hasDues).length;
+    const expiringSoon = seats.filter((s) => s.occupant && s.occupant.daysRemaining <= 3).length;
+    return { total, occupied, available, maintenance, dueCount, expiringSoon };
+  }, [seats]);
 
   const handleBulkSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     bulkCreate.mutate(
-      { startNumber: Number(startNum), endNumber: Number(endNum), prefix, section },
+      { startNumber: Number(startNum), endNumber: Number(endNum), prefix, section: newSection },
       {
         onSuccess: () => {
           setShowBulkModal(false);
@@ -36,124 +125,739 @@ export function SeatsPage() {
     );
   };
 
-  const getStatusColor = (status: SeatStatus) => {
-    switch (status) {
-      case 'available':
-        return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30';
-      case 'occupied':
-        return 'bg-blue-500/20 text-blue-400 border-blue-500/40 hover:bg-blue-500/30';
-      case 'maintenance':
-      case 'blocked':
-        return 'bg-amber-500/20 text-amber-400 border-amber-500/40 hover:bg-amber-500/30';
-      default:
-        return 'bg-surface-700 text-slate-300 border-surface-600';
-    }
+  const handleToggleMaintenance = (seat: SeatDTO) => {
+    const nextStatus: SeatStatus = seat.status === 'maintenance' ? 'available' : 'maintenance';
+    updateStatus.mutate(
+      { id: seat._id, status: nextStatus },
+      {
+        onSuccess: (updated) => {
+          if (selectedSeat && selectedSeat._id === seat._id) {
+            setSelectedSeat((prev) => (prev ? { ...prev, status: updated.status } : null));
+          }
+        },
+      },
+    );
   };
 
-  const toggleStatus = (seatId: string, currentStatus: SeatStatus) => {
-    const nextStatus: SeatStatus = currentStatus === 'available' ? 'maintenance' : 'available';
-    updateStatus.mutate({ id: seatId, status: nextStatus });
+  const handleOpenAssign = (seat: SeatDTO) => {
+    setAssignStudentModal(seat);
+    setAssignShiftId(selectedShiftId !== 'all' ? selectedShiftId : shifts[0]?._id || '');
+    setAssignPlanId(plans[0]?._id || '');
+    setAssignStudentId(students[0]?._id || '');
+  };
+
+  const handleConfirmAssign = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!assignStudentModal || !assignStudentId || !assignPlanId) return;
+
+    createMembershipMutation.mutate(
+      {
+        studentId: assignStudentId,
+        planId: assignPlanId,
+        shiftId: assignShiftId || undefined,
+        seatId: assignStudentModal._id,
+        startDate: assignStartDate,
+        endDate: assignEndDate,
+      },
+      {
+        onSuccess: () => {
+          setAssignStudentModal(null);
+          setSelectedSeat(null);
+        },
+      },
+    );
+  };
+
+  const handleConfirmSwap = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!swapModalData || !targetSeatId) return;
+
+    changeSeatMutation.mutate(
+      {
+        membershipId: swapModalData.membershipId,
+        targetSeatId,
+      },
+      {
+        onSuccess: () => {
+          setSwapModalData(null);
+          setSelectedSeat(null);
+        },
+      },
+    );
+  };
+
+  const handleVacateSeat = (membershipId: string, studentId: string) => {
+    if (!window.confirm('Are you sure you want to vacate this seat? The student membership will be marked as left.')) {
+      return;
+    }
+    markLeftMutation.mutate(
+      { membershipId, studentId },
+      {
+        onSuccess: () => {
+          setSelectedSeat(null);
+        },
+      },
+    );
+  };
+
+  const handleWhatsApp = (mobile: string, studentName: string, seatNumber: string) => {
+    const cleanMobile = mobile.replace(/[^0-9]/g, '');
+    const fullMobile = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
+    const text = encodeURIComponent(
+      `📚 Atlas Library Notification\n\nHello ${studentName} (Desk ${seatNumber}),\nThis is a notification regarding your library membership & desk renewal.\nPlease visit reception or reply here if you have any questions.\nHappy learning! 🌟`,
+    );
+    window.open(`https://wa.me/${fullMobile}?text=${text}`, '_blank');
+  };
+
+  // Color generator for seat grid items
+  const getSeatCardClasses = (seat: SeatDTO) => {
+    if (seat.status === 'maintenance' || seat.status === 'blocked') {
+      return 'border-amber-400/50 bg-amber-500/10 text-amber-300 hover:border-amber-400 dark:bg-amber-950/20';
+    }
+    if (seat.status === 'occupied') {
+      if (seat.occupant?.hasDues) {
+        return 'border-rose-500/50 bg-rose-500/10 text-rose-300 hover:border-rose-400 dark:bg-rose-950/20';
+      }
+      if (seat.occupant && seat.occupant.daysRemaining <= 3) {
+        return 'border-orange-500/50 bg-orange-500/10 text-orange-300 hover:border-orange-400 dark:bg-orange-950/20';
+      }
+      return 'border-blue-500/50 bg-blue-500/10 text-blue-300 hover:border-blue-400 dark:bg-blue-950/20';
+    }
+    // Available
+    return 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:border-emerald-400 dark:bg-emerald-950/20';
   };
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-6 max-w-7xl pb-12">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Visual Seating Map</h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Monitor, assign, and manage individual desk seats across library sections.
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Live Visual Seating Map</h1>
+            <span className="rounded-full bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-0.5 border border-emerald-500/30 font-medium">
+              Multi-Shift Aware
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Real-time shift-wise desk allocation, instant student reception drawer, and 1-click desk swap.
           </p>
         </div>
-        <button
-          onClick={() => setShowBulkModal(true)}
-          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-500"
-        >
-          + Bulk Generate Seats
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowBulkModal(true)}
+            className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white shadow hover:bg-indigo-500 transition"
+          >
+            <Layers className="h-4 w-4" />
+            + Bulk Generate Desks
+          </button>
+        </div>
       </div>
 
-      {/* Legend & Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-surface-700 bg-surface-800 p-4">
-        <div className="flex flex-wrap items-center gap-4 text-xs">
-          <span className="font-semibold text-slate-400">Legend:</span>
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-sm bg-emerald-500" />
-            <span className="text-slate-300">Available</span>
+      {/* KPI Stats Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-sm">
+          <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Desks</div>
+          <div className="text-xl font-bold text-slate-900 dark:text-white mt-1">{stats.total}</div>
+        </div>
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3.5 shadow-sm">
+          <div className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Available</div>
+          <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{stats.available}</div>
+        </div>
+        <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-3.5 shadow-sm">
+          <div className="text-[11px] font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider">Occupied</div>
+          <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-1">{stats.occupied}</div>
+        </div>
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 shadow-sm">
+          <div className="text-[11px] font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wider">Maintenance</div>
+          <div className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1">{stats.maintenance}</div>
+        </div>
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-3.5 shadow-sm">
+          <div className="text-[11px] font-medium text-rose-600 dark:text-rose-400 uppercase tracking-wider">Fee Overdue</div>
+          <div className="text-xl font-bold text-rose-600 dark:text-rose-400 mt-1">{stats.dueCount}</div>
+        </div>
+        <div className="rounded-xl border border-orange-500/30 bg-orange-500/5 p-3.5 shadow-sm">
+          <div className="text-[11px] font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wider">Expiring ≤ 3d</div>
+          <div className="text-xl font-bold text-orange-600 dark:text-orange-400 mt-1">{stats.expiringSoon}</div>
+        </div>
+      </div>
+
+      {/* Control Bar: Shifts Chip Selector + Section Tabs + Search + Legend */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-4 shadow-sm">
+        {/* Row 1: Shift Chips */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5 shrink-0 mr-1">
+              <Clock className="h-3.5 w-3.5" /> Shift:
+            </span>
+            <button
+              onClick={() => setSelectedShiftId('all')}
+              className={`rounded-xl px-3 py-1.5 text-xs font-medium transition shrink-0 ${
+                selectedShiftId === 'all'
+                  ? 'bg-indigo-600 !text-white shadow'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              All Shifts (Overview)
+            </button>
+            {shifts.map((s) => (
+              <button
+                key={s._id}
+                onClick={() => setSelectedShiftId(s._id)}
+                className={`rounded-xl px-3 py-1.5 text-xs font-medium transition shrink-0 flex items-center gap-1.5 ${
+                  selectedShiftId === s._id
+                    ? 'bg-indigo-600 !text-white shadow'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                <span>{s.name}</span>
+                <span className="text-[10px] opacity-75">({s.startTime} - {s.endTime})</span>
+              </button>
+            ))}
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-sm bg-blue-500" />
-            <span className="text-slate-300">Occupied</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-sm bg-amber-500" />
-            <span className="text-slate-300">Maintenance / Blocked</span>
+
+          {/* Quick Search */}
+          <div className="relative min-w-[200px]">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+            <input
+              type="text"
+              value={searchDesk}
+              onChange={(e) => setSearchDesk(e.target.value)}
+              placeholder="Search Desk # or Student…"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 pl-8 pr-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
           </div>
         </div>
 
-        <div className="flex items-center gap-2 min-w-[180px]">
-          <CustomSelect
-            value={filter}
-            onChange={(val) => setFilter(val as 'all' | SeatStatus)}
-            options={[
-              { value: 'all', label: `All Seats (${seats.length})` },
-              { value: 'available', label: 'Available Only' },
-              { value: 'occupied', label: 'Occupied Only' },
-              { value: 'maintenance', label: 'Maintenance Only' },
-            ]}
-          />
+        {/* Row 2: Section / Hall Filters & Legend */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0 mr-1 flex items-center gap-1">
+              <Filter className="h-3.5 w-3.5" /> Hall/Section:
+            </span>
+            <button
+              onClick={() => setSelectedSection('all')}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                selectedSection === 'all'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              All Sections
+            </button>
+            {sections.map((sec) => (
+              <button
+                key={sec}
+                onClick={() => setSelectedSection(sec)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                  selectedSection === sec
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                {sec}
+              </button>
+            ))}
+          </div>
+
+          {/* Legend and Status Filter */}
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" />
+                <span className="text-slate-600 dark:text-slate-400">Vacant</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="h-2.5 w-2.5 rounded-sm bg-blue-500" />
+                <span className="text-slate-600 dark:text-slate-400">Occupied</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="h-2.5 w-2.5 rounded-sm bg-rose-500" />
+                <span className="text-slate-600 dark:text-slate-400">Fee Due</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="h-2.5 w-2.5 rounded-sm bg-amber-500" />
+                <span className="text-slate-600 dark:text-slate-400">Maintenance</span>
+              </div>
+            </div>
+
+            <div className="w-36">
+              <CustomSelect
+                value={statusFilter}
+                onChange={(val) => setStatusFilter(val as 'all' | SeatStatus)}
+                options={[
+                  { value: 'all', label: `All (${displayedSeats.length})` },
+                  { value: 'available', label: 'Vacant Only' },
+                  { value: 'occupied', label: 'Occupied Only' },
+                  { value: 'maintenance', label: 'Maintenance' },
+                ]}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Seating Grid */}
-      <div className="rounded-xl border border-surface-700 bg-surface-800 p-6 min-h-[400px]">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 min-h-[420px] shadow-sm">
         {isLoading ? (
-          <div className="flex h-48 items-center justify-center text-slate-500 text-sm">
-            Loading seat layout…
+          <div className="flex h-56 flex-col items-center justify-center text-slate-400 text-sm gap-2">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+            <span>Loading seating matrix…</span>
           </div>
-        ) : filteredSeats.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 space-y-3 text-center">
-            <p className="text-slate-400 text-sm">No seats found matching the criteria.</p>
+        ) : displayedSeats.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-56 space-y-3 text-center">
+            <p className="text-slate-400 text-sm">No desks match the current shift or filter criteria.</p>
             {seats.length === 0 && (
               <button
                 onClick={() => setShowBulkModal(true)}
-                className="text-xs text-brand-400 underline hover:text-brand-300"
+                className="text-xs text-indigo-500 hover:underline"
               >
-                Click here to bulk create seats 1 to 50
+                Click here to bulk generate desks 1 to 50
               </button>
             )}
           </div>
         ) : (
           <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3">
-            {filteredSeats.map((seat) => (
-              <button
-                key={seat._id}
-                onClick={() => toggleStatus(seat._id, seat.status)}
-                title={`Seat ${seat.seatNumber} (${seat.status}) - Click to toggle maintenance`}
-                className={`flex flex-col items-center justify-center p-3 rounded-lg border text-center transition cursor-pointer select-none ${getStatusColor(
-                  seat.status,
-                )}`}
-              >
-                <span className="text-xs font-bold leading-tight">{seat.seatNumber}</span>
-                <span className="text-[9px] capitalize opacity-80 mt-1">{seat.status}</span>
-              </button>
-            ))}
+            {displayedSeats.map((seat) => {
+              const isOccupied = seat.status === 'occupied';
+              const isMaintenance = seat.status === 'maintenance' || seat.status === 'blocked';
+              return (
+                <button
+                  key={seat._id}
+                  onClick={() => setSelectedSeat(seat)}
+                  className={`group relative flex flex-col items-center justify-between p-3 rounded-xl border text-center transition-all duration-150 cursor-pointer select-none hover:shadow-md hover:scale-[1.03] ${getSeatCardClasses(
+                    seat,
+                  )}`}
+                >
+                  {/* Top Badge: Desk # */}
+                  <div className="text-xs font-bold leading-tight tracking-wide">{seat.seatNumber}</div>
+
+                  {/* Center Content: Occupant name or status icon */}
+                  <div className="my-1.5 min-h-[22px] flex items-center justify-center">
+                    {isOccupied && seat.occupant ? (
+                      <div className="text-[10px] font-medium truncate max-w-[70px] text-slate-700 dark:text-slate-200">
+                        {seat.occupant.name.split(' ')[0]}
+                      </div>
+                    ) : isMaintenance ? (
+                      <Wrench className="h-3.5 w-3.5 text-amber-400" />
+                    ) : (
+                      <span className="text-[9px] uppercase font-semibold tracking-wider text-emerald-500 opacity-80">
+                        Vacant
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Bottom: Days remaining badge or section */}
+                  <div className="text-[9px] opacity-75 font-mono">
+                    {isOccupied && seat.occupant ? (
+                      seat.occupant.hasDues ? (
+                        <span className="text-rose-500 font-bold">Due</span>
+                      ) : (
+                        <span>{seat.occupant.daysRemaining}d left</span>
+                      )
+                    ) : (
+                      <span className="truncate max-w-[65px]">{seat.section || 'Hall'}</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Bulk Generator Modal */}
+      {/* ── 1-CLICK RECEPTION DESK DRAWER / MODAL ───────────────────────── */}
+      <Modal
+        isOpen={!!selectedSeat}
+        onClose={() => setSelectedSeat(null)}
+        title={selectedSeat ? `Desk ${selectedSeat.seatNumber}` : 'Desk Details'}
+        subtitle={selectedSeat ? `${selectedSeat.section || 'Main Hall'} • Status: ${selectedSeat.status.toUpperCase()}` : ''}
+        icon={<Layers className="h-5 w-5 text-indigo-500" />}
+        maxWidth="lg"
+      >
+        {selectedSeat && (
+          <div className="space-y-6">
+            {/* Status Header Strip */}
+            <div
+              className={`p-4 rounded-xl border flex items-center justify-between ${
+                selectedSeat.status === 'occupied'
+                  ? 'bg-blue-500/10 border-blue-500/30 text-blue-300'
+                  : selectedSeat.status === 'maintenance'
+                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                  : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center font-bold text-base">
+                  {selectedSeat.seatNumber}
+                </div>
+                <div>
+                  <div className="text-xs uppercase font-semibold opacity-75">Current Allocation</div>
+                  <div className="text-sm font-bold capitalize">
+                    {selectedSeat.status === 'occupied' ? 'Occupied' : selectedSeat.status}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleToggleMaintenance(selectedSeat)}
+                className="flex items-center gap-1.5 rounded-lg border border-current px-3 py-1.5 text-xs font-semibold hover:bg-white/10 transition"
+              >
+                <Wrench className="h-3.5 w-3.5" />
+                {selectedSeat.status === 'maintenance' ? 'Mark Available' : 'Mark Maintenance'}
+              </button>
+            </div>
+
+            {/* Occupant Details Card (If Occupied) */}
+            {selectedSeat.occupant ? (
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-4 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-full bg-indigo-500/10 text-indigo-500 border border-indigo-500/30 flex items-center justify-center font-bold text-lg">
+                      {selectedSeat.occupant.photoUrl ? (
+                        <img
+                          src={selectedSeat.occupant.photoUrl}
+                          alt={selectedSeat.occupant.name}
+                          className="h-full w-full rounded-full object-cover"
+                        />
+                      ) : (
+                        selectedSeat.occupant.name.slice(0, 2).toUpperCase()
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        {selectedSeat.occupant.name}
+                        <span className="text-xs font-normal text-slate-400 font-mono">
+                          ({selectedSeat.occupant.membershipNumber})
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{selectedSeat.occupant.mobile}</p>
+                    </div>
+                  </div>
+
+                  <Link
+                    to={`/students/${selectedSeat.occupant.studentId}`}
+                    className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-400 font-medium"
+                  >
+                    Full Profile <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </div>
+
+                {/* Membership validity & Dues info */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase">Plan</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">
+                      {selectedSeat.occupant.planName || 'General Plan'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase">Shift</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">
+                      {selectedSeat.occupant.shiftName}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase">Days Remaining</span>
+                    <span
+                      className={`font-bold ${
+                        selectedSeat.occupant.daysRemaining <= 3 ? 'text-orange-400' : 'text-emerald-400'
+                      }`}
+                    >
+                      {selectedSeat.occupant.daysRemaining} days left
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase">Expiry Date</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">
+                      {new Date(selectedSeat.occupant.endDate).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase">Fee Status</span>
+                    {selectedSeat.occupant.hasDues ? (
+                      <span className="font-bold text-rose-400">
+                        ₹{(selectedSeat.occupant.duePaise / 100).toFixed(0)} Pending
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-emerald-400 flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> All Paid
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Reception Fast Actions */}
+                <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleWhatsApp(
+                        selectedSeat.occupant!.mobile,
+                        selectedSeat.occupant!.name,
+                        selectedSeat.seatNumber,
+                      )
+                    }
+                    className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-xs font-semibold !text-white shadow-sm transition"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" /> WhatsApp Alert
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSwapModalData({
+                        membershipId: selectedSeat.occupant!.membershipId,
+                        studentName: selectedSeat.occupant!.name,
+                        currentSeatNumber: selectedSeat.seatNumber,
+                      });
+                    }}
+                    className="flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 text-xs font-semibold !text-white shadow-sm transition"
+                  >
+                    <ArrowRightLeft className="h-3.5 w-3.5" /> Change / Swap Desk
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleVacateSeat(selectedSeat.occupant!.membershipId, selectedSeat.occupant!.studentId)
+                    }
+                    className="flex items-center gap-1.5 rounded-xl bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 text-xs font-semibold transition"
+                  >
+                    <UserMinus className="h-3.5 w-3.5" /> Vacate Desk
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Vacant Desk Actions */
+              <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-6 text-center space-y-3">
+                <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto" />
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-white">Desk is Vacant</h4>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Ready to be assigned to a new or existing student.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleOpenAssign(selectedSeat)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-xs font-semibold !text-white shadow transition"
+                >
+                  <PlusCircle className="h-4 w-4" /> + Assign Student to Desk {selectedSeat.seatNumber}
+                </button>
+              </div>
+            )}
+
+            {/* Multi-shift breakdown table if multiple shifts registered on this desk */}
+            {selectedSeat.shiftOccupants && selectedSeat.shiftOccupants.length > 1 && (
+              <div className="space-y-2">
+                <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  All Shifts Occupancy for Desk {selectedSeat.seatNumber}
+                </h5>
+                <div className="divide-y divide-slate-200 dark:divide-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden text-xs">
+                  {selectedSeat.shiftOccupants.map((so, idx) => (
+                    <div key={idx} className="p-3 flex items-center justify-between bg-white dark:bg-slate-900">
+                      <div>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">{so.student.name}</span>
+                        <div className="text-[11px] text-slate-400">Shift: {so.shiftName}</div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[11px] text-emerald-400 font-medium">
+                          {so.student.daysRemaining}d left
+                        </span>
+                        <div className="text-[10px] text-slate-400">
+                          {new Date(so.student.endDate).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* ── FAST ASSIGN STUDENT MODAL ────────────────────────────────────── */}
+      <Modal
+        isOpen={!!assignStudentModal}
+        onClose={() => setAssignStudentModal(null)}
+        title={`Assign Desk ${assignStudentModal?.seatNumber || ''}`}
+        subtitle="Quickly assign this vacant desk to a student"
+        icon={<PlusCircle className="h-5 w-5 text-indigo-500" />}
+        maxWidth="md"
+      >
+        {assignStudentModal && (
+          <form onSubmit={handleConfirmAssign} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Select Student
+              </label>
+              <CustomSelect
+                value={assignStudentId}
+                onChange={setAssignStudentId}
+                options={students.map((st) => ({
+                  value: st._id,
+                  label: `${st.name} (${st.membershipNumber}) - ${st.mobile}`,
+                }))}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Plan</label>
+                <CustomSelect
+                  value={assignPlanId}
+                  onChange={setAssignPlanId}
+                  options={plans.map((p) => ({
+                    value: p._id,
+                    label: `${p.name} (₹${p.feePaise / 100})`,
+                  }))}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Shift</label>
+                <CustomSelect
+                  value={assignShiftId}
+                  onChange={setAssignShiftId}
+                  options={[
+                    { value: '', label: 'General / Full Day' },
+                    ...shifts.map((sh) => ({
+                      value: sh._id,
+                      label: `${sh.name} (${sh.startTime}-${sh.endTime})`,
+                    })),
+                  ]}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  value={assignStartDate}
+                  onChange={(e) => setAssignStartDate(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  value={assignEndDate}
+                  onChange={(e) => setAssignEndDate(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  required
+                />
+              </div>
+            </div>
+
+            {createMembershipMutation.isError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+                {(createMembershipMutation.error as { response?: { data?: { error?: string } } })?.response?.data
+                  ?.error || 'Failed to assign desk'}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setAssignStudentModal(null)}
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={createMembershipMutation.isPending}
+                className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 shadow"
+              >
+                {createMembershipMutation.isPending ? 'Assigning…' : 'Confirm Assignment'}
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* ── 1-CLICK DESK SWAP / CHANGE MODAL ────────────────────────────── */}
+      <Modal
+        isOpen={!!swapModalData}
+        onClose={() => setSwapModalData(null)}
+        title="Shift / Swap Desk"
+        subtitle={swapModalData ? `Moving ${swapModalData.studentName} from Desk ${swapModalData.currentSeatNumber}` : ''}
+        icon={<ArrowRightLeft className="h-5 w-5 text-indigo-500" />}
+        maxWidth="md"
+      >
+        {swapModalData && (
+          <form onSubmit={handleConfirmSwap} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Select Destination Desk
+              </label>
+              <CustomSelect
+                value={targetSeatId}
+                onChange={setTargetSeatId}
+                options={seats
+                  .filter((s) => s.status === 'available')
+                  .map((s) => ({
+                    value: s._id,
+                    label: `Desk ${s.seatNumber} (${s.section || 'Hall'})`,
+                  }))}
+              />
+              <p className="text-[11px] text-slate-400 mt-1">
+                Only currently vacant desks are displayed for safe relocation.
+              </p>
+            </div>
+
+            {changeSeatMutation.isError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+                {(changeSeatMutation.error as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+                  'Failed to change desk'}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setSwapModalData(null)}
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={changeSeatMutation.isPending || !targetSeatId}
+                className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 shadow disabled:opacity-50"
+              >
+                {changeSeatMutation.isPending ? 'Relocating…' : 'Move to Destination Desk'}
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* ── BULK GENERATOR MODAL ────────────────────────────────────────── */}
       <Modal
         isOpen={showBulkModal}
         onClose={() => setShowBulkModal(false)}
-        title="Bulk Generate Seats"
+        title="Bulk Generate Desks"
         subtitle="Instantly populate a sequence of study desks for your library"
-        icon={<Layers className="h-5 w-5" />}
+        icon={<Layers className="h-5 w-5 text-indigo-500" />}
         maxWidth="md"
       >
         <form onSubmit={handleBulkSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Start Number</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Start Number
+              </label>
               <input
                 type="number"
                 min="1"
@@ -178,7 +882,9 @@ export function SeatsPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Prefix (Optional)</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Prefix (Optional)
+              </label>
               <input
                 type="text"
                 value={prefix}
@@ -191,8 +897,8 @@ export function SeatsPage() {
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Section</label>
               <input
                 type="text"
-                value={section}
-                onChange={(e) => setSection(e.target.value)}
+                value={newSection}
+                onChange={(e) => setNewSection(e.target.value)}
                 placeholder="Main Hall"
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
               />
@@ -212,7 +918,7 @@ export function SeatsPage() {
               disabled={bulkCreate.isPending}
               className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 disabled:opacity-50 shadow-sm"
             >
-              {bulkCreate.isPending ? 'Generating…' : 'Generate Seats'}
+              {bulkCreate.isPending ? 'Generating…' : 'Generate Desks'}
             </button>
           </div>
         </form>

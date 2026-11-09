@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/authenticate';
 import { listShifts, createShift, updateShift, deleteShift } from '../controllers/shift.controller';
 import { listPlans, createPlan, updatePlan, deletePlan } from '../controllers/plan.controller';
-import { listSeats, bulkCreateSeats, updateSeatStatus } from '../controllers/seat.controller';
+import { listSeats, bulkCreateSeats, updateSeatStatus, changeSeat } from '../controllers/seat.controller';
 import { getDashboardStats } from '../controllers/dashboard.controller';
 
 export const shiftsRouter = Router();
@@ -24,6 +24,7 @@ seatsRouter.use(authenticate);
 seatsRouter.get('/', listSeats);
 seatsRouter.post('/bulk', bulkCreateSeats);
 seatsRouter.patch('/:id/status', updateSeatStatus);
+seatsRouter.post('/change', changeSeat);
 
 export const dashboardRouter = Router();
 dashboardRouter.use(authenticate);

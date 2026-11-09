@@ -134,12 +134,33 @@ export function useDeletePlan() {
 }
 
 // ── Seats ────────────────────────────────────────────────────────────────────
-export function useSeats() {
+export function useSeats(params?: { shiftId?: string; section?: string }) {
   return useQuery({
-    queryKey: ['seats'],
+    queryKey: ['seats', params?.shiftId, params?.section],
     queryFn: async () => {
-      const { data } = await apiClient.get<{ seats: SeatDTO[] }>('/seats');
+      const { data } = await apiClient.get<{ seats: SeatDTO[] }>('/seats', {
+        params: {
+          shiftId: params?.shiftId && params.shiftId !== 'all' ? params.shiftId : undefined,
+          section: params?.section && params.section !== 'all' ? params.section : undefined,
+        },
+      });
       return data.seats;
+    },
+  });
+}
+
+export function useChangeSeat() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { membershipId: string; targetSeatId: string }) => {
+      const { data } = await apiClient.post<{ message: string }>('/seats/change', payload);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['seats'] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
     },
   });
 }

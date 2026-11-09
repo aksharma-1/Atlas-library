@@ -48,19 +48,28 @@ export async function createMembership(req: Request, res: Response, next: NextFu
         return;
       }
 
-      // Check for overlapping active memberships on this seat
+      // Check for overlapping active memberships on this seat for the SAME shift (or all shifts if full day)
+      const shiftCondition: Record<string, unknown> = {};
+      if (shiftId) {
+        shiftCondition['$or'] = [
+          { shiftId: shiftId },
+          { shiftId: null },
+          { shiftId: { $exists: false } },
+        ];
+      }
+
       const conflictingMembership = await Membership.findOne({
         tenantId,
         seatId,
         status: 'active',
-        $or: [
-          { startDate: { $lte: new Date(endDate) }, endDate: { $gte: new Date(startDate) } },
-        ],
+        startDate: { $lte: new Date(endDate) },
+        endDate: { $gte: new Date(startDate) },
+        ...shiftCondition,
       });
 
       if (conflictingMembership) {
         res.status(409).json({
-          error: `Seat ${seat.seatNumber} is already reserved by another active membership for this period`,
+          error: `Seat ${seat.seatNumber} is already reserved for this shift during this period`,
         });
         return;
       }

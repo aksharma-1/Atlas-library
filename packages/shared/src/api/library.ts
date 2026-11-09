@@ -30,6 +30,22 @@ export interface PlanDTO {
 
 export type SeatStatus = 'available' | 'occupied' | 'maintenance' | 'blocked';
 
+export interface SeatStudentInfo {
+  membershipId: string;
+  studentId: string;
+  name: string;
+  mobile: string;
+  photoUrl?: string;
+  membershipNumber: string;
+  planName?: string;
+  shiftName?: string;
+  startDate: string;
+  endDate: string;
+  daysRemaining: number;
+  hasDues: boolean;
+  duePaise: number;
+}
+
 export interface SeatDTO {
   _id: string;
   tenantId: string;
@@ -38,6 +54,14 @@ export interface SeatDTO {
   status: SeatStatus;
   createdAt: string;
   updatedAt: string;
+  /** Active occupant for the selected shift or active overall */
+  occupant?: SeatStudentInfo;
+  /** Multi-shift occupants breakdown for reception drawer */
+  shiftOccupants?: {
+    shiftId: string;
+    shiftName: string;
+    student: SeatStudentInfo;
+  }[];
 }
 
 export interface DashboardStatsDTO {
