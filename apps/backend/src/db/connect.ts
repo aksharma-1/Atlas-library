@@ -1,5 +1,15 @@
+import dns from 'dns';
 import mongoose from 'mongoose';
 import { env } from '../config/env';
+
+// If running in development and connecting to MongoDB Atlas SRV, fallback to public DNS if ISP DNS fails SRV lookup
+if (env.MONGODB_URI.startsWith('mongodb+srv://')) {
+  try {
+    dns.setServers(['8.8.8.8', '1.1.1.1']);
+  } catch {
+    // Ignore if not allowed or in restricted sandbox
+  }
+}
 
 /**
  * Masks credentials in a MongoDB URI for safe logging.
