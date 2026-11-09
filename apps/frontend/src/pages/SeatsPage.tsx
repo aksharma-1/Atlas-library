@@ -2,6 +2,10 @@ import { useState, useMemo } from 'react';
 import {
   useSeats,
   useBulkCreateSeats,
+  useCreateSingleSeat,
+  useUpdateSeat,
+  useDeleteSeat,
+  useDeleteSeatsBySection,
   useUpdateSeatStatus,
   useShifts,
   usePlans,
@@ -9,7 +13,7 @@ import {
 } from '../hooks/useLibrary';
 import { useStudents, useCreateMembership, useMarkMembershipLeft } from '../hooks/useStudents';
 import type { SeatDTO, SeatStatus } from '@atlas/shared';
-import { CustomSelect, Modal } from '../components/ui';
+import { CustomSelect, Modal, ConfirmModal } from '../components/ui';
 import {
   Layers,
   Clock,
@@ -22,6 +26,9 @@ import {
   PlusCircle,
   Search,
   Filter,
+  Edit2,
+  Trash2,
+  Plus,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -36,13 +43,18 @@ export function SeatsPage() {
   const { data: shifts = [] } = useShifts();
   const { data: plans = [] } = usePlans();
   const { data: students = [] } = useStudents();
-  const { data: seats = [], isLoading } = useSeats({
+  
+  // Notice: We fetch all seats without passing section to backend so that all section tabs, counts, and switching remain 100% instant and accurate
+  const { data: allSeats = [], isLoading } = useSeats({
     shiftId: selectedShiftId,
-    section: selectedSection,
   });
 
   // Mutations
   const bulkCreate = useBulkCreateSeats();
+  const createSingleSeatMutation = useCreateSingleSeat();
+  const updateSeatMutation = useUpdateSeat();
+  const deleteSeatMutation = useDeleteSeat();
+  const deleteSeatsBySectionMutation = useDeleteSeatsBySection();
   const updateStatus = useUpdateSeatStatus();
   const changeSeatMutation = useChangeSeat();
   const createMembershipMutation = useCreateMembership();
@@ -55,8 +67,35 @@ export function SeatsPage() {
   const [newSection, setNewSection] = useState('Main Hall');
   const [showBulkModal, setShowBulkModal] = useState(false);
 
+  // Single Seat Add Modal
+  const [showAddSingleModal, setShowAddSingleModal] = useState(false);
+  const [singleSeatNumber, setSingleSeatNumber] = useState('');
+  const [singleSection, setSingleSection] = useState('Main Hall');
+
+  // Edit Seat Modal
+  const [editSeatModal, setEditSeatModal] = useState<SeatDTO | null>(null);
+  const [editSeatNumber, setEditSeatNumber] = useState('');
+  const [editSection, setEditSection] = useState('');
+
   // Drawer / Details Modal State
   const [selectedSeat, setSelectedSeat] = useState<SeatDTO | null>(null);
+
+  // Generic Confirm Modal State
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmLabel?: string;
+    variant?: 'danger' | 'warning' | 'info';
+    action: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    confirmLabel: 'Confirm',
+    variant: 'danger',
+    action: () => {},
+  });
 
   // Assign Student Modal
   const [assignStudentModal, setAssignStudentModal] = useState<SeatDTO | null>(null);
@@ -78,19 +117,34 @@ export function SeatsPage() {
   } | null>(null);
   const [targetSeatId, setTargetSeatId] = useState<string>('');
 
-  // Extract distinct sections from all loaded seats for tabs
-  const sections = useMemo(() => {
+  // Extract distinct sections and their desk counts from all loaded seats
+  const { sections, sectionCounts } = useMemo(() => {
+    const counts: Record<string, number> = {};
     const set = new Set<string>();
-    seats.forEach((s) => {
-      if (s.section) set.add(s.section);
+    allSeats.forEach((s) => {
+      const sec = s.section?.trim() || 'Main Hall';
+      set.add(sec);
+      counts[sec] = (counts[sec] || 0) + 1;
     });
-    return Array.from(set);
-  }, [seats]);
+    return {
+      sections: Array.from(set).sort((a, b) => a.localeCompare(b)),
+      sectionCounts: counts,
+    };
+  }, [allSeats]);
 
-  // Client-side search and status filter
+  // Client-side section filter, status filter, and search
   const displayedSeats = useMemo(() => {
-    return seats.filter((s) => {
+    return allSeats.filter((s) => {
+      // 1. Hall / Section Filter
+      if (selectedSection !== 'all') {
+        const sec = s.section?.trim() || 'Main Hall';
+        if (sec.toLowerCase() !== selectedSection.toLowerCase()) return false;
+      }
+
+      // 2. Status Filter
       if (statusFilter !== 'all' && s.status !== statusFilter) return false;
+
+      // 3. Desk or Student Search
       if (searchDesk.trim()) {
         const query = searchDesk.trim().toLowerCase();
         const matchesDesk = s.seatNumber.toLowerCase().includes(query);
@@ -100,29 +154,110 @@ export function SeatsPage() {
       }
       return true;
     });
-  }, [seats, statusFilter, searchDesk]);
+  }, [allSeats, selectedSection, statusFilter, searchDesk]);
 
-  // Overall statistics for live KPI bar
+  // Overall statistics for live KPI bar (reflects current section if selected)
   const stats = useMemo(() => {
-    const total = seats.length;
-    const occupied = seats.filter((s) => s.status === 'occupied').length;
-    const available = seats.filter((s) => s.status === 'available').length;
-    const maintenance = seats.filter((s) => s.status === 'maintenance' || s.status === 'blocked').length;
-    const dueCount = seats.filter((s) => s.occupant?.hasDues).length;
-    const expiringSoon = seats.filter((s) => s.occupant && s.occupant.daysRemaining <= 3).length;
+    const list = selectedSection === 'all'
+      ? allSeats
+      : allSeats.filter((s) => (s.section?.trim() || 'Main Hall').toLowerCase() === selectedSection.toLowerCase());
+
+    const total = list.length;
+    const occupied = list.filter((s) => s.status === 'occupied').length;
+    const available = list.filter((s) => s.status === 'available').length;
+    const maintenance = list.filter((s) => s.status === 'maintenance' || s.status === 'blocked').length;
+    const dueCount = list.filter((s) => s.occupant?.hasDues).length;
+    const expiringSoon = list.filter((s) => s.occupant && s.occupant.daysRemaining <= 3).length;
     return { total, occupied, available, maintenance, dueCount, expiringSoon };
-  }, [seats]);
+  }, [allSeats, selectedSection]);
 
   const handleBulkSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     bulkCreate.mutate(
-      { startNumber: Number(startNum), endNumber: Number(endNum), prefix, section: newSection },
+      { startNumber: Number(startNum), endNumber: Number(endNum), prefix, section: newSection.trim() || 'Main Hall' },
       {
         onSuccess: () => {
           setShowBulkModal(false);
         },
       },
     );
+  };
+
+  const handleCreateSingleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!singleSeatNumber.trim()) return;
+    createSingleSeatMutation.mutate(
+      { seatNumber: singleSeatNumber.trim(), section: singleSection.trim() || 'Main Hall' },
+      {
+        onSuccess: () => {
+          setShowAddSingleModal(false);
+          setSingleSeatNumber('');
+        },
+      },
+    );
+  };
+
+  const handleOpenEdit = (seat: SeatDTO) => {
+    setEditSeatModal(seat);
+    setEditSeatNumber(seat.seatNumber);
+    setEditSection(seat.section?.trim() || 'Main Hall');
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editSeatModal || !editSeatNumber.trim()) return;
+    updateSeatMutation.mutate(
+      {
+        id: editSeatModal._id,
+        seatNumber: editSeatNumber.trim(),
+        section: editSection.trim() || 'Main Hall',
+      },
+      {
+        onSuccess: (updated) => {
+          setEditSeatModal(null);
+          if (selectedSeat && selectedSeat._id === updated._id) {
+            setSelectedSeat((prev) => (prev ? { ...prev, seatNumber: updated.seatNumber, section: updated.section } : null));
+          }
+        },
+      },
+    );
+  };
+
+  const handleDeleteSeat = (seat: SeatDTO) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: `Delete Desk ${seat.seatNumber}`,
+      description: `Are you sure you want to delete desk '${seat.seatNumber}'? If a student is assigned to this desk, deletion will be safely rejected.`,
+      confirmLabel: 'Delete Desk',
+      variant: 'danger',
+      action: () => {
+        deleteSeatMutation.mutate(seat._id, {
+          onSuccess: () => {
+            setSelectedSeat(null);
+            setConfirmConfig((prev) => ({ ...prev, isOpen: false }));
+          },
+        });
+      },
+    });
+  };
+
+  const handleDeleteCurrentSection = (sectionName: string) => {
+    const count = sectionCounts[sectionName] || 0;
+    setConfirmConfig({
+      isOpen: true,
+      title: `Delete Section "${sectionName}"`,
+      description: `CAUTION: Are you sure you want to delete all ${count} desks in section '${sectionName}'? Desks with active students will prevent deletion.`,
+      confirmLabel: `Delete All ${count} Desks`,
+      variant: 'danger',
+      action: () => {
+        deleteSeatsBySectionMutation.mutate(sectionName, {
+          onSuccess: () => {
+            setSelectedSection('all');
+            setConfirmConfig((prev) => ({ ...prev, isOpen: false }));
+          },
+        });
+      },
+    });
   };
 
   const handleToggleMaintenance = (seat: SeatDTO) => {
@@ -186,18 +321,25 @@ export function SeatsPage() {
     );
   };
 
-  const handleVacateSeat = (membershipId: string, studentId: string) => {
-    if (!window.confirm('Are you sure you want to vacate this seat? The student membership will be marked as left.')) {
-      return;
-    }
-    markLeftMutation.mutate(
-      { membershipId, studentId },
-      {
-        onSuccess: () => {
-          setSelectedSeat(null);
-        },
+  const handleVacateSeat = (membershipId: string, studentId: string, seatNumber: string) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: `Vacate Desk ${seatNumber}`,
+      description: `Are you sure you want to vacate desk ${seatNumber}? The active student membership will be marked as left and the desk will become available immediately.`,
+      confirmLabel: 'Vacate Desk',
+      variant: 'warning',
+      action: () => {
+        markLeftMutation.mutate(
+          { membershipId, studentId },
+          {
+            onSuccess: () => {
+              setSelectedSeat(null);
+              setConfirmConfig((prev) => ({ ...prev, isOpen: false }));
+            },
+          },
+        );
       },
-    );
+    });
   };
 
   const handleWhatsApp = (mobile: string, studentName: string, seatNumber: string) => {
@@ -242,10 +384,23 @@ export function SeatsPage() {
             Real-time shift-wise desk allocation, instant student reception drawer, and 1-click desk swap.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
-            onClick={() => setShowBulkModal(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white shadow hover:bg-indigo-500 transition"
+            onClick={() => {
+              setSingleSection(selectedSection !== 'all' ? selectedSection : 'Main Hall');
+              setShowAddSingleModal(true);
+            }}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+          >
+            <Plus className="h-4 w-4 text-indigo-500" />
+            Add Single Desk
+          </button>
+          <button
+            onClick={() => {
+              setNewSection(selectedSection !== 'all' ? selectedSection : 'Main Hall');
+              setShowBulkModal(true);
+            }}
+            className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold !text-white shadow hover:bg-indigo-500 transition"
           >
             <Layers className="h-4 w-4" />
             + Bulk Generate Desks
@@ -256,7 +411,9 @@ export function SeatsPage() {
       {/* KPI Stats Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-sm">
-          <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Desks</div>
+          <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            {selectedSection !== 'all' ? `${selectedSection} Total` : 'Total Desks'}
+          </div>
           <div className="text-xl font-bold text-slate-900 dark:text-white mt-1">{stats.total}</div>
         </div>
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3.5 shadow-sm">
@@ -330,33 +487,50 @@ export function SeatsPage() {
 
         {/* Row 2: Section / Hall Filters & Legend */}
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-1.5 overflow-x-auto">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0 mr-1 flex items-center gap-1">
               <Filter className="h-3.5 w-3.5" /> Hall/Section:
             </span>
             <button
               onClick={() => setSelectedSection('all')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+              className={`rounded-lg px-3 py-1 text-xs font-medium transition flex items-center gap-1.5 ${
                 selectedSection === 'all'
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
-              All Sections
+              <span>All Sections</span>
+              <span className={`text-[10px] rounded-full px-1.5 py-0.2 ${selectedSection === 'all' ? 'bg-white/20' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                {allSeats.length}
+              </span>
             </button>
             {sections.map((sec) => (
               <button
                 key={sec}
                 onClick={() => setSelectedSection(sec)}
-                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                className={`rounded-lg px-3 py-1 text-xs font-medium transition flex items-center gap-1.5 ${
                   selectedSection === sec
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                 }`}
               >
-                {sec}
+                <span>{sec}</span>
+                <span className={`text-[10px] rounded-full px-1.5 py-0.2 ${selectedSection === sec ? 'bg-white/20' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                  {sectionCounts[sec] || 0}
+                </span>
               </button>
             ))}
+
+            {selectedSection !== 'all' && (
+              <button
+                type="button"
+                onClick={() => handleDeleteCurrentSection(selectedSection)}
+                title={`Delete entire section "${selectedSection}"`}
+                className="ml-2 flex items-center gap-1 text-[11px] text-rose-500 hover:text-rose-400 hover:underline px-2 py-0.5"
+              >
+                <Trash2 className="h-3 w-3" /> Clear Section
+              </button>
+            )}
           </div>
 
           {/* Legend and Status Filter */}
@@ -405,15 +579,32 @@ export function SeatsPage() {
           </div>
         ) : displayedSeats.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-56 space-y-3 text-center">
-            <p className="text-slate-400 text-sm">No desks match the current shift or filter criteria.</p>
-            {seats.length === 0 && (
+            <p className="text-slate-400 text-sm">
+              {allSeats.length === 0
+                ? 'No desks configured yet in your library.'
+                : `No desks found in section "${selectedSection}".`}
+            </p>
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => setShowBulkModal(true)}
-                className="text-xs text-indigo-500 hover:underline"
+                onClick={() => {
+                  setSingleSection(selectedSection !== 'all' ? selectedSection : 'Main Hall');
+                  setShowAddSingleModal(true);
+                }}
+                className="text-xs text-indigo-500 hover:underline font-medium"
               >
-                Click here to bulk generate desks 1 to 50
+                + Add a desk to this section
               </button>
-            )}
+              <span className="text-slate-400">•</span>
+              <button
+                onClick={() => {
+                  setNewSection(selectedSection !== 'all' ? selectedSection : 'Main Hall');
+                  setShowBulkModal(true);
+                }}
+                className="text-xs text-indigo-500 hover:underline font-medium"
+              >
+                Bulk generate desks
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3">
@@ -476,9 +667,9 @@ export function SeatsPage() {
       >
         {selectedSeat && (
           <div className="space-y-6">
-            {/* Status Header Strip */}
+            {/* Status Header Strip with Quick Edit / Delete */}
             <div
-              className={`p-4 rounded-xl border flex items-center justify-between ${
+              className={`p-4 rounded-xl border flex flex-wrap items-center justify-between gap-3 ${
                 selectedSeat.status === 'occupied'
                   ? 'bg-blue-500/10 border-blue-500/30 text-blue-300'
                   : selectedSeat.status === 'maintenance'
@@ -491,21 +682,43 @@ export function SeatsPage() {
                   {selectedSeat.seatNumber}
                 </div>
                 <div>
-                  <div className="text-xs uppercase font-semibold opacity-75">Current Allocation</div>
+                  <div className="text-xs uppercase font-semibold opacity-75">
+                    Section: {selectedSeat.section || 'Main Hall'}
+                  </div>
                   <div className="text-sm font-bold capitalize">
                     {selectedSeat.status === 'occupied' ? 'Occupied' : selectedSeat.status}
                   </div>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => handleToggleMaintenance(selectedSeat)}
-                className="flex items-center gap-1.5 rounded-lg border border-current px-3 py-1.5 text-xs font-semibold hover:bg-white/10 transition"
-              >
-                <Wrench className="h-3.5 w-3.5" />
-                {selectedSeat.status === 'maintenance' ? 'Mark Available' : 'Mark Maintenance'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenEdit(selectedSeat)}
+                  title="Edit Desk Number or Hall/Section"
+                  className="flex items-center gap-1 rounded-lg border border-current px-2.5 py-1.5 text-xs font-semibold hover:bg-white/10 transition"
+                >
+                  <Edit2 className="h-3.5 w-3.5" /> Edit Desk
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleMaintenance(selectedSeat)}
+                  className="flex items-center gap-1 rounded-lg border border-current px-2.5 py-1.5 text-xs font-semibold hover:bg-white/10 transition"
+                >
+                  <Wrench className="h-3.5 w-3.5" />
+                  {selectedSeat.status === 'maintenance' ? 'Mark Available' : 'Maintenance'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDeleteSeat(selectedSeat)}
+                  title="Delete this desk"
+                  className="flex items-center gap-1 rounded-lg border border-rose-500/50 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 px-2.5 py-1.5 text-xs font-semibold transition"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Delete
+                </button>
+              </div>
             </div>
 
             {/* Occupant Details Card (If Occupied) */}
@@ -620,7 +833,11 @@ export function SeatsPage() {
                   <button
                     type="button"
                     onClick={() =>
-                      handleVacateSeat(selectedSeat.occupant!.membershipId, selectedSeat.occupant!.studentId)
+                      handleVacateSeat(
+                        selectedSeat.occupant!.membershipId,
+                        selectedSeat.occupant!.studentId,
+                        selectedSeat.seatNumber,
+                      )
                     }
                     className="flex items-center gap-1.5 rounded-xl bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 text-xs font-semibold transition"
                   >
@@ -676,6 +893,154 @@ export function SeatsPage() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* ── EDIT SEAT / CHANGE NUMBER OR SECTION MODAL ─────────────────── */}
+      <Modal
+        isOpen={!!editSeatModal}
+        onClose={() => setEditSeatModal(null)}
+        title="Edit Desk Details"
+        subtitle={editSeatModal ? `Modify Desk #${editSeatModal.seatNumber} configuration` : ''}
+        icon={<Edit2 className="h-5 w-5 text-indigo-500" />}
+        maxWidth="md"
+      >
+        {editSeatModal && (
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Desk Number / Code
+              </label>
+              <input
+                type="text"
+                value={editSeatNumber}
+                onChange={(e) => setEditSeatNumber(e.target.value)}
+                placeholder="e.g. A-01, 105, Cabin-2"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Hall / Section Name
+              </label>
+              <input
+                type="text"
+                value={editSection}
+                onChange={(e) => setEditSection(e.target.value)}
+                placeholder="e.g. Main Hall, First Floor, AC Room"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+                required
+              />
+              <p className="text-[11px] text-slate-400 mt-1">
+                Existing sections: {sections.join(', ')}
+              </p>
+            </div>
+
+            {updateSeatMutation.isError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+                {(updateSeatMutation.error as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+                  'Failed to update desk'}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setEditSeatModal(null)}
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={updateSeatMutation.isPending || !editSeatNumber.trim()}
+                className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 shadow disabled:opacity-50"
+              >
+                {updateSeatMutation.isPending ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* ── ADD SINGLE DESK MODAL ────────────────────────────────────────── */}
+      <Modal
+        isOpen={showAddSingleModal}
+        onClose={() => setShowAddSingleModal(false)}
+        title="Add Single Desk"
+        subtitle="Quickly add an individual seat to any section"
+        icon={<Plus className="h-5 w-5 text-indigo-500" />}
+        maxWidth="md"
+      >
+        <form onSubmit={handleCreateSingleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Desk Number / Identifier
+            </label>
+            <input
+              type="text"
+              value={singleSeatNumber}
+              onChange={(e) => setSingleSeatNumber(e.target.value)}
+              placeholder="e.g. A-31, 101, Cabin-1"
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Hall / Section Name
+            </label>
+            <input
+              type="text"
+              value={singleSection}
+              onChange={(e) => setSingleSection(e.target.value)}
+              placeholder="e.g. Main Hall"
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+              required
+            />
+            {sections.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                <span className="text-[11px] text-slate-400 mr-1">Choose existing:</span>
+                {sections.map((sec) => (
+                  <button
+                    key={sec}
+                    type="button"
+                    onClick={() => setSingleSection(sec)}
+                    className="text-[11px] bg-slate-100 dark:bg-slate-800 text-indigo-500 hover:underline px-2 py-0.5 rounded"
+                  >
+                    {sec}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {createSingleSeatMutation.isError && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+              {(createSingleSeatMutation.error as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+                'Failed to add desk'}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setShowAddSingleModal(false)}
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={createSingleSeatMutation.isPending || !singleSeatNumber.trim()}
+              className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 shadow disabled:opacity-50"
+            >
+              {createSingleSeatMutation.isPending ? 'Adding…' : 'Add Desk'}
+            </button>
+          </div>
+        </form>
       </Modal>
 
       {/* ── FAST ASSIGN STUDENT MODAL ────────────────────────────────────── */}
@@ -804,7 +1169,7 @@ export function SeatsPage() {
               <CustomSelect
                 value={targetSeatId}
                 onChange={setTargetSeatId}
-                options={seats
+                options={allSeats
                   .filter((s) => s.status === 'available')
                   .map((s) => ({
                     value: s._id,
@@ -923,6 +1288,22 @@ export function SeatsPage() {
           </div>
         </form>
       </Modal>
+
+      {/* ── GENERIC CONFIRMATION MODAL ──────────────────────────────────── */}
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmConfig.action}
+        title={confirmConfig.title}
+        description={confirmConfig.description}
+        confirmLabel={confirmConfig.confirmLabel}
+        variant={confirmConfig.variant}
+        isLoading={
+          deleteSeatMutation.isPending ||
+          deleteSeatsBySectionMutation.isPending ||
+          markLeftMutation.isPending
+        }
+      />
     </div>
   );
 }

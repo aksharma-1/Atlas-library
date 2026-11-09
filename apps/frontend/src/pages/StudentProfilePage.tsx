@@ -6,8 +6,8 @@ import { useAuth } from '../hooks/useAuth';
 import { PrintableCard } from '../components/PrintableCard';
 import { PrintableReceipt } from '../components/PrintableReceipt';
 import type { PaymentDTO } from '@atlas/shared';
-import { CustomSelect, Modal } from '../components/ui';
-import { UserCheck, CreditCard, Gift, UserCog, Bell } from 'lucide-react';
+import { CustomSelect, Modal, ConfirmModal } from '../components/ui';
+import { UserCheck, CreditCard, Gift, UserCog, Bell, ArrowLeft } from 'lucide-react';
 
 export function StudentProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +29,7 @@ export function StudentProfilePage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
   const [showGiftDaysModal, setShowGiftDaysModal] = useState(false);
+  const [showMarkLeftConfirm, setShowMarkLeftConfirm] = useState(false);
   const [showEditStudentModal, setShowEditStudentModal] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [giftDaysCount, setGiftDaysCount] = useState('3');
@@ -59,7 +60,12 @@ export function StudentProfilePage() {
   const [notes, setNotes] = useState('');
 
   if (isLoading || !profile) {
-    return <div className="p-8 text-center text-slate-400">Loading student profile…</div>;
+    return (
+      <div className="flex h-64 flex-col items-center justify-center text-slate-400 text-sm gap-2">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+        <span>Loading student profile…</span>
+      </div>
+    );
   }
 
   const { student, activeMembership, payments } = profile;
@@ -84,6 +90,9 @@ export function StudentProfilePage() {
       {
         onSuccess: () => {
           setShowAssignModal(false);
+          setSelectedPlanId('');
+          setSelectedShiftId('');
+          setSelectedSeatId('');
         },
       },
     );
@@ -91,10 +100,9 @@ export function StudentProfilePage() {
 
   const handleRecordPayment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeMembership || !paymentAmountRupees) return;
-
-    const amountPaise = Math.round(parseFloat(paymentAmountRupees) * 100);
-    const idempotencyKey = `PAY-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    if (!activeMembership) return;
+    const amountPaise = Math.round(parseFloat(paymentAmountRupees || '0') * 100);
+    if (amountPaise <= 0) return;
 
     recordPayment.mutate(
       {
@@ -102,7 +110,6 @@ export function StudentProfilePage() {
         amountPaise,
         paymentMethod,
         transactionRef: transactionRef || undefined,
-        idempotencyKey,
         notes: notes || undefined,
       },
       {
@@ -111,8 +118,50 @@ export function StudentProfilePage() {
           setPaymentAmountRupees('');
           setTransactionRef('');
           setNotes('');
-          // Open receipt immediately
           setReceiptPayment(data.payment);
+        },
+      },
+    );
+  };
+
+  const handleAddGiftDays = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeMembership || !id) return;
+    const days = parseInt(giftDaysCount, 10);
+    if (isNaN(days) || days <= 0) return;
+
+    addGiftDays.mutate(
+      {
+        membershipId: activeMembership._id,
+        studentId: id,
+        days,
+        reason: giftReason,
+      },
+      {
+        onSuccess: () => {
+          setShowGiftDaysModal(false);
+        },
+      },
+    );
+  };
+
+  const handleSaveStudentEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !editName.trim() || !editMobile.trim()) return;
+
+    updateStudent.mutate(
+      {
+        id,
+        name: editName.trim(),
+        mobile: editMobile.trim(),
+        email: editEmail.trim() || undefined,
+        address: editAddress.trim() || undefined,
+        membershipNumber: editMembershipNumber.trim() || undefined,
+        photoUrl: editPhotoUrl.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          setShowEditStudentModal(false);
         },
       },
     );
@@ -123,37 +172,42 @@ export function StudentProfilePage() {
     : 0;
 
   return (
-    <div className="space-y-8 max-w-6xl">
-      {/* Navigation & Header */}
-      <div>
-        <Link to="/students" className="text-xs text-brand-400 hover:text-brand-300 font-medium">
-          ← Back to Students Directory
+    <div className="space-y-6 max-w-6xl pb-12">
+      {/* ── Student Profile Header ── */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+        <Link
+          to="/students"
+          className="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold mb-4"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to Students Directory
         </Link>
-        <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
             {student.photoUrl ? (
               <img
                 src={student.photoUrl}
                 alt={student.name}
-                className="h-16 w-16 rounded-full object-cover border-2 border-brand-500 shadow-md shrink-0"
+                className="h-16 w-16 rounded-full object-cover border-2 border-indigo-500 shadow-md shrink-0"
               />
             ) : (
-              <div className="h-16 w-16 rounded-full bg-surface-700 border border-surface-600 flex items-center justify-center text-2xl font-bold text-white shrink-0">
+              <div className="h-16 w-16 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-2xl font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
                 {student.name.charAt(0).toUpperCase()}
               </div>
             )}
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-white">{student.name}</h1>
-                <span className="rounded bg-brand-600/30 px-2 py-0.5 text-xs font-mono font-bold text-brand-300">
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{student.name}</h1>
+                <span className="rounded-md bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
                   {student.membershipNumber}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 📞 {student.mobile} {student.email ? `· ✉️ ${student.email}` : ''} {student.address ? `· 📍 ${student.address}` : ''}
               </p>
             </div>
           </div>
+
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => {
@@ -165,25 +219,25 @@ export function StudentProfilePage() {
                 setEditPhotoUrl(student.photoUrl || '');
                 setShowEditStudentModal(true);
               }}
-              className="rounded-lg border border-surface-600 bg-surface-700 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-surface-600 hover:text-white"
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition"
             >
               ✏️ Edit Member
             </button>
             <button
               onClick={() => setShowCardModal(true)}
-              className="rounded-lg border border-surface-600 bg-surface-700 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-surface-600 hover:text-white"
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition"
             >
               🪪 View ID Card
             </button>
             <button
               onClick={() => setShowReminderModal(true)}
-              className="rounded-lg bg-emerald-600/20 border border-emerald-500/30 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-600 hover:text-white transition"
+              className="rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-3.5 py-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:!text-white transition"
             >
               📲 Renewal Reminder
             </button>
             <button
               onClick={() => setShowAssignModal(true)}
-              className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-500"
+              className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 shadow transition"
             >
               {activeMembership ? '↻ Change / Renew Plan' : '+ Assign Membership'}
             </button>
@@ -192,31 +246,24 @@ export function StudentProfilePage() {
       </div>
 
       {/* ── Active Membership Banner ── */}
-      <div className="rounded-xl border border-surface-700 bg-surface-800 p-6 space-y-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 space-y-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-white">Current Active Membership</h2>
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">Current Active Membership</h2>
           {activeMembership && (
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowGiftDaysModal(true)}
-                className="rounded bg-indigo-600/20 hover:bg-indigo-600 px-2.5 py-1 text-xs font-semibold text-indigo-300 hover:text-white transition"
+                className="rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-2.5 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:!text-white transition"
               >
                 🎁 Add Gift Days
               </button>
               <button
-                onClick={() => {
-                  if (window.confirm(`Are you sure you want to mark this student as Left? Seat #${activeMembership.seatNumber || ''} will be freed immediately.`)) {
-                    markMembershipLeft.mutate({
-                      membershipId: activeMembership._id,
-                      studentId: student._id,
-                    });
-                  }
-                }}
-                className="rounded bg-red-500/20 hover:bg-red-500 px-2.5 py-1 text-xs font-semibold text-red-300 hover:text-white transition"
+                onClick={() => setShowMarkLeftConfirm(true)}
+                className="rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:!text-white transition"
               >
                 🚪 Mark as Left
               </button>
-              <span className="rounded bg-emerald-500/20 px-2.5 py-0.5 text-xs font-medium text-emerald-400 capitalize">
+              <span className="rounded-md bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-semibold capitalize">
                 ● Active
               </span>
             </div>
@@ -224,41 +271,41 @@ export function StudentProfilePage() {
         </div>
 
         {!activeMembership ? (
-          <div className="p-4 text-center border border-dashed border-surface-700 rounded-lg">
-            <p className="text-sm text-slate-400">No active membership assigned.</p>
+          <div className="p-6 text-center border border-dashed border-slate-300 dark:border-slate-700 rounded-xl">
+            <p className="text-sm text-slate-500 dark:text-slate-400">No active membership assigned.</p>
             <button
               onClick={() => setShowAssignModal(true)}
-              className="mt-2 text-xs text-brand-400 underline hover:text-brand-300"
+              className="mt-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
             >
               Assign a plan & seat now
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-surface-900/60 p-3.5 rounded-lg border border-surface-700">
-              <p className="text-xs text-slate-400">Plan & Seat Type</p>
-              <p className="text-sm font-bold text-white mt-0.5 capitalize">
+            <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Plan & Seat Type</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 capitalize">
                 {activeMembership.seatType} Membership
               </p>
             </div>
-            <div className="bg-surface-900/60 p-3.5 rounded-lg border border-surface-700">
-              <p className="text-xs text-slate-400">Assigned Seat</p>
-              <p className="text-sm font-bold text-brand-400 mt-0.5">
+            <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Assigned Seat</p>
+              <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">
                 {activeMembership.seatType === 'reserved'
                   ? `Seat #${activeMembership.seatNumber || 'Reserved'}`
                   : 'Floating Desk'}
               </p>
             </div>
-            <div className="bg-surface-900/60 p-3.5 rounded-lg border border-surface-700">
-              <p className="text-xs text-slate-400">Validity Period</p>
-              <p className="text-xs font-semibold text-white mt-1">
+            <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Validity Period</p>
+              <p className="text-xs font-semibold text-slate-900 dark:text-white mt-1">
                 {new Date(activeMembership.startDate).toLocaleDateString()} – {new Date(activeMembership.endDate).toLocaleDateString()}
               </p>
             </div>
-            <div className="bg-surface-900/60 p-3.5 rounded-lg border border-surface-700 flex items-center justify-between">
+            <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-400">Payment Status</p>
-                <p className="text-sm font-bold text-white mt-0.5 capitalize">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Payment Status</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 capitalize">
                   {activeMembership.paymentStatus} (₹{(activeMembership.paidPaise / 100).toFixed(0)} / ₹{(activeMembership.feePaise / 100).toFixed(0)})
                 </p>
               </div>
@@ -268,7 +315,7 @@ export function StudentProfilePage() {
                     setPaymentAmountRupees((duesRemainingPaise / 100).toString());
                     setShowPaymentModal(true);
                   }}
-                  className="rounded bg-brand-600 px-3 py-1 text-xs font-semibold text-white hover:bg-brand-500 shrink-0 ml-2"
+                  className="rounded-lg bg-indigo-600 px-3 py-1 text-xs font-semibold !text-white hover:bg-indigo-500 shadow shrink-0 ml-2"
                 >
                   Pay Due
                 </button>
@@ -279,16 +326,16 @@ export function StudentProfilePage() {
       </div>
 
       {/* ── Payments Ledger ── */}
-      <div className="rounded-xl border border-surface-700 bg-surface-800 p-6 space-y-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 space-y-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-white">Payment Ledger ({payments.length})</h2>
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">Payment Ledger ({payments.length})</h2>
           {activeMembership && duesRemainingPaise > 0 && (
             <button
               onClick={() => {
                 setPaymentAmountRupees((duesRemainingPaise / 100).toString());
                 setShowPaymentModal(true);
               }}
-              className="text-xs text-brand-400 hover:text-brand-300 font-semibold"
+              className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
             >
               + Record Fee Payment
             </button>
@@ -296,11 +343,11 @@ export function StudentProfilePage() {
         </div>
 
         {payments.length === 0 ? (
-          <p className="text-xs text-slate-500 py-3 text-center">No payment transactions recorded.</p>
+          <p className="text-xs text-slate-400 py-4 text-center">No payment transactions recorded.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-surface-700/60 font-semibold uppercase text-slate-400">
+            <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+              <thead className="bg-slate-50 dark:bg-slate-800/60 font-semibold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="px-4 py-2.5">Receipt #</th>
                   <th className="px-4 py-2.5">Date</th>
@@ -310,18 +357,18 @@ export function StudentProfilePage() {
                   <th className="px-4 py-2.5 text-right">Receipt</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-700">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                 {payments.map((p) => (
-                  <tr key={p._id}>
-                    <td className="px-4 py-3 font-mono font-bold text-white">{p.receiptNumber}</td>
-                    <td className="px-4 py-3 text-slate-400">{new Date(p.createdAt).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 uppercase">{p.paymentMethod}</td>
-                    <td className="px-4 py-3 text-slate-400">{p.transactionRef || '—'}</td>
-                    <td className="px-4 py-3 font-bold text-emerald-400">₹{(p.amountPaise / 100).toFixed(2)}</td>
+                  <tr key={p._id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition">
+                    <td className="px-4 py-3 font-mono font-bold text-slate-900 dark:text-white">{p.receiptNumber}</td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{new Date(p.createdAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 uppercase font-semibold text-slate-700 dark:text-slate-300">{p.paymentMethod}</td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{p.transactionRef || '—'}</td>
+                    <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400">₹{(p.amountPaise / 100).toFixed(2)}</td>
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => setReceiptPayment(p)}
-                        className="rounded bg-surface-700 px-2.5 py-1 text-[11px] text-slate-200 hover:bg-brand-600 hover:text-white"
+                        className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
                       >
                         🖨️ Receipt
                       </button>
@@ -340,7 +387,7 @@ export function StudentProfilePage() {
         onClose={() => setShowAssignModal(false)}
         title="Assign Membership"
         subtitle="Enroll student in a membership plan, desk & study shift"
-        icon={<UserCheck className="h-5 w-5" />}
+        icon={<UserCheck className="h-5 w-5 text-indigo-500" />}
         maxWidth="md"
       >
         <form onSubmit={handleAssignMembership} className="space-y-4">
@@ -380,14 +427,14 @@ export function StudentProfilePage() {
 
           <div>
             <CustomSelect
-              label="Assigned Shift (Optional)"
+              label="Select Operational Shift"
               value={selectedShiftId}
               onChange={(val) => setSelectedShiftId(val)}
               options={[
-                { value: '', label: '-- Flexible / Any Shift --' },
-                ...shifts.map((s) => ({
-                  value: s._id,
-                  label: `${s.name} (${s.startTime}–${s.endTime})`,
+                { value: '', label: 'General / Full Day' },
+                ...shifts.map((sh) => ({
+                  value: sh._id,
+                  label: `${sh.name} (${sh.startTime} - ${sh.endTime})`,
                 })),
               ]}
             />
@@ -417,9 +464,9 @@ export function StudentProfilePage() {
           </div>
 
           {createMembership.isError && (
-            <p className="text-xs text-rose-500 font-medium">
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 text-xs">
               Failed to assign: {(createMembership.error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Conflict or server error'}
-            </p>
+            </div>
           )}
 
           <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
@@ -445,9 +492,9 @@ export function StudentProfilePage() {
       <Modal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
-        title="Record Fee Collection"
-        subtitle="Log student fee payment and generate printable receipt"
-        icon={<CreditCard className="h-5 w-5" />}
+        title="Record Fee Payment"
+        subtitle={`Collect dues for ${student.name}`}
+        icon={<CreditCard className="h-5 w-5 text-indigo-500" />}
         maxWidth="md"
       >
         <form onSubmit={handleRecordPayment} className="space-y-4">
@@ -455,7 +502,7 @@ export function StudentProfilePage() {
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Amount (₹) *</label>
             <input
               type="number"
-              step="0.01"
+              step="1"
               min="1"
               value={paymentAmountRupees}
               onChange={(e) => setPaymentAmountRupees(e.target.value)}
@@ -464,39 +511,39 @@ export function StudentProfilePage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <CustomSelect
-                label="Payment Mode"
-                value={paymentMethod}
-                onChange={(val) => setPaymentMethod(val as 'cash' | 'upi' | 'card' | 'bank_transfer')}
-                options={[
-                  { value: 'upi', label: 'UPI (GPay/PhonePe)' },
-                  { value: 'cash', label: 'Cash' },
-                  { value: 'card', label: 'Debit / Credit Card' },
-                  { value: 'bank_transfer', label: 'Bank Transfer / NEFT' },
-                ]}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Transaction Reference</label>
-              <input
-                type="text"
-                value={transactionRef}
-                onChange={(e) => setTransactionRef(e.target.value)}
-                placeholder="e.g. UTR / UPI Ref"
-                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
-              />
-            </div>
+          <div>
+            <CustomSelect
+              label="Payment Mode *"
+              value={paymentMethod}
+              onChange={(val) => setPaymentMethod(val as any)}
+              options={[
+                { value: 'upi', label: 'UPI (GPay / PhonePe / Paytm)' },
+                { value: 'cash', label: 'Cash' },
+                { value: 'card', label: 'Debit / Credit Card' },
+                { value: 'bank_transfer', label: 'Bank Transfer / NEFT' },
+              ]}
+              required
+            />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Notes / Remarks</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Transaction Ref / UTR (Optional)</label>
+            <input
+              type="text"
+              value={transactionRef}
+              onChange={(e) => setTransactionRef(e.target.value)}
+              placeholder="e.g. UPI Ref / Receipt No"
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Notes (Optional)</label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Optional note"
+              placeholder="e.g. 50% advance for November"
               className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
             />
           </div>
@@ -521,22 +568,22 @@ export function StudentProfilePage() {
       </Modal>
 
       {/* ── Printable ID Card Modal ── */}
-      {showCardModal && (
-        <PrintableCard
-          student={student}
-          membership={activeMembership}
-          tenantName={user?.tenantName}
-          onClose={() => setShowCardModal(false)}
-        />
-      )}
+      <PrintableCard
+        isOpen={showCardModal}
+        onClose={() => setShowCardModal(false)}
+        student={student}
+        membership={activeMembership}
+        tenantName={user?.tenantName}
+      />
 
       {/* ── Printable Receipt Modal ── */}
       {receiptPayment && (
         <PrintableReceipt
+          isOpen={!!receiptPayment}
+          onClose={() => setReceiptPayment(null)}
           payment={receiptPayment}
           student={student}
           tenantName={user?.tenantName}
-          onClose={() => setReceiptPayment(null)}
         />
       )}
 
@@ -545,54 +592,37 @@ export function StudentProfilePage() {
         isOpen={showGiftDaysModal && !!activeMembership}
         onClose={() => setShowGiftDaysModal(false)}
         title="Add Gift Days"
-        subtitle="Extend membership validity without creating any additional fee charges"
-        icon={<Gift className="h-5 w-5" />}
-        maxWidth="sm"
+        subtitle={`Extend validity for ${student.name}`}
+        icon={<Gift className="h-5 w-5 text-indigo-500" />}
+        maxWidth="md"
       >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!activeMembership) return;
-            const days = parseInt(giftDaysCount, 10);
-            if (isNaN(days) || days < 1) return;
-            addGiftDays.mutate(
-              {
-                membershipId: activeMembership._id,
-                studentId: student._id,
-                days,
-                reason: giftReason,
-              },
-              {
-                onSuccess: () => {
-                  setShowGiftDaysModal(false);
-                },
-              },
-            );
-          }}
-          className="space-y-4"
-        >
+        <form onSubmit={handleAddGiftDays} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Number of Days *</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Days to add (e.g. 3, 5, 7) *
+            </label>
             <input
               type="number"
               min="1"
-              max="365"
               value={giftDaysCount}
               onChange={(e) => setGiftDaysCount(e.target.value)}
               className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
               required
             />
           </div>
+
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Reason / Promotion</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Reason / Event *</label>
             <input
               type="text"
               value={giftReason}
               onChange={(e) => setGiftReason(e.target.value)}
-              placeholder="e.g. Diwali bonus, compensatory days"
+              placeholder="e.g. Diwali festive bonus / Exam week extension"
               className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+              required
             />
           </div>
+
           <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
@@ -606,88 +636,22 @@ export function StudentProfilePage() {
               disabled={addGiftDays.isPending}
               className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 disabled:opacity-50 shadow-sm"
             >
-              {addGiftDays.isPending ? 'Extending…' : 'Extend Validity'}
+              {addGiftDays.isPending ? 'Extending…' : 'Add Days'}
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* ── Edit Member Modal ── */}
+      {/* ── Edit Student Modal ── */}
       <Modal
         isOpen={showEditStudentModal}
         onClose={() => setShowEditStudentModal(false)}
         title="Edit Student Profile"
-        subtitle={`Update contact details or membership ID for ${student.name}`}
-        icon={<UserCog className="h-5 w-5" />}
+        subtitle={`Update details for ${student.name}`}
+        icon={<UserCog className="h-5 w-5 text-indigo-500" />}
         maxWidth="md"
       >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!editName.trim() || !editMobile.trim()) return;
-            updateStudent.mutate(
-              {
-                id: student._id,
-                name: editName,
-                mobile: editMobile,
-                email: editEmail,
-                address: editAddress,
-                membershipNumber: editMembershipNumber,
-                photoUrl: editPhotoUrl || undefined,
-              },
-              {
-                onSuccess: () => {
-                  setShowEditStudentModal(false);
-                },
-              },
-            );
-          }}
-          className="space-y-4"
-        >
-          {/* Photo Upload in Profile Modal */}
-          <div className="flex items-center gap-4">
-            {editPhotoUrl ? (
-              <img
-                src={editPhotoUrl}
-                alt="Preview"
-                className="h-16 w-16 rounded-full object-cover border-2 border-indigo-500 shadow"
-              />
-            ) : (
-              <div className="h-16 w-16 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-2xl text-slate-400">
-                📷
-              </div>
-            )}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Upload Photo</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  if (file.size > 2 * 1024 * 1024) {
-                    alert('Photo must be less than 2MB');
-                    return;
-                  }
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                    setEditPhotoUrl(event.target?.result as string);
-                  };
-                  reader.readAsDataURL(file);
-                }}
-                className="block text-xs text-slate-500 file:mr-2 file:rounded-lg file:border-0 file:bg-slate-100 dark:file:bg-slate-800 file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-slate-700 dark:file:text-slate-300 hover:file:bg-slate-200"
-              />
-              {editPhotoUrl && (
-                <button
-                  type="button"
-                  onClick={() => setEditPhotoUrl('')}
-                  className="mt-1 text-[11px] text-rose-500 hover:underline"
-                >
-                  Remove Photo
-                </button>
-              )}
-            </div>
-          </div>
+        <form onSubmit={handleSaveStudentEdit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Full Name *</label>
             <input
@@ -698,9 +662,10 @@ export function StudentProfilePage() {
               required
             />
           </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mobile Number *</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mobile *</label>
               <input
                 type="tel"
                 value={editMobile}
@@ -710,24 +675,26 @@ export function StudentProfilePage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Membership ID</label>
               <input
-                type="email"
-                value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
+                type="text"
+                value={editMembershipNumber}
+                onChange={(e) => setEditMembershipNumber(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
               />
             </div>
           </div>
+
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Membership Number</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email</label>
             <input
-              type="text"
-              value={editMembershipNumber}
-              onChange={(e) => setEditMembershipNumber(e.target.value)}
+              type="email"
+              value={editEmail}
+              onChange={(e) => setEditEmail(e.target.value)}
               className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
             />
           </div>
+
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Address / City</label>
             <input
@@ -737,6 +704,18 @@ export function StudentProfilePage() {
               className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
             />
           </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Photo URL (Optional)</label>
+            <input
+              type="url"
+              value={editPhotoUrl}
+              onChange={(e) => setEditPhotoUrl(e.target.value)}
+              placeholder="https://..."
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+            />
+          </div>
+
           <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
@@ -756,32 +735,25 @@ export function StudentProfilePage() {
         </form>
       </Modal>
 
-      {/* ── Expiry / Renewal Reminder Modal ── */}
+      {/* ── WhatsApp Reminder Modal ── */}
       <Modal
         isOpen={showReminderModal}
         onClose={() => setShowReminderModal(false)}
-        title="Library Renewal Reminder"
-        subtitle={`Official notification for ${student.name}`}
-        icon={<Bell className="h-5 w-5" />}
-        maxWidth="lg"
+        title="Send WhatsApp Renewal Reminder"
+        subtitle="Pre-drafted notification template for rapid dispatch"
+        icon={<Bell className="h-5 w-5 text-indigo-500" />}
+        maxWidth="md"
       >
         <div className="space-y-4">
-          <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-4 border border-slate-200 dark:border-slate-700">
-            <pre className="text-xs text-slate-800 dark:text-slate-200 whitespace-pre-wrap font-sans">
-{`📚 Atlas Library Reminder
-
-Dear ${student.name}(${activeMembership?.seatNumber || '86'}),
-Aapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.
-Jaldi se bata dein, taaki seat ko accordingly update kiya ja sake.
-Keep reading, keep growing! 🌟`}
-            </pre>
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs font-mono space-y-2 whitespace-pre-line text-slate-800 dark:text-slate-200">
+            {`📚 Atlas Library Reminder\n\nDear ${student.name}(${activeMembership?.seatNumber || 'Seat'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`}
           </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
               onClick={() => {
-                const reminderText = `📚 Atlas Library Reminder\n\nDear ${student.name}(${activeMembership?.seatNumber || '86'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`;
+                const reminderText = `📚 Atlas Library Reminder\n\nDear ${student.name}(${activeMembership?.seatNumber || 'Seat'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`;
                 navigator.clipboard.writeText(reminderText);
                 alert('Template copied to clipboard!');
               }}
@@ -792,7 +764,7 @@ Keep reading, keep growing! 🌟`}
             <button
               type="button"
               onClick={() => {
-                const reminderText = `📚 Atlas Library Reminder\n\nDear ${student.name}(${activeMembership?.seatNumber || '86'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`;
+                const reminderText = `📚 Atlas Library Reminder\n\nDear ${student.name}(${activeMembership?.seatNumber || 'Seat'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`;
                 const cleanMobile = student.mobile.replace(/[^0-9]/g, '');
                 const fullMobile = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
                 window.open(`https://wa.me/${fullMobile}?text=${encodeURIComponent(reminderText)}`, '_blank');
@@ -805,6 +777,30 @@ Keep reading, keep growing! 🌟`}
           </div>
         </div>
       </Modal>
+
+      {/* Mark Left Confirmation Modal */}
+      {activeMembership && (
+        <ConfirmModal
+          isOpen={showMarkLeftConfirm}
+          onClose={() => setShowMarkLeftConfirm(false)}
+          onConfirm={() => {
+            markMembershipLeft.mutate(
+              {
+                membershipId: activeMembership._id,
+                studentId: student._id,
+              },
+              {
+                onSuccess: () => setShowMarkLeftConfirm(false),
+              },
+            );
+          }}
+          title="Mark Student as Left"
+          description={`Are you sure you want to mark ${student.name} as Left? Desk #${activeMembership.seatNumber || ''} will be freed immediately.`}
+          confirmLabel="Mark as Left"
+          variant="danger"
+          isLoading={markMembershipLeft.isPending}
+        />
+      )}
     </div>
   );
 }

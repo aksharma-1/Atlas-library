@@ -236,7 +236,36 @@ html.light-mode table tbody tr:hover {
   box-shadow: var(--shadow-glass);
 }
 
-/* ── Scrollbars ───────────────────────────────────────────────────────────── */
+/* ── Print Media Styles for ID Cards & Receipts ────────────────────────────── */
+@media print {
+  /* Hide all background layout, navigation, modals backdrop, and control buttons */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only the targeted print element and its children */
+  #printable-card,
+  #printable-card *,
+  #printable-receipt,
+  #printable-receipt * {
+    visibility: visible;
+  }
+
+  #printable-card,
+  #printable-receipt {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: none !important;
+    border: 1px solid #1e293b !important;
+    background: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    margin: 0 !important;
+    page-break-inside: avoid;
+  }
+}
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

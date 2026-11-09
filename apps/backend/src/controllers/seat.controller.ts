@@ -18,6 +18,17 @@ const updateSeatStatusSchema = z.object({
   status: z.enum(['available', 'occupied', 'maintenance', 'blocked']),
 });
 
+const createSingleSeatSchema = z.object({
+  seatNumber: z.string().min(1, 'Seat number is required').trim(),
+  section: z.string().optional().default('Main Hall').transform((s) => s.trim() || 'Main Hall'),
+});
+
+const updateSeatSchema = z.object({
+  seatNumber: z.string().min(1, 'Seat number is required').trim().optional(),
+  section: z.string().min(1, 'Section name is required').trim().optional(),
+  status: z.enum(['available', 'occupied', 'maintenance', 'blocked']).optional(),
+});
+
 const changeSeatSchema = z.object({
   membershipId: z.string().min(1, 'membershipId is required'),
   targetSeatId: z.string().min(1, 'targetSeatId is required'),
@@ -273,6 +284,151 @@ export async function bulkCreateSeats(req: Request, res: Response, next: NextFun
       }
       throw err;
     }
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function createSingleSeat(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const parsed = createSingleSeatSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors });
+      return;
+    }
+
+    const { seatNumber, section } = parsed.data;
+    const tenantId = req.user!.tenantId;
+
+    // Check duplicate seatNumber within tenant
+    const existing = await Seat.findOne({ tenantId, seatNumber });
+    if (existing) {
+      res.status(409).json({ error: `Desk '${seatNumber}' already exists in your library` });
+      return;
+    }
+
+    const seat = await Seat.create({
+      tenantId,
+      seatNumber,
+      section,
+      status: 'available',
+    });
+
+    res.status(201).json({ seat });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateSeat(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const parsed = updateSeatSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors });
+      return;
+    }
+
+    const tenantId = req.user!.tenantId;
+    const { seatNumber, section, status } = parsed.data;
+
+    // If changing seatNumber, check conflict
+    if (seatNumber) {
+      const existing = await Seat.findOne({ tenantId, seatNumber, _id: { $ne: id } });
+      if (existing) {
+        res.status(409).json({ error: `Desk '${seatNumber}' is already in use by another seat` });
+        return;
+      }
+    }
+
+    const updateFields: Record<string, unknown> = {};
+    if (seatNumber) updateFields['seatNumber'] = seatNumber;
+    if (section) updateFields['section'] = section;
+    if (status) updateFields['status'] = status;
+
+    const seat = await Seat.findOneAndUpdate(
+      { _id: id, tenantId },
+      { $set: updateFields },
+      { new: true },
+    );
+
+    if (!seat) {
+      res.status(404).json({ error: 'Seat not found' });
+      return;
+    }
+
+    res.status(200).json({ seat });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteSeat(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user!.tenantId;
+
+    // Prevent deletion if seat has active student membership
+    const active = await Membership.findOne({
+      tenantId,
+      seatId: id,
+      status: 'active',
+      endDate: { $gte: new Date() },
+    });
+
+    if (active) {
+      res.status(400).json({
+        error: 'Cannot delete desk because a student currently has an active membership assigned to it. Vacate or relocate the student first.',
+      });
+      return;
+    }
+
+    const seat = await Seat.findOneAndDelete({ _id: id, tenantId });
+    if (!seat) {
+      res.status(404).json({ error: 'Seat not found' });
+      return;
+    }
+
+    res.status(200).json({ message: `Desk '${seat.seatNumber}' deleted successfully` });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteSeatsBySection(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { section } = req.query as { section?: string };
+    const tenantId = req.user!.tenantId;
+
+    if (!section || section.trim() === '' || section === 'all') {
+      res.status(400).json({ error: 'A valid section name is required to delete' });
+      return;
+    }
+
+    // Find all seats in this section
+    const seats = await Seat.find({ tenantId, section });
+    const seatIds = seats.map(s => s._id);
+
+    // Check if any seat in this section has an active membership
+    const active = await Membership.findOne({
+      tenantId,
+      seatId: { $in: seatIds },
+      status: 'active',
+      endDate: { $gte: new Date() },
+    });
+
+    if (active) {
+      res.status(400).json({
+        error: `Cannot delete section '${section}' because one or more desks currently have active student memberships. Vacate or relocate them first.`,
+      });
+      return;
+    }
+
+    const result = await Seat.deleteMany({ tenantId, section });
+    res.status(200).json({
+      message: `Successfully deleted ${result.deletedCount} desks from section '${section}'`,
+      deletedCount: result.deletedCount,
+    });
   } catch (err) {
     next(err);
   }

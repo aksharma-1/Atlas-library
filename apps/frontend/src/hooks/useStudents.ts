@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/client';
 import type { StudentDTO, StudentProfileDTO, MembershipDTO, PaymentDTO } from '@atlas/shared';
+import toast from 'react-hot-toast';
 
 export function useStudents(search?: string) {
   return useQuery({
@@ -39,9 +40,13 @@ export function useCreateStudent() {
       const { data } = await apiClient.post<{ student: StudentDTO }>('/students', payload);
       return data.student;
     },
-    onSuccess: () => {
+    onSuccess: (student) => {
+      toast.success(`Student "${student.name}" registered successfully!`);
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to register student');
     },
   });
 }
@@ -61,9 +66,13 @@ export function useCreateMembership() {
       return data.membership;
     },
     onSuccess: (_, vars) => {
+      toast.success('Desk assigned & membership activated!');
       queryClient.invalidateQueries({ queryKey: ['students', vars.studentId] });
       queryClient.invalidateQueries({ queryKey: ['seats'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to assign membership');
     },
   });
 }
@@ -85,10 +94,14 @@ export function useRecordPayment() {
       );
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      toast.success(`Payment of ₹${(data.payment.amountPaise / 100).toFixed(0)} recorded successfully!`);
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to record payment');
     },
   });
 }
@@ -109,8 +122,12 @@ export function useUpdateStudent() {
       return data.student;
     },
     onSuccess: (_, vars) => {
+      toast.success(`Student profile updated`);
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['students', vars.id] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to update student profile');
     },
   });
 }
@@ -123,10 +140,14 @@ export function useDeleteStudent() {
       return data;
     },
     onSuccess: () => {
+      toast.success('Student deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['seats'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to delete student');
     },
   });
 }
@@ -141,10 +162,14 @@ export function useMarkMembershipLeft() {
       return data;
     },
     onSuccess: (_, vars) => {
+      toast.success('Seat vacated and marked as Left');
       queryClient.invalidateQueries({ queryKey: ['students', vars.studentId] });
       queryClient.invalidateQueries({ queryKey: ['seats'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to vacate seat');
     },
   });
 }
@@ -169,9 +194,13 @@ export function useAddGiftDays() {
       return data;
     },
     onSuccess: (_, vars) => {
+      toast.success(`Gift days added successfully!`);
       queryClient.invalidateQueries({ queryKey: ['students', vars.studentId] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to add gift days');
     },
   });
 }

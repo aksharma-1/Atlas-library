@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useShifts, useCreateShift, useUpdateShift, useDeleteShift, usePlans, useCreatePlan, useUpdatePlan, useDeletePlan } from '../hooks/useLibrary';
 import { formatTime12H } from '../utils/time';
 import type { ShiftDTO, PlanDTO } from '@atlas/shared';
-import { CustomSelect, Modal } from '../components/ui';
+import { CustomSelect, Modal, ConfirmModal } from '../components/ui';
 import { Clock, CalendarClock } from 'lucide-react';
 
 export function PlansPage() {
@@ -16,6 +16,9 @@ export function PlansPage() {
   const createPlan = useCreatePlan();
   const updatePlan = useUpdatePlan();
   const deletePlan = useDeletePlan();
+
+  // Delete confirm modal state
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'shift' | 'plan'; id: string; name: string } | null>(null);
 
   // Shift create form
   const [shiftName, setShiftName] = useState('');
@@ -93,13 +96,7 @@ export function PlansPage() {
   };
 
   const handleDeleteShift = (id: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete shift "${name}"?`)) return;
-    setActionError(null);
-    deleteShift.mutate(id, {
-      onError: (err: any) => {
-        setActionError(err.response?.data?.error || 'Failed to delete shift');
-      },
-    });
+    setDeleteConfirm({ type: 'shift', id, name });
   };
 
   const handleCreatePlan = (e: React.FormEvent) => {
@@ -162,13 +159,7 @@ export function PlansPage() {
   };
 
   const handleDeletePlan = (id: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete plan "${name}"?`)) return;
-    setActionError(null);
-    deletePlan.mutate(id, {
-      onError: (err: any) => {
-        setActionError(err.response?.data?.error || 'Failed to delete plan');
-      },
-    });
+    setDeleteConfirm({ type: 'plan', id, name });
   };
 
   return (
@@ -552,6 +543,29 @@ export function PlansPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => {
+          if (!deleteConfirm) return;
+          if (deleteConfirm.type === 'shift') {
+            deleteShift.mutate(deleteConfirm.id, {
+              onSuccess: () => setDeleteConfirm(null),
+            });
+          } else {
+            deletePlan.mutate(deleteConfirm.id, {
+              onSuccess: () => setDeleteConfirm(null),
+            });
+          }
+        }}
+        title={`Delete ${deleteConfirm?.type === 'shift' ? 'Shift' : 'Plan'} "${deleteConfirm?.name || ''}"`}
+        description={`Are you sure you want to delete this ${deleteConfirm?.type === 'shift' ? 'study shift' : 'membership plan'}? This action cannot be undone.`}
+        confirmLabel={`Delete ${deleteConfirm?.type === 'shift' ? 'Shift' : 'Plan'}`}
+        variant="danger"
+        isLoading={deleteShift.isPending || deletePlan.isPending}
+      />
     </div>
   );
 }

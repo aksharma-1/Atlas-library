@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/client';
 import type { ShiftDTO, PlanDTO, SeatDTO, DashboardStatsDTO } from '@atlas/shared';
+import toast from 'react-hot-toast';
 
 // ── Dashboard Stats ──────────────────────────────────────────────────────────
 export function useDashboardStats() {
@@ -32,9 +33,13 @@ export function useCreateShift() {
       const { data } = await apiClient.post<{ shift: ShiftDTO }>('/shifts', shift);
       return data.shift;
     },
-    onSuccess: () => {
+    onSuccess: (shift) => {
+      toast.success(`Shift "${shift.name}" created successfully`);
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to create shift');
     },
   });
 }
@@ -46,9 +51,13 @@ export function useUpdateShift() {
       const { data } = await apiClient.put<{ shift: ShiftDTO }>(`/shifts/${id}`, shift);
       return data.shift;
     },
-    onSuccess: () => {
+    onSuccess: (shift) => {
+      toast.success(`Shift "${shift.name}" updated`);
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
       queryClient.invalidateQueries({ queryKey: ['plans'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to update shift');
     },
   });
 }
@@ -61,8 +70,12 @@ export function useDeleteShift() {
       return data;
     },
     onSuccess: () => {
+      toast.success('Shift deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
       queryClient.invalidateQueries({ queryKey: ['plans'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to delete shift');
     },
   });
 }
@@ -91,9 +104,13 @@ export function useCreatePlan() {
       const { data } = await apiClient.post<{ plan: PlanDTO }>('/plans', plan);
       return data.plan;
     },
-    onSuccess: () => {
+    onSuccess: (plan) => {
+      toast.success(`Plan "${plan.name}" created successfully`);
       queryClient.invalidateQueries({ queryKey: ['plans'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to create plan');
     },
   });
 }
@@ -113,8 +130,12 @@ export function useUpdatePlan() {
       const { data } = await apiClient.put<{ plan: PlanDTO }>(`/plans/${id}`, plan);
       return data.plan;
     },
-    onSuccess: () => {
+    onSuccess: (plan) => {
+      toast.success(`Plan "${plan.name}" updated`);
       queryClient.invalidateQueries({ queryKey: ['plans'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to update plan');
     },
   });
 }
@@ -127,8 +148,12 @@ export function useDeletePlan() {
       return data;
     },
     onSuccess: () => {
+      toast.success('Plan deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['plans'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to delete plan');
     },
   });
 }
@@ -156,11 +181,33 @@ export function useChangeSeat() {
       const { data } = await apiClient.post<{ message: string }>('/seats/change', payload);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
+      toast.success(res.message || 'Seat changed successfully');
       queryClient.invalidateQueries({ queryKey: ['seats'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to change desk');
+    },
+  });
+}
+
+export function useCreateSingleSeat() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { seatNumber: string; section?: string }) => {
+      const { data } = await apiClient.post<{ seat: SeatDTO }>('/seats', payload);
+      return data.seat;
+    },
+    onSuccess: (seat) => {
+      toast.success(`Desk "${seat.seatNumber}" added successfully`);
+      queryClient.invalidateQueries({ queryKey: ['seats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to add desk');
     },
   });
 }
@@ -169,12 +216,72 @@ export function useBulkCreateSeats() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (params: { startNumber: number; endNumber: number; prefix?: string; section?: string }) => {
-      const { data } = await apiClient.post<{ createdCount: number; seats: SeatDTO[] }>('/seats/bulk', params);
+      const { data } = await apiClient.post<{ createdCount: number; seats: SeatDTO[]; note?: string }>('/seats/bulk', params);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
+      toast.success(`Generated ${res.createdCount} desks successfully!`);
       queryClient.invalidateQueries({ queryKey: ['seats'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to bulk generate desks');
+    },
+  });
+}
+
+export function useUpdateSeat() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...payload }: { id: string; seatNumber?: string; section?: string; status?: 'available' | 'occupied' | 'maintenance' | 'blocked' }) => {
+      const { data } = await apiClient.put<{ seat: SeatDTO }>(`/seats/${id}`, payload);
+      return data.seat;
+    },
+    onSuccess: (seat) => {
+      toast.success(`Desk "${seat.seatNumber}" updated`);
+      queryClient.invalidateQueries({ queryKey: ['seats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to update desk');
+    },
+  });
+}
+
+export function useDeleteSeat() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await apiClient.delete<{ message: string }>(`/seats/${id}`);
+      return data;
+    },
+    onSuccess: (res) => {
+      toast.success(res.message || 'Desk deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['seats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to delete desk');
+    },
+  });
+}
+
+export function useDeleteSeatsBySection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (section: string) => {
+      const { data } = await apiClient.delete<{ message: string; deletedCount: number }>('/seats/section/bulk', {
+        params: { section },
+      });
+      return data;
+    },
+    onSuccess: (res) => {
+      toast.success(res.message || `Deleted desks in section`);
+      queryClient.invalidateQueries({ queryKey: ['seats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to delete section');
     },
   });
 }
@@ -186,9 +293,13 @@ export function useUpdateSeatStatus() {
       const { data } = await apiClient.patch<{ seat: SeatDTO }>(`/seats/${id}/status`, { status });
       return data.seat;
     },
-    onSuccess: () => {
+    onSuccess: (seat) => {
+      toast.success(`Desk "${seat.seatNumber}" is now ${seat.status}`);
       queryClient.invalidateQueries({ queryKey: ['seats'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to update status');
     },
   });
 }

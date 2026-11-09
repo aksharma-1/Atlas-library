@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useStudents, useCreateStudent, useUpdateStudent, useDeleteStudent, useFilteredMemberships } from '../hooks/useStudents';
 import type { StudentDTO } from '@atlas/shared';
-import { Modal } from '../components/ui';
-import { Bell, UserCheck, UserPlus } from 'lucide-react';
+import { Modal, ConfirmModal } from '../components/ui';
+import { Bell, UserCheck, UserPlus, Search, Edit2, ArrowUpRight, MessageSquare } from 'lucide-react';
 
 type TabType = 'all' | 'dues' | 'expiring_3' | 'expiring_7' | 'expired' | 'left';
 
@@ -11,7 +11,9 @@ export function StudentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get('tab') as TabType | null;
 
-  const [activeTab, setActiveTab] = useState<TabType>(urlTab && ['all', 'dues', 'expiring_3', 'expiring_7', 'expired', 'left'].includes(urlTab) ? urlTab : 'all');
+  const [activeTab, setActiveTab] = useState<TabType>(
+    urlTab && ['all', 'dues', 'expiring_3', 'expiring_7', 'expired', 'left'].includes(urlTab) ? urlTab : 'all',
+  );
   const [search, setSearch] = useState('');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
 
@@ -55,6 +57,9 @@ export function StudentsPage() {
     mobile: string;
   } | null>(null);
 
+  // Delete Confirm Modal State
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+
   // Queries & Mutations
   const { data: students = [], isLoading: studentsLoading } = useStudents(search);
   const { data: filteredMemberships = [], isLoading: membershipsLoading } = useFilteredMemberships(activeTab);
@@ -63,29 +68,7 @@ export function StudentsPage() {
   const updateStudent = useUpdateStudent();
   const deleteStudent = useDeleteStudent();
 
-  // Helper for image upload -> Base64 Data URL
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Photo must be less than 2MB');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      if (isEdit) {
-        setEditPhotoUrl(dataUrl);
-      } else {
-        setPhotoUrl(dataUrl);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleRegister = (e: React.FormEvent) => {
+  const handleCreateStudent = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !mobile.trim()) return;
 
@@ -145,10 +128,7 @@ export function StudentsPage() {
   };
 
   const handleDelete = (id: string, sName: string) => {
-    if (!window.confirm(`Are you sure you want to delete / remove student "${sName}"? Any active memberships and seat reservations will be cancelled.`)) {
-      return;
-    }
-    deleteStudent.mutate(id);
+    setDeleteConfirm({ id, name: sName });
   };
 
   const getReminderText = (sName: string, sSeat: string) => {
@@ -165,39 +145,41 @@ export function StudentsPage() {
   const tabs: { id: TabType; label: string; icon: string }[] = [
     { id: 'all', label: 'All Members', icon: '👥' },
     { id: 'dues', label: 'Fees Due', icon: '💰' },
-    { id: 'expiring_3', label: 'Expired In 1-3 Days', icon: '⚡' },
-    { id: 'expiring_7', label: 'Expired In 1-7 Days', icon: '📅' },
+    { id: 'expiring_3', label: 'Expiring in 3 Days', icon: '⚠️' },
+    { id: 'expiring_7', label: 'Expiring in 7 Days', icon: '📅' },
     { id: 'expired', label: 'Expired Membership', icon: '⏳' },
     { id: 'left', label: 'Left Membership', icon: '🚪' },
   ];
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-6 max-w-7xl pb-12">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Students & Members</h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Students & Members</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Directory of registered students, seat allocations, fees dues, and expiry management.
           </p>
         </div>
         <button
           onClick={() => setShowRegisterModal(true)}
-          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-500"
+          className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold !text-white shadow hover:bg-indigo-500 transition"
         >
-          + Register New Student
+          <UserPlus className="h-4 w-4" />
+          Register New Student
         </button>
       </div>
 
       {/* Tabs navigation */}
-      <div className="flex flex-wrap gap-2 border-b border-surface-700 pb-3">
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => handleSelectTab(tab.id)}
-            className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition ${
+            className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
               activeTab === tab.id
-                ? 'bg-brand-600 text-white shadow-sm'
-                : 'bg-surface-800 text-slate-300 hover:bg-surface-700 hover:text-white'
+                ? 'bg-indigo-600 !text-white shadow-sm'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             <span>{tab.icon}</span>
@@ -208,258 +190,261 @@ export function StudentsPage() {
 
       {/* Search Bar for All Members */}
       {activeTab === 'all' && (
-        <div className="rounded-xl border border-surface-700 bg-surface-800 p-4">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, mobile number, or membership ID…"
-            className="w-full rounded-lg border border-surface-600 bg-surface-700 px-4 py-2 text-sm text-white placeholder-slate-400 outline-none focus:border-brand-500"
-          />
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
+          <div className="relative">
+            <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by student name, mobile number, or membership ID…"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 pl-10 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+            />
+          </div>
         </div>
       )}
 
       {/* Tab 1: All Members Directory */}
       {activeTab === 'all' ? (
-        <div className="overflow-hidden rounded-xl border border-surface-700 bg-surface-800 shadow-sm">
-          <table className="w-full text-left text-sm text-slate-300">
-            <thead className="bg-surface-700/60 text-xs font-semibold uppercase tracking-wider text-slate-400 border-b border-surface-700">
-              <tr>
-                <th className="px-6 py-3.5">Student / Photo</th>
-                <th className="px-6 py-3.5">Membership ID</th>
-                <th className="px-6 py-3.5">Mobile</th>
-                <th className="px-6 py-3.5">Registered Date</th>
-                <th className="px-6 py-3.5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-700">
-              {studentsLoading ? (
+        <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+              <thead className="bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-500">
-                    Loading students directory…
-                  </td>
+                  <th className="px-6 py-3.5">Student</th>
+                  <th className="px-6 py-3.5">Membership ID</th>
+                  <th className="px-6 py-3.5">Mobile</th>
+                  <th className="px-6 py-3.5">Registered Date</th>
+                  <th className="px-6 py-3.5 text-right">Actions</th>
                 </tr>
-              ) : students.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-400">
-                    No students found. Register your first student above.
-                  </td>
-                </tr>
-              ) : (
-                students.map((s) => (
-                  <tr key={s._id} className="hover:bg-surface-700/30 transition">
-                    <td className="px-6 py-4 flex items-center gap-3">
-                      {s.photoUrl ? (
-                        <img
-                          src={s.photoUrl}
-                          alt={s.name}
-                          className="h-10 w-10 rounded-full object-cover border border-surface-600"
-                        />
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-surface-700 flex items-center justify-center text-sm font-bold text-slate-300 border border-surface-600">
-                          {s.name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-semibold text-white">{s.name}</p>
-                        {s.email && <p className="text-xs text-slate-400">{s.email}</p>}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 font-mono font-medium text-brand-400">
-                      {s.membershipNumber}
-                    </td>
-                    <td className="px-6 py-4">{s.mobile}</td>
-                    <td className="px-6 py-4 text-xs text-slate-400">
-                      {new Date(s.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-right space-x-2">
-                      <Link
-                        to={`/students/${s._id}`}
-                        className="rounded bg-brand-600/20 px-2.5 py-1 text-xs font-medium text-brand-300 hover:bg-brand-600 hover:text-white transition"
-                      >
-                        Profile
-                      </Link>
-                      <button
-                        onClick={() => handleStartEdit(s)}
-                        className="rounded bg-surface-600 hover:bg-surface-500 px-2.5 py-1 text-xs text-slate-200"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(s._id, s.name)}
-                        className="rounded bg-red-500/20 hover:bg-red-500/30 px-2.5 py-1 text-xs text-red-300"
-                      >
-                        Delete
-                      </button>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                {studentsLoading ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-slate-400 text-sm">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent mx-auto mb-2" />
+                      Loading students directory…
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : students.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-slate-400 text-sm">
+                      No students found. Register your first student above.
+                    </td>
+                  </tr>
+                ) : (
+                  students.map((s) => (
+                    <tr key={s._id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition">
+                      <td className="px-6 py-4 flex items-center gap-3">
+                        {s.photoUrl ? (
+                          <img
+                            src={s.photoUrl}
+                            alt={s.name}
+                            className="h-10 w-10 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-sm font-bold border border-indigo-200 dark:border-indigo-800">
+                            {s.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold text-slate-900 dark:text-white">{s.name}</p>
+                          {s.email && <p className="text-xs text-slate-400">{s.email}</p>}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 font-mono font-medium text-indigo-600 dark:text-indigo-400">
+                        {s.membershipNumber}
+                      </td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300 font-mono text-xs">{s.mobile}</td>
+                      <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400">
+                        {new Date(s.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-right space-x-2">
+                        <Link
+                          to={`/students/${s._id}`}
+                          className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-2.5 py-1 text-xs font-semibold hover:bg-indigo-600 hover:!text-white transition"
+                        >
+                          Profile <ArrowUpRight className="h-3 w-3" />
+                        </Link>
+                        <button
+                          onClick={() => handleStartEdit(s)}
+                          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(s._id, s.name)}
+                          className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 px-2.5 py-1 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/30 transition"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
         /* Tabs 2-6: Filtered Memberships (Dues, Expiring 1-3, Expiring 1-7, Expired, Left) */
-        <div className="overflow-hidden rounded-xl border border-surface-700 bg-surface-800 shadow-sm">
-          <div className="p-4 bg-surface-700/30 border-b border-surface-700 flex justify-between items-center">
-            <h3 className="text-sm font-semibold text-white">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
               {tabs.find((t) => t.id === activeTab)?.label} ({filteredMemberships.length})
             </h3>
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-500 dark:text-slate-400">
               Showing filtered records matching current status
             </span>
           </div>
 
-          <table className="w-full text-left text-sm text-slate-300">
-            <thead className="bg-surface-700/60 text-xs font-semibold uppercase tracking-wider text-slate-400 border-b border-surface-700">
-              <tr>
-                <th className="px-5 py-3.5">Student / ID</th>
-                <th className="px-5 py-3.5">Mobile</th>
-                <th className="px-5 py-3.5">Seat / Plan</th>
-                <th className="px-5 py-3.5">Expiry Date</th>
-                {activeTab === 'dues' ? (
-                  <th className="px-5 py-3.5 text-right">Due Amount</th>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+              <thead className="bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th className="px-5 py-3.5">Student / ID</th>
+                  <th className="px-5 py-3.5">Mobile</th>
+                  <th className="px-5 py-3.5">Seat / Plan</th>
+                  <th className="px-5 py-3.5">Expiry Date</th>
+                  {activeTab === 'dues' ? (
+                    <th className="px-5 py-3.5 text-right">Due Amount</th>
+                  ) : (
+                    <th className="px-5 py-3.5">Status</th>
+                  )}
+                  <th className="px-5 py-3.5 text-right">Quick Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                {membershipsLoading ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-400 text-sm">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent mx-auto mb-2" />
+                      Loading records…
+                    </td>
+                  </tr>
+                ) : filteredMemberships.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-400 text-sm">
+                      No records found in this section.
+                    </td>
+                  </tr>
                 ) : (
-                  <th className="px-5 py-3.5">Status</th>
-                )}
-                <th className="px-5 py-3.5 text-right">Quick Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-700">
-              {membershipsLoading ? (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-500">
-                    Loading records…
-                  </td>
-                </tr>
-              ) : filteredMemberships.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400">
-                    No records found in this section.
-                  </td>
-                </tr>
-              ) : (
-                filteredMemberships.map((m: any) => {
-                  const s = m.studentId || {};
-                  const duePaise = Math.max(0, (m.feePaise || 0) - (m.paidPaise || 0));
-                  const isExpired = new Date(m.endDate) < new Date();
-                  const seatNo = m.seatId?.seatNumber || 'Non-Reserved';
+                  filteredMemberships.map((m: any) => {
+                    const s = m.studentId || {};
+                    const duePaise = Math.max(0, (m.feePaise || 0) - (m.paidPaise || 0));
+                    const isExpired = new Date(m.endDate) < new Date();
+                    const seatNo = m.seatId?.seatNumber || 'Non-Reserved';
 
-                  return (
-                    <tr key={m._id} className="hover:bg-surface-700/30 transition">
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          {s.photoUrl ? (
-                            <img
-                              src={s.photoUrl}
-                              alt={s.name}
-                              className="h-8 w-8 rounded-full object-cover border border-surface-600"
-                            />
-                          ) : (
-                            <div className="h-8 w-8 rounded-full bg-surface-700 flex items-center justify-center text-xs font-bold text-slate-300">
-                              {(s.name || '?').charAt(0).toUpperCase()}
+                    return (
+                      <tr key={m._id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition">
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-3">
+                            {s.photoUrl ? (
+                              <img
+                                src={s.photoUrl}
+                                alt={s.name}
+                                className="h-8 w-8 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                              />
+                            ) : (
+                              <div className="h-8 w-8 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs font-bold border border-indigo-200 dark:border-indigo-800">
+                                {(s.name || '?').charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div>
+                              <Link
+                                to={`/students/${s._id}`}
+                                className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                              >
+                                {s.name || 'Unknown Student'}
+                              </Link>
+                              <p className="text-[11px] font-mono text-slate-400">{s.membershipNumber}</p>
                             </div>
-                          )}
-                          <div>
-                            <Link to={`/students/${s._id}`} className="font-semibold text-brand-300 hover:underline">
-                              {s.name || 'Unknown Student'}
-                            </Link>
-                            <p className="text-[11px] font-mono text-slate-400">{s.membershipNumber}</p>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5">{s.mobile || '—'}</td>
-                      <td className="px-5 py-3.5">
-                        <span className="font-semibold text-white">Seat {seatNo}</span>
-                        <p className="text-xs text-slate-400">{m.planId?.name}</p>
-                      </td>
-                      <td className="px-5 py-3.5 font-mono text-xs">
-                        <span className={isExpired ? 'text-red-400 font-semibold' : 'text-slate-300'}>
-                          {new Date(m.endDate).toLocaleDateString()}
-                        </span>
-                      </td>
-
-                      {activeTab === 'dues' ? (
-                        <td className="px-5 py-3.5 text-right font-mono font-bold text-amber-400">
-                          ₹{(duePaise / 100).toFixed(0)}
                         </td>
-                      ) : (
-                        <td className="px-5 py-3.5 capitalize">
-                          <span
-                            className={`rounded px-2 py-0.5 text-[10px] font-semibold ${
-                              m.status === 'active'
-                                ? 'bg-emerald-500/20 text-emerald-300'
-                                : m.status === 'left'
-                                ? 'bg-purple-500/20 text-purple-300'
-                                : 'bg-red-500/20 text-red-300'
-                            }`}
-                          >
-                            {m.status}
+                        <td className="px-5 py-3.5 text-slate-600 dark:text-slate-300 font-mono text-xs">{s.mobile || '—'}</td>
+                        <td className="px-5 py-3.5">
+                          <span className="font-semibold text-slate-900 dark:text-white">Seat {seatNo}</span>
+                          <p className="text-xs text-slate-400">{m.planId?.name}</p>
+                        </td>
+                        <td className="px-5 py-3.5 font-mono text-xs">
+                          <span className={isExpired ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-slate-600 dark:text-slate-300'}>
+                            {new Date(m.endDate).toLocaleDateString()}
                           </span>
                         </td>
-                      )}
 
-                      <td className="px-5 py-3.5 text-right space-x-2">
-                        {/* WhatsApp Reminder Button */}
-                        <button
-                          onClick={() =>
-                            setReminderModalData({
-                              studentName: s.name,
-                              seatNumber: seatNo,
-                              mobile: s.mobile,
-                            })
-                          }
-                          className="rounded bg-emerald-600/20 hover:bg-emerald-600 px-2.5 py-1 text-xs font-medium text-emerald-300 hover:text-white transition"
-                          title="Send Renewal Reminder"
-                        >
-                          📲 Reminder
-                        </button>
-                        <Link
-                          to={`/students/${s._id}`}
-                          className="rounded bg-brand-600/20 hover:bg-brand-600 px-2.5 py-1 text-xs font-medium text-brand-300 hover:text-white transition"
-                        >
-                          View
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        {activeTab === 'dues' ? (
+                          <td className="px-5 py-3.5 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
+                            ₹{(duePaise / 100).toFixed(0)}
+                          </td>
+                        ) : (
+                          <td className="px-5 py-3.5 capitalize">
+                            <span
+                              className={`rounded-md px-2 py-0.5 text-[10px] font-semibold ${
+                                m.status === 'active'
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-500/30'
+                                  : m.status === 'left'
+                                  ? 'bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400 border border-purple-500/30'
+                                  : 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 border border-rose-500/30'
+                              }`}
+                            >
+                              {m.status}
+                            </span>
+                          </td>
+                        )}
+
+                        <td className="px-5 py-3.5 text-right space-x-2">
+                          <button
+                            onClick={() =>
+                              setReminderModalData({
+                                studentName: s.name,
+                                seatNumber: seatNo,
+                                mobile: s.mobile,
+                              })
+                            }
+                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-600 hover:!text-white px-2.5 py-1 text-xs font-semibold transition"
+                            title="Send Renewal Reminder"
+                          >
+                            <MessageSquare className="h-3 w-3" /> Reminder
+                          </button>
+                          <Link
+                            to={`/students/${s._id}`}
+                            className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-600 hover:!text-white px-2.5 py-1 text-xs font-semibold transition"
+                          >
+                            View <ArrowUpRight className="h-3 w-3" />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* ── WhatsApp / SMS Reminder Modal ── */}
+      {/* ── WhatsApp Reminder Modal ── */}
       <Modal
         isOpen={!!reminderModalData}
         onClose={() => setReminderModalData(null)}
-        title="Expiry / Renewal Reminder"
-        subtitle={reminderModalData ? `Send notification to ${reminderModalData.studentName} (Seat ${reminderModalData.seatNumber})` : ''}
-        icon={<Bell className="h-5 w-5" />}
-        maxWidth="lg"
+        title="Send WhatsApp Renewal Reminder"
+        subtitle="Pre-drafted notification template for rapid dispatch"
+        icon={<Bell className="h-5 w-5 text-indigo-500" />}
+        maxWidth="md"
       >
         {reminderModalData && (
           <div className="space-y-4">
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-4 border border-slate-200 dark:border-slate-700">
-              <label className="block text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-2">
-                Message Template Preview
-              </label>
-              <pre className="text-xs text-slate-800 dark:text-slate-200 whitespace-pre-wrap font-sans">
-                {getReminderText(reminderModalData.studentName, reminderModalData.seatNumber)}
-              </pre>
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs font-mono space-y-2 whitespace-pre-line text-slate-800 dark:text-slate-200">
+              {getReminderText(reminderModalData.studentName, reminderModalData.seatNumber)}
             </div>
 
             <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(getReminderText(reminderModalData.studentName, reminderModalData.seatNumber));
-                  alert('Template copied to clipboard!');
-                }}
-                className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                onClick={() => setReminderModalData(null)}
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
               >
-                📋 Copy Text
+                Cancel
               </button>
               <button
                 type="button"
@@ -470,9 +455,9 @@ export function StudentsPage() {
                   );
                   setReminderModalData(null);
                 }}
-                className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-emerald-500 flex items-center gap-2 shadow-sm"
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-emerald-500 flex items-center gap-2 shadow-sm transition"
               >
-                <span>💬</span> Open WhatsApp
+                <span>💬</span> Open WhatsApp Chat
               </button>
             </div>
           </div>
@@ -483,46 +468,13 @@ export function StudentsPage() {
       <Modal
         isOpen={!!editingStudent}
         onClose={() => setEditingStudent(null)}
-        title="Edit Student Details"
-        subtitle={editingStudent ? `Update personal or registration information for ${editingStudent.name}` : ''}
-        icon={<UserCheck className="h-5 w-5" />}
+        title="Edit Student Profile"
+        subtitle={`Update details for ${editingStudent?.name}`}
+        icon={<Edit2 className="h-5 w-5 text-indigo-500" />}
         maxWidth="md"
       >
         {editingStudent && (
           <form onSubmit={handleSaveEdit} className="space-y-4">
-            {/* Photo Upload Preview */}
-            <div className="flex items-center gap-4">
-              {editPhotoUrl ? (
-                <img
-                  src={editPhotoUrl}
-                  alt="Preview"
-                  className="h-16 w-16 rounded-full object-cover border-2 border-indigo-500 shadow"
-                />
-              ) : (
-                <div className="h-16 w-16 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-2xl text-slate-400">
-                  📷
-                </div>
-              )}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Upload Photo</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handlePhotoUpload(e, true)}
-                  className="block text-xs text-slate-500 file:mr-2 file:rounded-lg file:border-0 file:bg-slate-100 dark:file:bg-slate-800 file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-slate-700 dark:file:text-slate-300 hover:file:bg-slate-200"
-                />
-                {editPhotoUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setEditPhotoUrl('')}
-                    className="mt-1 text-[11px] text-rose-500 hover:underline"
-                  >
-                    Remove Photo
-                  </button>
-                )}
-              </div>
-            </div>
-
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Full Name *</label>
               <input
@@ -536,7 +488,7 @@ export function StudentsPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mobile Number *</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mobile *</label>
                 <input
                   type="tel"
                   value={editMobile}
@@ -546,22 +498,22 @@ export function StudentsPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Membership ID</label>
                 <input
-                  type="email"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
+                  type="text"
+                  value={editMembershipNumber}
+                  onChange={(e) => setEditMembershipNumber(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Member ID</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email</label>
               <input
-                type="text"
-                value={editMembershipNumber}
-                onChange={(e) => setEditMembershipNumber(e.target.value)}
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
               />
             </div>
@@ -572,6 +524,17 @@ export function StudentsPage() {
                 type="text"
                 value={editAddress}
                 onChange={(e) => setEditAddress(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Photo URL (Optional)</label>
+              <input
+                type="url"
+                value={editPhotoUrl}
+                onChange={(e) => setEditPhotoUrl(e.target.value)}
+                placeholder="https://..."
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
               />
             </div>
@@ -596,56 +559,23 @@ export function StudentsPage() {
         )}
       </Modal>
 
-      {/* ── Registration Modal ── */}
+      {/* ── Register New Student Modal ── */}
       <Modal
         isOpen={showRegisterModal}
         onClose={() => setShowRegisterModal(false)}
-        title="Register Student"
-        subtitle="Create an administrative record for a new library member"
-        icon={<UserPlus className="h-5 w-5" />}
+        title="Register New Student"
+        subtitle="Create student profile & generate membership ID"
+        icon={<UserCheck className="h-5 w-5 text-indigo-500" />}
         maxWidth="md"
       >
-        <form onSubmit={handleRegister} className="space-y-4">
-          {/* Photo Upload Input */}
-          <div className="flex items-center gap-4">
-            {photoUrl ? (
-              <img
-                src={photoUrl}
-                alt="Preview"
-                className="h-16 w-16 rounded-full object-cover border-2 border-indigo-500 shadow"
-              />
-            ) : (
-              <div className="h-16 w-16 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-2xl text-slate-400">
-                📷
-              </div>
-            )}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Member Photo (Optional)</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handlePhotoUpload(e, false)}
-                className="block text-xs text-slate-500 file:mr-2 file:rounded-lg file:border-0 file:bg-slate-100 dark:file:bg-slate-800 file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-slate-700 dark:file:text-slate-300 hover:file:bg-slate-200"
-              />
-              {photoUrl && (
-                <button
-                  type="button"
-                  onClick={() => setPhotoUrl('')}
-                  className="mt-1 text-[11px] text-rose-500 hover:underline"
-                >
-                  Remove Photo
-                </button>
-              )}
-            </div>
-          </div>
-
+        <form onSubmit={handleCreateStudent} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Full Name *</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Student Full Name *</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Bharat Rawat"
+              placeholder="e.g. Rahul Sharma"
               className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
               required
             />
@@ -658,30 +588,41 @@ export function StudentsPage() {
                 type="tel"
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
-                placeholder="9876543210"
+                placeholder="10-digit number"
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
                 required
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email (Optional)</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Membership ID (Auto if blank)</label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="student@example.com"
+                type="text"
+                value={membershipNumber}
+                onChange={(e) => setMembershipNumber(e.target.value)}
+                placeholder="e.g. ATL-0042"
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Custom Member ID (Optional)</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email Address (Optional)</label>
             <input
-              type="text"
-              value={membershipNumber}
-              onChange={(e) => setMembershipNumber(e.target.value)}
-              placeholder="Leave empty for auto-generated (MEM-0001)"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="rahul@example.com"
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Photo URL (Optional)</label>
+            <input
+              type="url"
+              value={photoUrl}
+              onChange={(e) => setPhotoUrl(e.target.value)}
+              placeholder="https://..."
               className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
             />
           </div>
@@ -715,6 +656,24 @@ export function StudentsPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Delete Student Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => {
+          if (deleteConfirm) {
+            deleteStudent.mutate(deleteConfirm.id, {
+              onSuccess: () => setDeleteConfirm(null),
+            });
+          }
+        }}
+        title={`Delete Student "${deleteConfirm?.name || ''}"`}
+        description={`Are you sure you want to remove student "${deleteConfirm?.name || ''}"? Any active memberships and assigned seats will be cancelled and freed immediately.`}
+        confirmLabel="Delete Student"
+        variant="danger"
+        isLoading={deleteStudent.isPending}
+      />
     </div>
   );
 }
