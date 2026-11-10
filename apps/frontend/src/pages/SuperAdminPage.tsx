@@ -3,6 +3,7 @@ import {
   useSuperAdminTenants,
   useApproveTenantSubscription,
   useToggleTenantStatus,
+  useResetTenantPasswordByAdmin,
   useAuth,
   useLogout,
   useSuperAdminSaasPlans,
@@ -25,6 +26,7 @@ export function SuperAdminPage() {
 
   const approveTenant = useApproveTenantSubscription();
   const toggleStatus = useToggleTenantStatus();
+  const resetPasswordMutation = useResetTenantPasswordByAdmin();
   const createPlan = useCreateSaasPlan();
   const updatePlan = useUpdateSaasPlan();
   const deletePlan = useDeleteSaasPlan();
@@ -41,6 +43,11 @@ export function SuperAdminPage() {
   const [libraryFilter, setLibraryFilter] = useState<'pending' | 'active' | 'all'>('pending');
   const [approvalDays, setApprovalDays] = useState('30');
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+
+  // Admin Password Reset Modal State
+  const [adminResetTenant, setAdminResetTenant] = useState<any | null>(null);
+  const [adminNewPassword, setAdminNewPassword] = useState('');
+  const [adminGeneratedOtp, setAdminGeneratedOtp] = useState<{ otp: string; email: string } | null>(null);
 
   // Plan Management Modal State
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
@@ -524,6 +531,18 @@ export function SuperAdminPage() {
                             }`}
                           >
                             {t.isActive ? 'Suspend' : 'Unsuspend'}
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setAdminResetTenant(t);
+                              setAdminNewPassword('');
+                              setAdminGeneratedOtp(null);
+                            }}
+                            title="Reset Client Password or Generate Recovery OTP"
+                            className="bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white px-2.5 py-1 rounded text-xs transition font-semibold"
+                          >
+                            🔑 Reset Password
                           </button>
                         </td>
                       </tr>
@@ -1032,6 +1051,137 @@ export function SuperAdminPage() {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* Admin Password Reset Modal */}
+      <Modal
+        isOpen={!!adminResetTenant}
+        onClose={() => setAdminResetTenant(null)}
+        title="Admin Password Recovery & Reset"
+        subtitle={`Reset credentials for library: ${adminResetTenant?.name || ''}`}
+        icon={<ShieldCheck className="h-5 w-5 text-indigo-400" />}
+        maxWidth="md"
+      >
+        {adminResetTenant && (
+          <div className="space-y-4">
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 text-xs space-y-1">
+              <div>
+                <span className="text-slate-400">Library:</span>{' '}
+                <strong className="text-slate-900 dark:text-white">{adminResetTenant.name}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400">Owner Name:</span>{' '}
+                <strong className="text-slate-900 dark:text-white">{adminResetTenant.ownerName}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400">Login Email:</span>{' '}
+                <strong className="text-indigo-600 dark:text-indigo-400 font-mono">{adminResetTenant.ownerEmail}</strong>
+              </div>
+            </div>
+
+            {adminGeneratedOtp ? (
+              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 space-y-2">
+                <p className="text-xs font-semibold">
+                  ✓ One-time recovery code generated for <span className="underline">{adminGeneratedOtp.email}</span>:
+                </p>
+                <div className="text-center py-2 bg-emerald-950/40 rounded-lg border border-emerald-500/20">
+                  <span className="text-2xl font-mono font-black tracking-widest text-white">
+                    {adminGeneratedOtp.otp}
+                  </span>
+                </div>
+                <p className="text-[11px] text-emerald-300">
+                  Provide this 6-digit code to the library owner. They can enter it on the "Forgot Password" page to choose their new password.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Option 1: Set New Password Directly
+                  </label>
+                  <input
+                    type="text"
+                    value={adminNewPassword}
+                    onChange={(e) => setAdminNewPassword(e.target.value)}
+                    placeholder="Enter new temporary password (min 6 chars)"
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Instantly updates the password in database without needing any OTP.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+                  <span className="text-[10px] uppercase font-bold text-slate-400">OR</span>
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Option 2: Generate 6-Digit OTP Code
+                  </label>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Generate a secure 6-digit OTP that only you can see, then convey it to the client via phone or WhatsApp.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setAdminResetTenant(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+              >
+                Close
+              </button>
+
+              {!adminGeneratedOtp && (
+                <>
+                  <button
+                    type="button"
+                    disabled={resetPasswordMutation.isPending}
+                    onClick={() => {
+                      resetPasswordMutation.mutate(
+                        { tenantId: adminResetTenant._id },
+                        {
+                          onSuccess: (data) => {
+                            if (data.otp && data.ownerEmail) {
+                              setAdminGeneratedOtp({ otp: data.otp, email: data.ownerEmail });
+                            }
+                          },
+                        },
+                      );
+                    }}
+                    className="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-semibold px-3.5 py-2 rounded-xl text-xs transition disabled:opacity-50"
+                  >
+                    Generate OTP Code
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={resetPasswordMutation.isPending || adminNewPassword.trim().length < 6}
+                    onClick={() => {
+                      resetPasswordMutation.mutate(
+                        { tenantId: adminResetTenant._id, newPassword: adminNewPassword.trim() },
+                        {
+                          onSuccess: (data) => {
+                            alert(data.message);
+                            setAdminResetTenant(null);
+                          },
+                        },
+                      );
+                    }}
+                    className="bg-indigo-600 hover:bg-indigo-500 !text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow disabled:opacity-50"
+                  >
+                    {resetPasswordMutation.isPending ? 'Updating…' : 'Save Direct Password'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

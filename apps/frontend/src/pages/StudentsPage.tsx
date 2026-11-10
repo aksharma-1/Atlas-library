@@ -1,14 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStudents, useCreateStudent, useUpdateStudent, useDeleteStudent, useFilteredMemberships } from '../hooks/useStudents';
 import { usePlans, useSeats, useShifts } from '../hooks/useLibrary';
+import { useAuth } from '../hooks/useAuth';
 import type { StudentDTO } from '@atlas/shared';
 import { Modal, ConfirmModal, CustomSelect } from '../components/ui';
-import { Bell, UserCheck, UserPlus, Search, Edit2, ArrowUpRight, MessageSquare, Armchair } from 'lucide-react';
+import { Bell, UserCheck, UserPlus, Search, Edit2, Trash2, MessageSquare, Armchair } from 'lucide-react';
+import {
+  DateRangeDurationSelector,
+  calculateEndDateFromDays,
+  getTodayDateString,
+  type DurationOption,
+} from '../components/DateRangeDurationSelector';
 
 type TabType = 'all' | 'dues' | 'expiring_3' | 'expiring_7' | 'expired' | 'left';
 
 export function StudentsPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get('tab') as TabType | null;
 
@@ -47,10 +56,9 @@ export function StudentsPage() {
   const [regPlanId, setRegPlanId] = useState('');
   const [regShiftId, setRegShiftId] = useState('');
   const [regSeatId, setRegSeatId] = useState('');
-  const [regStartDate, setRegStartDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [regEndDate, setRegEndDate] = useState(() =>
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  );
+  const [regDurationOption, setRegDurationOption] = useState<DurationOption>('30d');
+  const [regStartDate, setRegStartDate] = useState(() => getTodayDateString());
+  const [regEndDate, setRegEndDate] = useState(() => calculateEndDateFromDays(getTodayDateString(), 30));
 
   // Edit Student state
   const [editingStudent, setEditingStudent] = useState<StudentDTO | null>(null);
@@ -115,6 +123,10 @@ export function StudentsPage() {
           setRegPlanId('');
           setRegShiftId('');
           setRegSeatId('');
+          setRegDurationOption('30d');
+          const today = getTodayDateString();
+          setRegStartDate(today);
+          setRegEndDate(calculateEndDateFromDays(today, 30));
         },
       },
     );
@@ -157,7 +169,8 @@ export function StudentsPage() {
   };
 
   const getReminderText = (sName: string, sSeat: string) => {
-    return `📚 Atlas Library Reminder\n\nDear ${sName}(${sSeat || 'Seat'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`;
+    const libraryTitle = user?.tenantName || 'StudySpace Library';
+    return `📚 ${libraryTitle} Reminder\n\nDear ${sName}(${sSeat || 'Seat'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`;
   };
 
   const handleOpenWhatsApp = (mobileNum: string, text: string) => {
@@ -232,7 +245,72 @@ export function StudentsPage() {
       {/* Tab 1: All Members Directory */}
       {activeTab === 'all' ? (
         <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
-          <div className="overflow-x-auto">
+          {/* Mobile Card List (< md) */}
+          <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800/60">
+            {studentsLoading ? (
+              <div className="py-12 text-center text-slate-400 text-sm">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent mx-auto mb-2" />
+                Loading students directory…
+              </div>
+            ) : students.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 text-sm px-4">
+                No students found. Register your first student above.
+              </div>
+            ) : (
+              students.map((s) => (
+                <div
+                  key={s._id}
+                  onClick={() => navigate(`/students/${s._id}`)}
+                  className="p-4 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition cursor-pointer flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {s.photoUrl ? (
+                      <img
+                        src={s.photoUrl}
+                        alt={s.name}
+                        className="h-11 w-11 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                      />
+                    ) : (
+                      <div className="h-11 w-11 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-sm font-bold border border-indigo-200 dark:border-indigo-800 shrink-0">
+                        {s.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 dark:text-white truncate">{s.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">{s.mobile || 'No mobile'}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                          {s.membershipNumber || 'ID N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => handleStartEdit(s)}
+                      title="Edit Student"
+                      className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 shadow-xs"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(s._id, s.name)}
+                      title="Delete Student"
+                      className="p-2 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 shadow-xs"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table (>= md) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
               <thead className="bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                 <tr>
@@ -259,7 +337,11 @@ export function StudentsPage() {
                   </tr>
                 ) : (
                   students.map((s) => (
-                    <tr key={s._id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition">
+                    <tr
+                      key={s._id}
+                      onClick={() => navigate(`/students/${s._id}`)}
+                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition cursor-pointer group"
+                    >
                       <td className="px-6 py-4 flex items-center gap-3">
                         {s.photoUrl ? (
                           <img
@@ -273,7 +355,9 @@ export function StudentsPage() {
                           </div>
                         )}
                         <div>
-                          <p className="font-semibold text-slate-900 dark:text-white">{s.name}</p>
+                          <p className="font-semibold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                            {s.name}
+                          </p>
                           {s.email && <p className="text-xs text-slate-400">{s.email}</p>}
                         </div>
                       </td>
@@ -284,24 +368,22 @@ export function StudentsPage() {
                       <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400">
                         {new Date(s.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 text-right space-x-2">
-                        <Link
-                          to={`/students/${s._id}`}
-                          className="inline-flex items-center gap-1 rounded-lg bg-indigo-500 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-2.5 py-1 text-xs font-semibold hover:bg-indigo-600 hover:!text-white transition"
-                        >
-                          Profile <ArrowUpRight className="h-3 w-3" />
-                        </Link>
+                      <td className="px-6 py-4 text-right space-x-1.5" onClick={(e) => e.stopPropagation()}>
                         <button
+                          type="button"
                           onClick={() => handleStartEdit(s)}
-                          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                          title="Edit Student"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition shadow-sm"
                         >
-                          Edit
+                          <Edit2 className="h-3.5 w-3.5" />
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleDelete(s._id, s.name)}
-                          className="rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 px-2.5 py-1 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/30 transition"
+                          title="Delete Student"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition shadow-sm"
                         >
-                          Delete
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </td>
                     </tr>
@@ -314,16 +396,119 @@ export function StudentsPage() {
       ) : (
         /* Tabs 2-6: Filtered Memberships (Dues, Expiring 1-3, Expiring 1-7, Expired, Left) */
         <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
-          <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+          <div className="p-3.5 sm:p-4 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
               {tabs.find((t) => t.id === activeTab)?.label} ({filteredMemberships.length})
             </h3>
-            <span className="text-xs text-slate-500 dark:text-slate-400">
-              Showing filtered records matching current status
+            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
+              Showing filtered records
             </span>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Filtered Cards (< md) */}
+          <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800/60">
+            {membershipsLoading ? (
+              <div className="py-12 text-center text-slate-400 text-sm">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent mx-auto mb-2" />
+                Loading records…
+              </div>
+            ) : filteredMemberships.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 text-sm px-4">
+                No records found in this section.
+              </div>
+            ) : (
+              filteredMemberships.map((m: any) => {
+                const s = m.studentId || {};
+                const duePaise = Math.max(0, (m.feePaise || 0) - (m.paidPaise || 0));
+                const isExpired = new Date(m.endDate) < new Date();
+                const seatNo = m.seatId?.seatNumber || 'Non-Reserved';
+
+                return (
+                  <div
+                    key={m._id}
+                    onClick={() => s._id && navigate(`/students/${s._id}`)}
+                    className="p-4 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition cursor-pointer flex flex-col gap-2.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {s.photoUrl ? (
+                          <img
+                            src={s.photoUrl}
+                            alt={s.name}
+                            className="h-10 w-10 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs font-bold border border-indigo-200 dark:border-indigo-800 shrink-0">
+                            {(s.name || '?').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 dark:text-white truncate">{s.name || 'Unknown Student'}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">{s.mobile || '—'}</p>
+                        </div>
+                      </div>
+
+                      <span className="rounded-lg px-2.5 py-1 text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                        Seat {seatNo}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 dark:border-slate-800/60">
+                      <div>
+                        <span className="text-slate-400 block text-[10px]">Expiry</span>
+                        <span className={`font-mono ${isExpired ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-slate-700 dark:text-slate-300'}`}>
+                          {new Date(m.endDate).toLocaleDateString()}
+                        </span>
+                      </div>
+
+                      {activeTab === 'dues' ? (
+                        <div className="text-right">
+                          <span className="text-slate-400 block text-[10px]">Due Amount</span>
+                          <span className="font-mono font-bold text-rose-600 dark:text-rose-400 text-sm">
+                            ₹{(duePaise / 100).toFixed(0)}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-right">
+                          <span className="text-slate-400 block text-[10px]">Status</span>
+                          <span
+                            className={`rounded-md px-2 py-0.5 text-[10px] font-semibold capitalize ${
+                              m.status === 'active'
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                : m.status === 'left'
+                                ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                            }`}
+                          >
+                            {m.status}
+                          </span>
+                        </div>
+                      )}
+
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setReminderModalData({
+                              studentName: s.name,
+                              seatNumber: seatNo,
+                              mobile: s.mobile,
+                            })
+                          }
+                          className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 text-xs font-semibold shadow-xs transition"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" /> Alert
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop Table (>= md) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
               <thead className="bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                 <tr>
@@ -361,7 +546,11 @@ export function StudentsPage() {
                     const seatNo = m.seatId?.seatNumber || 'Non-Reserved';
 
                     return (
-                      <tr key={m._id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition">
+                      <tr
+                        key={m._id}
+                        onClick={() => s._id && navigate(`/students/${s._id}`)}
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition cursor-pointer group"
+                      >
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-3">
                             {s.photoUrl ? (
@@ -376,12 +565,9 @@ export function StudentsPage() {
                               </div>
                             )}
                             <div>
-                              <Link
-                                to={`/students/${s._id}`}
-                                className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
-                              >
+                              <p className="font-semibold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                 {s.name || 'Unknown Student'}
-                              </Link>
+                              </p>
                               <p className="text-[11px] font-mono text-slate-400">{s.membershipNumber}</p>
                             </div>
                           </div>
@@ -417,8 +603,9 @@ export function StudentsPage() {
                           </td>
                         )}
 
-                        <td className="px-5 py-3.5 text-right space-x-2">
+                        <td className="px-5 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
                           <button
+                            type="button"
                             onClick={() =>
                               setReminderModalData({
                                 studentName: s.name,
@@ -426,17 +613,11 @@ export function StudentsPage() {
                                 mobile: s.mobile,
                               })
                             }
-                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-600 hover:!text-white px-2.5 py-1 text-xs font-semibold transition"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-600 hover:!text-white px-2.5 py-1 text-xs font-semibold transition shadow-sm"
                             title="Send Renewal Reminder"
                           >
-                            <MessageSquare className="h-3 w-3" /> Reminder
+                            <MessageSquare className="h-3.5 w-3.5" /> Reminder
                           </button>
-                          <Link
-                            to={`/students/${s._id}`}
-                            className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-600 hover:!text-white px-2.5 py-1 text-xs font-semibold transition"
-                          >
-                            View <ArrowUpRight className="h-3 w-3" />
-                          </Link>
                         </td>
                       </tr>
                     );
@@ -684,7 +865,7 @@ export function StudentsPage() {
             </div>
 
             {assignDeskOnRegister && (
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-850/60 border border-slate-200 dark:border-slate-800 space-y-3 animate-fade-in">
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-3 animate-fade-in">
                 <div>
                   <CustomSelect
                     label="Select Plan *"
@@ -732,30 +913,15 @@ export function StudentsPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Start Date
-                    </label>
-                    <input
-                      type="date"
-                      value={regStartDate}
-                      onChange={(e) => setRegStartDate(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-xs text-slate-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      End Date
-                    </label>
-                    <input
-                      type="date"
-                      value={regEndDate}
-                      onChange={(e) => setRegEndDate(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-xs text-slate-900 dark:text-white"
-                    />
-                  </div>
-                </div>
+                <DateRangeDurationSelector
+                  startDate={regStartDate}
+                  endDate={regEndDate}
+                  onChangeStartDate={setRegStartDate}
+                  onChangeEndDate={setRegEndDate}
+                  durationOption={regDurationOption}
+                  onChangeDurationOption={setRegDurationOption}
+                  label="Membership Validity & Duration"
+                />
               </div>
             )}
           </div>

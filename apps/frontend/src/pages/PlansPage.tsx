@@ -178,15 +178,15 @@ export function PlansPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-2">
         {/* ── Shifts Section ── */}
-        <div className="rounded-xl border border-surface-700 bg-surface-800 p-6 space-y-6">
+        <div className="rounded-2xl border border-surface-700 bg-surface-800 p-4 sm:p-6 space-y-5 sm:space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-white">Operational Shifts</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-white">Operational Shifts</h2>
             <p className="text-xs text-slate-400">Define library shifts and study periods in 12-hour format.</p>
           </div>
 
-          <form onSubmit={handleCreateShift} className="space-y-3 bg-surface-900/60 p-4 rounded-lg border border-surface-700">
+          <form onSubmit={handleCreateShift} className="space-y-3 bg-surface-900/60 p-3.5 sm:p-4 rounded-xl border border-surface-700">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">+ Add New Shift</h3>
             <div>
               <label className="block text-xs font-medium text-slate-300">Shift Name</label>
@@ -271,13 +271,13 @@ export function PlansPage() {
         </div>
 
         {/* ── Plans Section ── */}
-        <div className="rounded-xl border border-surface-700 bg-surface-800 p-6 space-y-6">
+        <div className="rounded-2xl border border-surface-700 bg-surface-800 p-4 sm:p-6 space-y-5 sm:space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-white">Membership Plans</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-white">Membership Plans</h2>
             <p className="text-xs text-slate-400">Configure plans with pricing in rupees (unlimited capacity).</p>
           </div>
 
-          <form onSubmit={handleCreatePlan} className="space-y-3 bg-surface-900/60 p-4 rounded-lg border border-surface-700">
+          <form onSubmit={handleCreatePlan} className="space-y-3 bg-surface-900/60 p-3.5 sm:p-4 rounded-xl border border-surface-700">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">+ Add New Plan</h3>
             <div>
               <label className="block text-xs font-medium text-slate-300">Plan Name</label>

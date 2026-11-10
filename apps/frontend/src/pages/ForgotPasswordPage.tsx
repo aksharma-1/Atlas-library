@@ -29,7 +29,6 @@ export function ForgotPasswordPage() {
   const [step, setStep] = useState<'request' | 'reset'>('request');
   const [email, setEmail] = useState('');
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
-  const [debugOtp, setDebugOtp] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const {
@@ -52,9 +51,6 @@ export function ForgotPasswordPage() {
       {
         onSuccess: (res) => {
           setInfoMessage(res.message);
-          if (res.debugOtp) {
-            setDebugOtp(res.debugOtp);
-          }
           setStep('reset');
         },
         onError: (err: any) => {
@@ -109,12 +105,6 @@ export function ForgotPasswordPage() {
           {infoMessage && (
             <div className="rounded-lg border border-brand-500/30 bg-brand-500/10 px-4 py-2.5 text-xs text-brand-300">
               {infoMessage}
-            </div>
-          )}
-
-          {debugOtp && (
-            <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 p-3 text-xs text-emerald-300">
-              <span className="font-bold">Development Fast-OTP:</span> <span className="font-mono text-white text-sm">{debugOtp}</span>
             </div>
           )}
 

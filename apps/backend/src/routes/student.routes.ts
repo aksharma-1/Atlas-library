@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/authenticate';
+import { requireActiveTenant } from '../middleware/requireActiveTenant';
 import { listStudents, createStudent, getStudentProfile, updateStudent, deleteStudent } from '../controllers/student.controller';
 import { createMembership, markMembershipLeft, addGiftDays, listMembershipsWithFilters } from '../controllers/membership.controller';
 import { recordPayment, getReceipt } from '../controllers/payment.controller';
 
 export const studentsRouter = Router();
-studentsRouter.use(authenticate);
+studentsRouter.use(authenticate, requireActiveTenant);
 studentsRouter.get('/', listStudents);
 studentsRouter.post('/', createStudent);
 studentsRouter.get('/:id', getStudentProfile);
@@ -13,13 +14,13 @@ studentsRouter.put('/:id', updateStudent);
 studentsRouter.delete('/:id', deleteStudent);
 
 export const membershipsRouter = Router();
-membershipsRouter.use(authenticate);
+membershipsRouter.use(authenticate, requireActiveTenant);
 membershipsRouter.get('/', listMembershipsWithFilters);
 membershipsRouter.post('/', createMembership);
 membershipsRouter.patch('/:id/left', markMembershipLeft);
 membershipsRouter.post('/:id/gift-days', addGiftDays);
 
 export const paymentsRouter = Router();
-paymentsRouter.use(authenticate);
+paymentsRouter.use(authenticate, requireActiveTenant);
 paymentsRouter.post('/', recordPayment);
 paymentsRouter.get('/:id/receipt', getReceipt);

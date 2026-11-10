@@ -130,6 +130,7 @@ export async function register(
       subscriptionStatus: tenant.subscriptionStatus,
       subscriptionTier: tenant.subscriptionTier,
       maxSeats: tenant.maxSeats,
+      isActive: tenant.isActive,
     };
 
     const token = generateToken(payload);
@@ -260,6 +261,7 @@ export async function submitPaymentUtr(
       ...req.user!,
       subscriptionStatus: 'pending_approval',
       subscriptionTier: chosenTier,
+      isActive: tenant.isActive,
     };
 
     const token = generateToken(updatedPayload);
@@ -299,10 +301,15 @@ export async function login(
     res.cookie(AUTH_COOKIE, token, cookieOptions);
     res.status(200).json({ user });
   } catch (err) {
-    // loginUser throws plain Error on bad credentials — return 401
-    if (err instanceof Error && err.message === 'Invalid email or password') {
-      res.status(401).json({ error: 'Invalid email or password' });
-      return;
+    if (err instanceof Error) {
+      if (err.message.includes('suspended') || err.message.includes('disabled')) {
+        res.status(403).json({ error: err.message });
+        return;
+      }
+      if (err.message === 'Invalid email or password') {
+        res.status(401).json({ error: 'Invalid email or password' });
+        return;
+      }
     }
     next(err);
   }
@@ -357,12 +364,14 @@ export async function me(req: Request, res: Response, next: NextFunction): Promi
       subscriptionExpiresAt: tenant.subscriptionExpiresAt ? tenant.subscriptionExpiresAt.toISOString() : undefined,
       onboardingStep: tenant.onboardingStep,
       maxSeats: tenant.maxSeats,
+      isActive: tenant.isActive,
     };
 
-    // If tenant status changed in DB (e.g. approved by superadmin), re-issue updated cookie
+    // If tenant status or active state changed in DB (e.g. approved or suspended by superadmin), re-issue updated cookie
     if (
       tenant.subscriptionStatus !== req.user.subscriptionStatus ||
-      tenant.onboardingStep !== req.user.onboardingStep
+      tenant.onboardingStep !== req.user.onboardingStep ||
+      tenant.isActive !== req.user.isActive
     ) {
       const token = generateToken(latestUser);
       res.cookie(AUTH_COOKIE, token, cookieOptions);
@@ -418,9 +427,7 @@ export async function forgotPassword(req: Request, res: Response, next: NextFunc
     console.log(`\n🔑 [PASSWORD RESET OTP] For ${email}: CODE = [ ${otp} ] (Expires in 15 mins)\n`);
 
     res.status(200).json({
-      message: 'Password reset code has been sent. Please enter the 6-digit code and your new password.',
-      // For local development ease, include debugOtp
-      debugOtp: process.env.NODE_ENV !== 'production' ? otp : undefined,
+      message: 'Password reset code has been sent. Please contact Super Admin or check your registered recovery channel for your 6-digit code.',
     });
   } catch (err) {
     next(err);

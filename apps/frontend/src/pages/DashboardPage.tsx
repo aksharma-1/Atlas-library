@@ -22,10 +22,10 @@ export function DashboardPage() {
   const { data: stats, isLoading } = useDashboardStats();
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto">
       {/* Welcome Glass Banner */}
-      <div className="relative overflow-hidden rounded-3xl glass-panel p-8 border">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl glass-panel p-5 sm:p-8 border">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5 sm:gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Badge variant="brand">
@@ -33,24 +33,24 @@ export function DashboardPage() {
               </Badge>
               <span className="text-xs text-slate-400">Library Control Hub</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight" style={{ color: 'var(--text-main)' }}>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight" style={{ color: 'var(--text-main)' }}>
               Welcome back, {user?.name}
             </h1>
-            <p className="text-xs md:text-sm text-slate-400 max-w-xl">
+            <p className="text-xs sm:text-sm text-slate-400 max-w-xl">
               Live operational dashboard for{' '}
               <strong className="text-indigo-400 font-semibold">{user?.tenantName}</strong>. 
               Track student admissions, seating occupancy, dues collection, and upcoming renewals.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link to="/students">
-              <Button icon={<UserPlus className="h-4 w-4" />}>
+          <div className="flex items-center gap-2.5 sm:gap-3 w-full md:w-auto">
+            <Link to="/students" className="flex-1 md:flex-initial">
+              <Button icon={<UserPlus className="h-4 w-4" />} className="w-full justify-center">
                 Register Student
               </Button>
             </Link>
-            <Link to="/seats">
-              <Button variant="outline" icon={<Armchair className="h-4 w-4" />}>
+            <Link to="/seats" className="flex-1 md:flex-initial">
+              <Button variant="outline" icon={<Armchair className="h-4 w-4" />} className="w-full justify-center">
                 Seat Map
               </Button>
             </Link>

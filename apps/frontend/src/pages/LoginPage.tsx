@@ -157,7 +157,8 @@ export function LoginPage() {
                 role="alert"
                 className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs text-rose-300"
               >
-                Invalid email or password. Please try again or use the recovery flow.
+                {(login.error as any)?.response?.data?.error ||
+                  'Invalid email or password. Please try again or use the recovery flow.'}
               </div>
             )}
 

@@ -137,3 +137,51 @@ export async function toggleTenantStatus(req: Request, res: Response, next: Next
     next(err);
   }
 }
+
+/**
+ * POST /api/v1/superadmin/tenants/:id/reset-password
+ * Super-admin can directly set a new password or generate a one-time OTP for any library owner.
+ */
+export async function resetTenantPasswordByAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    const owner = await User.findOne({ tenantId: id, role: 'owner' });
+    if (!owner) {
+      res.status(404).json({ error: 'Library owner user not found for this tenant' });
+      return;
+    }
+
+    if (newPassword && typeof newPassword === 'string' && newPassword.trim().length >= 6) {
+      const bcrypt = await import('bcryptjs');
+      owner.passwordHash = await bcrypt.hash(newPassword.trim(), 12);
+      owner.resetPasswordOtp = undefined;
+      owner.resetPasswordOtpExpires = undefined;
+      await owner.save();
+
+      res.status(200).json({
+        message: `Password successfully updated for owner "${owner.email}"!`,
+        ownerEmail: owner.email,
+      });
+      return;
+    }
+
+    // Otherwise generate a fresh 6-digit OTP visible only to the super-admin
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour for admin dispatch
+
+    owner.resetPasswordOtp = otp;
+    owner.resetPasswordOtpExpires = expires;
+    await owner.save();
+
+    res.status(200).json({
+      message: `Generated recovery OTP for "${owner.email}". Provide this OTP to the client to enter on the reset screen.`,
+      otp,
+      ownerEmail: owner.email,
+      expiresAt: expires.toISOString(),
+    });
+  } catch (err) {
+    next(err);
+  }
+}

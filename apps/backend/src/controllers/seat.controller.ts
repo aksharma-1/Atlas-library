@@ -50,11 +50,11 @@ export async function listSeats(req: Request, res: Response, next: NextFunction)
       .sort({ seatNumber: 1 });
 
     // Fetch active memberships for this tenant to provide live occupancy & student details
+    // Any membership with status 'active' and an assigned seat occupies that seat until vacated/left/cancelled
     const activeMemberships = await Membership.find({
       tenantId,
       status: 'active',
       seatId: { $ne: null },
-      endDate: { $gte: new Date() },
     })
       .populate('studentId', 'name mobile photoUrl membershipNumber')
       .populate('planId', 'name')

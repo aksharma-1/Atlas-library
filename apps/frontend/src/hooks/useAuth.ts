@@ -198,6 +198,28 @@ export function useToggleTenantStatus() {
   });
 }
 
+/** useResetTenantPasswordByAdmin — Super-admin resets password or generates OTP for tenant */
+export function useResetTenantPasswordByAdmin() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ tenantId, newPassword }: { tenantId: string; newPassword?: string }) => {
+      const { data } = await apiClient.post<{
+        message: string;
+        otp?: string;
+        ownerEmail?: string;
+        expiresAt?: string;
+      }>(`/superadmin/tenants/${tenantId}/reset-password`, {
+        newPassword,
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['superadmin', 'tenants'] });
+    },
+  });
+}
+
 /** useForgotPassword — request 6-digit reset code */
 export function useForgotPassword() {
   return useMutation({

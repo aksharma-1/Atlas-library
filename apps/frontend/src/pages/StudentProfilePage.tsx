@@ -8,6 +8,12 @@ import { PrintableReceipt } from '../components/PrintableReceipt';
 import type { PaymentDTO } from '@atlas/shared';
 import { CustomSelect, Modal, ConfirmModal } from '../components/ui';
 import { UserCheck, CreditCard, Gift, UserCog, Bell, ArrowLeft } from 'lucide-react';
+import {
+  DateRangeDurationSelector,
+  calculateEndDateFromDays,
+  getTodayDateString,
+  type DurationOption,
+} from '../components/DateRangeDurationSelector';
 
 export function StudentProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -48,10 +54,9 @@ export function StudentProfilePage() {
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [selectedShiftId, setSelectedShiftId] = useState('');
   const [selectedSeatId, setSelectedSeatId] = useState('');
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(() =>
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  );
+  const [durationOption, setDurationOption] = useState<DurationOption>('30d');
+  const [startDate, setStartDate] = useState(() => getTodayDateString());
+  const [endDate, setEndDate] = useState(() => calculateEndDateFromDays(getTodayDateString(), 30));
 
   // Payment form
   const [paymentAmountRupees, setPaymentAmountRupees] = useState('');
@@ -93,6 +98,10 @@ export function StudentProfilePage() {
           setSelectedPlanId('');
           setSelectedShiftId('');
           setSelectedSeatId('');
+          setDurationOption('30d');
+          const today = getTodayDateString();
+          setStartDate(today);
+          setEndDate(calculateEndDateFromDays(today, 30));
         },
       },
     );
@@ -172,43 +181,43 @@ export function StudentProfilePage() {
     : 0;
 
   return (
-    <div className="space-y-6 max-w-6xl pb-12">
+    <div className="space-y-4 sm:space-y-6 max-w-6xl pb-12">
       {/* ── Student Profile Header ── */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-6 shadow-sm">
         <Link
           to="/students"
-          className="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold mb-4"
+          className="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold mb-3 sm:mb-4"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Back to Students Directory
         </Link>
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-3.5 sm:gap-4">
             {student.photoUrl ? (
               <img
                 src={student.photoUrl}
                 alt={student.name}
-                className="h-16 w-16 rounded-full object-cover border-2 border-indigo-500 shadow-md shrink-0"
+                className="h-14 w-14 sm:h-16 sm:w-16 rounded-full object-cover border-2 border-indigo-500 shadow-md shrink-0"
               />
             ) : (
-              <div className="h-16 w-16 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-2xl font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
+              <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
                 {student.name.charAt(0).toUpperCase()}
               </div>
             )}
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{student.name}</h1>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white truncate">{student.name}</h1>
                 <span className="rounded-md bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
                   {student.membershipNumber}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate">
                 📞 {student.mobile} {student.email ? `· ✉️ ${student.email}` : ''} {student.address ? `· 📍 ${student.address}` : ''}
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
             <button
               onClick={() => {
                 setEditName(student.name);
@@ -219,27 +228,27 @@ export function StudentProfilePage() {
                 setEditPhotoUrl(student.photoUrl || '');
                 setShowEditStudentModal(true);
               }}
-              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition"
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs transition text-center justify-center"
             >
               ✏️ Edit Member
             </button>
             <button
               onClick={() => setShowCardModal(true)}
-              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition"
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs transition text-center justify-center"
             >
               🪪 View ID Card
             </button>
             <button
               onClick={() => setShowReminderModal(true)}
-              className="rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-3.5 py-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:!text-white transition"
+              className="rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-3 py-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:!text-white transition text-center justify-center"
             >
-              📲 Renewal Reminder
+              📲 Reminder
             </button>
             <button
               onClick={() => setShowAssignModal(true)}
-              className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 shadow transition"
+              className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 shadow-xs transition text-center justify-center"
             >
-              {activeMembership ? '↻ Change / Renew Plan' : '+ Assign Membership'}
+              {activeMembership ? '↻ Renew Plan' : '+ Assign Plan'}
             </button>
           </div>
         </div>
@@ -281,19 +290,19 @@ export function StudentProfilePage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-              <p className="text-xs text-slate-500 dark:text-slate-400">Plan & Seat Type</p>
-              <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 capitalize">
-                {activeMembership.seatType} Membership
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
+            <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Plan & Seat Type</p>
+              <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5 capitalize">
+                {activeMembership.seatType}
               </p>
             </div>
-            <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-              <p className="text-xs text-slate-500 dark:text-slate-400">Assigned Seat</p>
+            <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Assigned Seat</p>
               <div className="mt-0.5">
                 {activeMembership.seatType === 'reserved' ? (
                   (activeMembership.seatNumber || (activeMembership.seatId as any)?.seatNumber) ? (
-                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                    <span className="text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400">
                       Seat #{activeMembership.seatNumber || (activeMembership.seatId as any)?.seatNumber}
                     </span>
                   ) : (
@@ -301,26 +310,26 @@ export function StudentProfilePage() {
                       onClick={() => setShowAssignModal(true)}
                       className="text-xs font-bold text-amber-500 hover:underline flex items-center gap-1 cursor-pointer"
                     >
-                      ⚠️ No Desk Allocated (Click to Assign)
+                      ⚠️ Assign Desk
                     </button>
                   )
                 ) : (
-                  <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                  <span className="text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400">
                     Floating Desk
                   </span>
                 )}
               </div>
             </div>
-            <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-              <p className="text-xs text-slate-500 dark:text-slate-400">Validity Period</p>
-              <p className="text-xs font-semibold text-slate-900 dark:text-white mt-1">
+            <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Validity Period</p>
+              <p className="text-[11px] sm:text-xs font-semibold text-slate-900 dark:text-white mt-1">
                 {new Date(activeMembership.startDate).toLocaleDateString()} – {new Date(activeMembership.endDate).toLocaleDateString()}
               </p>
             </div>
-            <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Payment Status</p>
-                <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 capitalize">
+                <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Payment Status</p>
+                <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5 capitalize">
                   {activeMembership.paymentStatus} (₹{(activeMembership.paidPaise / 100).toFixed(0)} / ₹{(activeMembership.feePaise / 100).toFixed(0)})
                 </p>
               </div>
@@ -330,7 +339,7 @@ export function StudentProfilePage() {
                     setPaymentAmountRupees((duesRemainingPaise / 100).toString());
                     setShowPaymentModal(true);
                   }}
-                  className="rounded-lg bg-indigo-600 px-3 py-1 text-xs font-semibold !text-white hover:bg-indigo-500 shadow shrink-0 ml-2"
+                  className="rounded-lg bg-indigo-600 px-3 py-1 text-xs font-semibold !text-white hover:bg-indigo-500 shadow shrink-0"
                 >
                   Pay Due
                 </button>
@@ -455,28 +464,15 @@ export function StudentProfilePage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Start Date</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">End Date</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
-                required
-              />
-            </div>
-          </div>
+          <DateRangeDurationSelector
+            startDate={startDate}
+            endDate={endDate}
+            onChangeStartDate={setStartDate}
+            onChangeEndDate={setEndDate}
+            durationOption={durationOption}
+            onChangeDurationOption={setDurationOption}
+            label="Membership Validity & Duration"
+          />
 
           {createMembership.isError && (
             <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 text-xs">
@@ -761,14 +757,14 @@ export function StudentProfilePage() {
       >
         <div className="space-y-4">
           <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs font-mono space-y-2 whitespace-pre-line text-slate-800 dark:text-slate-200">
-            {`📚 Atlas Library Reminder\n\nDear ${student.name}(${activeMembership?.seatNumber || 'Seat'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`}
+            {`📚 ${user?.tenantName || 'StudySpace Library'} Reminder\n\nDear ${student.name}(${activeMembership?.seatNumber || 'Seat'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`}
           </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
               onClick={() => {
-                const reminderText = `📚 Atlas Library Reminder\n\nDear ${student.name}(${activeMembership?.seatNumber || 'Seat'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`;
+                const reminderText = `📚 ${user?.tenantName || 'StudySpace Library'} Reminder\n\nDear ${student.name}(${activeMembership?.seatNumber || 'Seat'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`;
                 navigator.clipboard.writeText(reminderText);
                 alert('Template copied to clipboard!');
               }}
@@ -779,7 +775,7 @@ export function StudentProfilePage() {
             <button
               type="button"
               onClick={() => {
-                const reminderText = `📚 Atlas Library Reminder\n\nDear ${student.name}(${activeMembership?.seatNumber || 'Seat'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`;
+                const reminderText = `📚 ${user?.tenantName || 'StudySpace Library'} Reminder\n\nDear ${student.name}(${activeMembership?.seatNumber || 'Seat'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`;
                 const cleanMobile = student.mobile.replace(/[^0-9]/g, '');
                 const fullMobile = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
                 window.open(`https://wa.me/${fullMobile}?text=${encodeURIComponent(reminderText)}`, '_blank');

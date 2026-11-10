@@ -28,8 +28,12 @@ export async function loginUser(
   // Use constant-time comparison even if user not found (prevents timing attacks)
   const isValid = user ? await user.comparePassword(password) : false;
 
-  if (!user || !isValid || !user.isActive) {
+  if (!user || !isValid) {
     throw new Error('Invalid email or password');
+  }
+
+  if (!user.isActive) {
+    throw new Error('Your user account has been disabled. Please contact your administrator.');
   }
 
   if (user.role === 'superadmin') {
@@ -51,8 +55,12 @@ export async function loginUser(
 
   const tenant = await Tenant.findById(user.tenantId);
 
-  if (!tenant || !tenant.isActive) {
-    throw new Error('Invalid email or password');
+  if (!tenant) {
+    throw new Error('Library account not found');
+  }
+
+  if (!tenant.isActive) {
+    throw new Error('Your library account has been suspended by the platform administrator.');
   }
 
   const payload: AuthUser = {
@@ -70,6 +78,7 @@ export async function loginUser(
     subscriptionTier: tenant.subscriptionTier,
     subscriptionExpiresAt: tenant.subscriptionExpiresAt ? tenant.subscriptionExpiresAt.toISOString() : undefined,
     maxSeats: tenant.maxSeats || 100,
+    isActive: tenant.isActive,
   };
 
   const token = jwt.sign(payload, env.JWT_SECRET, {

@@ -28,7 +28,7 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   return (
     <aside
-      className="w-64 border-r flex flex-col justify-between p-4 z-10 select-none transition-colors duration-200"
+      className="hidden md:flex w-64 border-r flex-col justify-between p-4 z-10 select-none transition-colors duration-200"
       style={{
         backgroundColor: 'var(--sidebar-bg)',
         borderColor: 'var(--border-subtle)',

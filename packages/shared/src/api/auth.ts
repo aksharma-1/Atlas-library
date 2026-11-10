@@ -35,6 +35,7 @@ export interface AuthUser {
   subscriptionTier?: SubscriptionTier;
   subscriptionExpiresAt?: string;
   maxSeats?: number;
+  isActive?: boolean;
 }
 
 /** Payload for updating user & library profile */

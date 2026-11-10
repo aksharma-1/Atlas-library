@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
+import { Moon, Sun } from 'lucide-react';
 import {
   useAuth,
   useConfigureLibrary,
@@ -10,6 +12,7 @@ import {
 
 export function OnboardingPage() {
   const { user, isLoading } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const configureLibrary = useConfigureLibrary();
   const submitPaymentUtr = useSubmitPaymentUtr();
   const logout = useLogout();
@@ -107,32 +110,41 @@ export function OnboardingPage() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => logout.mutate()}
-            className="text-xs text-slate-400 hover:text-white border border-surface-700 px-3 py-1.5 rounded-lg"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+              className="rounded-lg p-1.5 border border-surface-700 text-slate-400 hover:text-white cursor-pointer"
+            >
+              {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-500" />}
+            </button>
+            <button
+              onClick={() => logout.mutate()}
+              className="text-xs text-slate-400 hover:text-white border border-surface-700 px-3 py-1.5 rounded-lg"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         {/* ── Pending Verification Banner ── */}
         {isPendingApproval ? (
-          <div className="max-w-xl mx-auto rounded-2xl border border-amber-500/30 bg-amber-500/10 p-8 shadow-2xl text-center space-y-4">
+          <div className="max-w-xl mx-auto rounded-2xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/10 p-8 shadow-2xl text-center space-y-4">
             <span className="text-5xl block animate-bounce">⏳</span>
-            <h2 className="text-xl font-bold text-white">Payment Verification in Progress</h2>
-            <p className="text-xs text-amber-200/90 leading-relaxed">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Payment Verification in Progress</h2>
+            <p className="text-xs text-amber-900 dark:text-amber-200/90 font-medium leading-relaxed">
               We have received your payment reference. Our platform administrator is verifying your UPI transfer.
               Your library dashboard will be activated immediately upon confirmation.
             </p>
-            <div className="rounded-xl bg-surface-900/80 p-4 border border-surface-700 inline-block text-left text-xs space-y-1">
-              <p><span className="text-slate-400">Library:</span> <strong className="text-white">{user?.tenantName}</strong></p>
-              <p><span className="text-slate-400">Selected Plan:</span> <strong className="text-brand-400 capitalize">{user?.subscriptionTier} Tier</strong></p>
-              <p><span className="text-slate-400">Status:</span> <span className="bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded text-[10px] font-semibold">Under Review</span></p>
+            <div className="rounded-xl bg-white dark:bg-surface-900/80 p-4 border border-amber-200 dark:border-surface-700 inline-block text-left text-xs space-y-1.5 shadow-sm">
+              <p><span className="text-slate-500 dark:text-slate-400">Library:</span> <strong className="text-slate-900 dark:text-white">{user?.tenantName}</strong></p>
+              <p><span className="text-slate-500 dark:text-slate-400">Selected Plan:</span> <strong className="text-brand-600 dark:text-brand-400 capitalize">{user?.subscriptionTier} Tier</strong></p>
+              <p><span className="text-slate-500 dark:text-slate-400">Status:</span> <span className="bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">Under Review</span></p>
             </div>
             <div className="pt-2">
               <button
                 onClick={() => window.location.reload()}
-                className="rounded-lg bg-surface-700 px-4 py-2 text-xs font-semibold text-slate-200 hover:bg-surface-600 transition"
+                className="rounded-lg bg-surface-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-surface-600 px-4 py-2 text-xs font-semibold hover:bg-surface-700 transition"
               >
                 ↻ Refresh Status
               </button>

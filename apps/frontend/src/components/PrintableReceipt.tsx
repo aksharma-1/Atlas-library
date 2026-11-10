@@ -10,7 +10,7 @@ export interface PrintableReceiptProps {
   tenantName?: string;
 }
 
-export function PrintableReceipt({ isOpen, onClose, payment, student, tenantName = 'Atlas Library' }: PrintableReceiptProps) {
+export function PrintableReceipt({ isOpen, onClose, payment, student, tenantName = 'StudySpace Library' }: PrintableReceiptProps) {
   const handlePrint = () => {
     window.print();
   };

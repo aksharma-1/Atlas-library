@@ -11,7 +11,7 @@ export interface PrintableCardProps {
   tenantName?: string;
 }
 
-export function PrintableCard({ isOpen, onClose, student, membership, tenantName = 'Atlas Library' }: PrintableCardProps) {
+export function PrintableCard({ isOpen, onClose, student, membership, tenantName = 'StudySpace Library' }: PrintableCardProps) {
   const handlePrint = () => {
     window.print();
   };
@@ -50,8 +50,8 @@ export function PrintableCard({ isOpen, onClose, student, membership, tenantName
         <div className="flex justify-center py-1">
           <div
             id="printable-card"
-            className="w-[450px] rounded-2xl overflow-hidden border border-slate-300 dark:border-slate-700 bg-white dark:bg-gradient-to-br dark:from-slate-900 dark:via-indigo-950/40 dark:to-slate-900 shadow-xl text-slate-900 dark:text-white relative select-none"
-            style={{ width: '450px' }}
+            className="w-full max-w-[450px] rounded-2xl overflow-hidden border border-slate-300 dark:border-indigo-900/60 bg-white dark:bg-slate-900 shadow-xl text-slate-900 dark:text-white relative select-none"
+            style={{ maxWidth: '450px' }}
           >
             {/* Header Banner */}
             <div className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-700 px-5 py-3 flex items-center justify-between text-white shadow-sm">
@@ -85,7 +85,7 @@ export function PrintableCard({ isOpen, onClose, student, membership, tenantName
                       className="h-24 w-24 rounded-xl object-cover border-2 border-indigo-400/80 shadow-md bg-slate-100 dark:bg-slate-800"
                     />
                   ) : (
-                    <div className="h-24 w-24 rounded-xl bg-slate-100 dark:bg-slate-800 border-2 border-indigo-300 dark:border-indigo-500/50 flex flex-col items-center justify-center text-indigo-600 dark:text-indigo-300 font-bold text-2xl shadow-inner">
+                    <div className="h-24 w-24 rounded-xl bg-slate-100 dark:bg-slate-800/90 border-2 border-indigo-300 dark:border-indigo-500/40 flex flex-col items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-2xl shadow-inner">
                       <span>{student.name.slice(0, 2).toUpperCase()}</span>
                       <span className="text-[8px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mt-1 font-normal">
                         Student
@@ -123,7 +123,7 @@ export function PrintableCard({ isOpen, onClose, student, membership, tenantName
                 </div>
 
                 {/* Digital Verification QR Code */}
-                <div className="shrink-0 flex flex-col items-center justify-center bg-white p-1.5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm">
+                <div className="shrink-0 flex flex-col items-center justify-center bg-white p-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                   <QRCodeSVG value={qrData} size={64} level="M" />
                   <span className="text-[7px] text-slate-800 font-mono font-bold mt-1 uppercase tracking-tighter">
                     Verified
@@ -132,7 +132,7 @@ export function PrintableCard({ isOpen, onClose, student, membership, tenantName
               </div>
 
               {/* Membership Specs Grid */}
-              <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200 dark:border-slate-700/80 text-center">
+              <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200 dark:border-slate-750 text-center">
                 <div>
                   <span className="text-[9px] uppercase tracking-wider text-slate-500 dark:text-slate-400 block font-semibold">
                     Seat Number

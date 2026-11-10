@@ -30,16 +30,16 @@ export function Modal({
   }[maxWidth];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
       <div
         onClick={onClose}
         className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
       />
 
-      {/* Dialog box */}
+      {/* Dialog box / Mobile Bottom Sheet */}
       <div
-        className={`relative w-full ${maxWidthClass} rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl transition-all z-10 max-h-[90vh] overflow-y-auto text-slate-900 dark:text-slate-100`}
+        className={`relative w-full ${maxWidthClass} rounded-t-3xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-2xl transition-all z-10 max-h-[92vh] overflow-y-auto text-slate-900 dark:text-slate-100`}
       >
         <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-5">
           <div className="flex items-center gap-3">

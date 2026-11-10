@@ -12,6 +12,7 @@ import {
   useChangeSeat,
 } from '../hooks/useLibrary';
 import { useStudents, useCreateMembership, useMarkMembershipLeft } from '../hooks/useStudents';
+import { useAuth } from '../hooks/useAuth';
 import type { SeatDTO, SeatStatus } from '@atlas/shared';
 import { CustomSelect, Modal, ConfirmModal } from '../components/ui';
 import {
@@ -31,8 +32,15 @@ import {
   Plus,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import {
+  DateRangeDurationSelector,
+  calculateEndDateFromDays,
+  getTodayDateString,
+  type DurationOption,
+} from '../components/DateRangeDurationSelector';
 
 export function SeatsPage() {
+  const { user } = useAuth();
   // Query parameters / Filter states
   const [selectedShiftId, setSelectedShiftId] = useState<string>('all');
   const [selectedSection, setSelectedSection] = useState<string>('all');
@@ -102,12 +110,11 @@ export function SeatsPage() {
   const [assignStudentId, setAssignStudentId] = useState<string>('');
   const [assignPlanId, setAssignPlanId] = useState<string>('');
   const [assignShiftId, setAssignShiftId] = useState<string>('');
-  const [assignStartDate, setAssignStartDate] = useState<string>(new Date().toISOString().slice(0, 10));
-  const [assignEndDate, setAssignEndDate] = useState<string>(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + 1);
-    return d.toISOString().slice(0, 10);
-  });
+  const [assignDurationOption, setAssignDurationOption] = useState<DurationOption>('30d');
+  const [assignStartDate, setAssignStartDate] = useState<string>(() => getTodayDateString());
+  const [assignEndDate, setAssignEndDate] = useState<string>(() =>
+    calculateEndDateFromDays(getTodayDateString(), 30),
+  );
 
   // Swap / Change Seat Modal
   const [swapModalData, setSwapModalData] = useState<{
@@ -279,6 +286,10 @@ export function SeatsPage() {
     setAssignShiftId(selectedShiftId !== 'all' ? selectedShiftId : shifts[0]?._id || '');
     setAssignPlanId(plans[0]?._id || '');
     setAssignStudentId(students[0]?._id || '');
+    setAssignDurationOption('30d');
+    const today = getTodayDateString();
+    setAssignStartDate(today);
+    setAssignEndDate(calculateEndDateFromDays(today, 30));
   };
 
   const handleConfirmAssign = (e: React.FormEvent) => {
@@ -345,8 +356,9 @@ export function SeatsPage() {
   const handleWhatsApp = (mobile: string, studentName: string, seatNumber: string) => {
     const cleanMobile = mobile.replace(/[^0-9]/g, '');
     const fullMobile = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
+    const libraryTitle = user?.tenantName || 'StudySpace Library';
     const text = encodeURIComponent(
-      `📚 Atlas Library Notification\n\nHello ${studentName} (Desk ${seatNumber}),\nThis is a notification regarding your library membership & desk renewal.\nPlease visit reception or reply here if you have any questions.\nHappy learning! 🌟`,
+      `📚 ${libraryTitle} Notification\n\nHello ${studentName} (Desk ${seatNumber}),\nThis is a notification regarding your library membership & desk renewal.\nPlease visit reception or reply here if you have any questions.\nHappy learning! 🌟`,
     );
     window.open(`https://wa.me/${fullMobile}?text=${text}`, '_blank');
   };
@@ -607,7 +619,7 @@ export function SeatsPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3">
+          <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 sm:gap-3">
             {displayedSeats.map((seat) => {
               const isOccupied = seat.status === 'occupied';
               const isMaintenance = seat.status === 'maintenance' || seat.status === 'blocked';
@@ -1097,32 +1109,15 @@ export function SeatsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Start Date
-                </label>
-                <input
-                  type="date"
-                  value={assignStartDate}
-                  onChange={(e) => setAssignStartDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  End Date
-                </label>
-                <input
-                  type="date"
-                  value={assignEndDate}
-                  onChange={(e) => setAssignEndDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white"
-                  required
-                />
-              </div>
-            </div>
+            <DateRangeDurationSelector
+              startDate={assignStartDate}
+              endDate={assignEndDate}
+              onChangeStartDate={setAssignStartDate}
+              onChangeEndDate={setAssignEndDate}
+              durationOption={assignDurationOption}
+              onChangeDurationOption={setAssignDurationOption}
+              label="Membership Validity & Duration"
+            />
 
             {createMembershipMutation.isError && (
               <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">

@@ -5,6 +5,7 @@ import {
   listAllTenants,
   approveTenantSubscription,
   toggleTenantStatus,
+  resetTenantPasswordByAdmin,
 } from '../controllers/superadmin.controller';
 import {
   getAllSaasPlansAdmin,
@@ -22,6 +23,7 @@ superadminRouter.use(authenticate, requireSuperAdmin);
 superadminRouter.get('/tenants', listAllTenants);
 superadminRouter.post('/tenants/:id/approve', approveTenantSubscription);
 superadminRouter.post('/tenants/:id/toggle-status', toggleTenantStatus);
+superadminRouter.post('/tenants/:id/reset-password', resetTenantPasswordByAdmin);
 
 // SaaS Plans & Pricing Configuration
 superadminRouter.get('/saas-plans', getAllSaasPlansAdmin);

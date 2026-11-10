@@ -116,13 +116,19 @@ html.light-mode h1,
 html.light-mode h2,
 html.light-mode h3,
 html.light-mode h4,
+html.light-mode .text-white,
 html.light-mode .text-slate-100 {
   color: #0f172a !important; /* Deep Slate-900 */
 }
 
+html.light-mode .text-slate-200,
+html.light-mode .text-slate-300 {
+  color: #334155 !important; /* High-contrast Slate-700 body text */
+}
+
 /* Stop gray/washed out secondary text in light mode */
 html.light-mode .text-slate-400 {
-  color: #64748b !important; /* Slate-500: readable, natural */
+  color: #475569 !important; /* Slate-600: strong readable body */
 }
 
 html.light-mode .text-slate-500 {
@@ -164,6 +170,21 @@ a[class*="bg-indigo"] {
 button[class*="bg-brand"] *,
 button[class*="bg-indigo"] * {
   color: #ffffff !important;
+}
+
+/* Plan buttons unselected in light mode */
+html.light-mode .bg-surface-700 {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+}
+
+html.light-mode button.bg-surface-700 {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html.light-mode button.bg-surface-700:hover {
+  background-color: #cbd5e1 !important;
 }
 
 /* Form inputs & selects in light mode */
