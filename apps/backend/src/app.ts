@@ -32,6 +32,9 @@ import { errorHandler } from './middleware/errorHandler';
 export function createApp(): Express {
   const app = express();
 
+  // Trust reverse proxy (Render, Cloudflare, etc.) so secure cookies work over HTTPS on mobile
+  app.set('trust proxy', 1);
+
   // ── Security headers ───────────────────────────────────────────────────────
   app.use(helmet());
 

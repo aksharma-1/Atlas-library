@@ -29,8 +29,10 @@ export const AUTH_COOKIE = 'atlas_token';
 // Shared cookie options
 const cookieOptions = {
   httpOnly: true,
-  sameSite: (env.NODE_ENV === 'production' ? 'none' : 'strict') as 'none' | 'strict',
+  sameSite: (env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
   secure: env.NODE_ENV === 'production',
+  // Partitioned cookie (CHIPS) enables cross-site cookies in modern mobile browsers
+  partitioned: env.NODE_ENV === 'production',
   // 24 h in milliseconds (mirrors JWT_EXPIRES_IN default)
   maxAge: 24 * 60 * 60 * 1000,
 };
