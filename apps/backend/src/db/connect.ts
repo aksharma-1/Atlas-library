@@ -40,6 +40,32 @@ export async function connectDB(): Promise<void> {
       autoIndex: env.NODE_ENV !== 'production',
     });
     console.log(`✅  MongoDB connected → ${masked}`);
+
+    // Self-healing: Safely migrate the payment idempotencyKey index if old sparse index exists
+    try {
+      const paymentCollection = mongoose.connection.collection('payments');
+      const existingIndexes = await paymentCollection.indexes();
+      const faultyIndex = existingIndexes.find(
+        (idx) => idx.name === 'tenantId_1_idempotencyKey_1' && !idx.partialFilterExpression,
+      );
+
+      if (faultyIndex) {
+        console.log('🔄  Migrating payment idempotency index to partialFilterExpression...');
+        await paymentCollection.dropIndex('tenantId_1_idempotencyKey_1');
+        await paymentCollection.createIndex(
+          { tenantId: 1, idempotencyKey: 1 },
+          {
+            unique: true,
+            partialFilterExpression: { idempotencyKey: { $type: 'string' } },
+            background: true,
+          },
+        );
+        console.log('✅  Payment idempotency index successfully migrated without data loss.');
+      }
+    } catch (indexMigrationErr) {
+      // Do not block app startup if index migration encounters non-fatal condition
+      console.warn('⚠️  Payment index check/migration notice:', (indexMigrationErr as Error).message);
+    }
   } catch (error) {
     console.error(`❌  MongoDB connection failed → ${masked}`);
     throw error;

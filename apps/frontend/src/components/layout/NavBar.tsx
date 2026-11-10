@@ -1,6 +1,7 @@
 import { useAuth, useLogout } from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
-import { Moon, Sun, Shield, LogOut, BookOpen } from 'lucide-react';
+import { Moon, Sun, Shield, LogOut, BookOpen, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export function NavBar() {
   const { user } = useAuth();
@@ -50,17 +51,32 @@ export function NavBar() {
           )}
         </button>
 
-        {/* User profile dropdown info */}
+        {/* User profile info & link */}
         <div className="flex items-center gap-3 pl-2 border-l" style={{ borderColor: 'var(--glass-border)' }}>
-          <div className="text-right hidden sm:block">
-            <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{user?.name}</p>
-            <p className="text-[10px] uppercase font-semibold text-indigo-400">{user?.role}</p>
-          </div>
+          <Link
+            to="/profile"
+            title="View & Edit Profile"
+            className="flex items-center gap-2 group hover:opacity-90 transition cursor-pointer"
+          >
+            <div className="text-right hidden sm:block">
+              <p className="text-xs font-bold group-hover:text-indigo-400 transition" style={{ color: 'var(--text-main)' }}>{user?.name}</p>
+              <p className="text-[10px] uppercase font-semibold text-indigo-400">{user?.role}</p>
+            </div>
 
-          {/* Avatar initial */}
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-xs font-extrabold text-white shadow-md">
-            {user?.name?.charAt(0).toUpperCase() ?? 'U'}
-          </div>
+            {/* Avatar initial */}
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-xs font-extrabold text-white shadow-md group-hover:ring-2 group-hover:ring-indigo-500/50 transition">
+              {user?.name?.charAt(0).toUpperCase() ?? 'U'}
+            </div>
+          </Link>
+
+          {/* Quick Profile Icon Link (Mobile & Desktop) */}
+          <Link
+            to="/profile"
+            title="Profile & Settings"
+            className="rounded-xl p-2 border transition glass-card hover:border-indigo-400/40 text-slate-400 hover:text-indigo-400 cursor-pointer"
+          >
+            <User className="h-4 w-4" />
+          </Link>
 
           {/* Logout */}
           <button

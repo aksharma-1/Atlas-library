@@ -8,6 +8,8 @@ import {
   submitPaymentUtr,
   forgotPassword,
   resetPassword,
+  getProfile,
+  updateProfile,
 } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/authenticate';
 
@@ -30,6 +32,12 @@ authRouter.post('/logout', logout);
 
 /** GET  /api/v1/auth/me     — protected */
 authRouter.get('/me', authenticate, me);
+
+/** GET  /api/v1/auth/profile — protected user profile */
+authRouter.get('/profile', authenticate, getProfile);
+
+/** PUT  /api/v1/auth/profile — protected update user profile */
+authRouter.put('/profile', authenticate, updateProfile);
 
 /** POST /api/v1/auth/configure-library — protected onboarding step 2 */
 authRouter.post('/configure-library', authenticate, configureLibrary);

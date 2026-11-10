@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { Tenant } from '../models/Tenant';
 import { User } from '../models/User';
 import { Seat } from '../models/Seat';
+import { Student } from '../models/Student';
 import { SaasPlan } from '../models/SaasPlan';
 
 /**
@@ -27,13 +28,16 @@ export async function listAllTenants(_req: Request, res: Response, next: NextFun
     // Fetch owner info for each tenant
     const tenantsWithOwners = await Promise.all(
       tenants.map(async (t) => {
-        const owner = await User.findOne({ tenantId: t._id, role: 'owner' }).select('name email').lean();
+        const owner = await User.findOne({ tenantId: t._id, role: 'owner' }).select('name email createdAt').lean();
         const seatCount = await Seat.countDocuments({ tenantId: t._id });
+        const studentCount = await Student.countDocuments({ tenantId: t._id });
         return {
           ...t,
           ownerName: owner?.name || 'N/A',
           ownerEmail: owner?.email || t.email,
+          ownerJoinedAt: owner?.createdAt,
           configuredSeats: seatCount,
+          totalStudents: studentCount,
         };
       }),
     );

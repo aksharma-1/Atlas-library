@@ -12,6 +12,7 @@ import { StudentProfilePage } from './pages/StudentProfilePage';
 import { SuperAdminPage } from './pages/SuperAdminPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { SubscriptionPage } from './pages/SubscriptionPage';
+import { ProfilePage } from './pages/ProfilePage';
 
 function App() {
   return (
@@ -100,6 +101,16 @@ function App() {
             <ProtectedRoute>
               <AppShell>
                 <StudentProfilePage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <ProfilePage />
               </AppShell>
             </ProtectedRoute>
           }

@@ -13,6 +13,8 @@ export interface ITenant extends Document {
   phone?: string;
   /** City / location description */
   city?: string;
+  /** Full address of the library */
+  address?: string;
   /** Whether this tenant account is active */
   isActive: boolean;
   /** Onboarding funnel step */
@@ -59,6 +61,10 @@ const tenantSchema = new Schema<ITenant>(
       trim: true,
     },
     city: {
+      type: String,
+      trim: true,
+    },
+    address: {
       type: String,
       trim: true,
     },

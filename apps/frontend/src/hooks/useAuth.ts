@@ -10,7 +10,10 @@ import type {
   UpdatePlatformConfigRequest,
   ForgotPasswordRequest,
   ResetPasswordRequest,
+  UpdateProfileRequest,
+  UserProfileDTO,
 } from '@atlas/shared';
+import toast from 'react-hot-toast';
 
 const ME_KEY = ['auth', 'me'] as const;
 
@@ -124,6 +127,38 @@ export function useSuperAdminTenants() {
     queryFn: async () => {
       const { data } = await apiClient.get<{ tenants: any[] }>('/superadmin/tenants');
       return data.tenants;
+    },
+  });
+}
+
+/** useUserProfile — Fetch full profile of current user & their library */
+export function useUserProfile() {
+  return useQuery<UserProfileDTO>({
+    queryKey: ['auth', 'profile'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<UserProfileDTO>('/auth/profile');
+      return data;
+    },
+  });
+}
+
+/** useUpdateProfile — Update personal info, library details, or password */
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: UpdateProfileRequest) => {
+      const { data } = await apiClient.put<{ message: string; user: AuthUser }>('/auth/profile', payload);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(ME_KEY, data.user);
+      queryClient.invalidateQueries({ queryKey: ['auth', 'profile'] });
+      toast.success(data.message || 'Profile updated successfully!');
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.error || 'Failed to update profile';
+      toast.error(msg);
     },
   });
 }

@@ -36,14 +36,21 @@ export function useCreateStudent() {
       address?: string;
       membershipNumber?: string;
       photoUrl?: string;
+      planId?: string;
+      shiftId?: string;
+      seatId?: string;
+      startDate?: string;
+      endDate?: string;
     }) => {
-      const { data } = await apiClient.post<{ student: StudentDTO }>('/students', payload);
+      const { data } = await apiClient.post<{ student: StudentDTO; membership?: MembershipDTO }>('/students', payload);
       return data.student;
     },
     onSuccess: (student) => {
       toast.success(`Student "${student.name}" registered successfully!`);
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['seats'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
       toast.error(err?.response?.data?.error || 'Failed to register student');

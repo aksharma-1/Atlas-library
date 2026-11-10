@@ -60,7 +60,6 @@ const paymentSchema = new Schema<IPayment>(
     },
     idempotencyKey: {
       type: String,
-      sparse: true,
     },
     notes: {
       type: String,
@@ -74,6 +73,14 @@ const paymentSchema = new Schema<IPayment>(
 );
 
 paymentSchema.index({ tenantId: 1, receiptNumber: 1 }, { unique: true });
-paymentSchema.index({ tenantId: 1, idempotencyKey: 1 }, { unique: true, sparse: true });
+// Use partialFilterExpression so documents without an idempotencyKey or with null/undefined are NOT indexed.
+// This completely prevents E11000 duplicate key errors for multiple payments that do not specify an idempotency key.
+paymentSchema.index(
+  { tenantId: 1, idempotencyKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { idempotencyKey: { $type: 'string' } },
+  },
+);
 
 export const Payment = model<IPayment>('Payment', paymentSchema);

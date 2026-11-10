@@ -12,7 +12,7 @@ import {
   useUpdatePlatformConfig,
 } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
-import { Moon, Sun, LogOut, Sparkles, ShieldCheck } from 'lucide-react';
+import { Moon, Sun, LogOut, Sparkles, ShieldCheck, Search, Building2, User, Phone, MapPin, Users } from 'lucide-react';
 import type { SaasPlanDTO } from '@atlas/shared';
 import { CustomSelect, Modal } from '../components/ui';
 
@@ -32,6 +32,10 @@ export function SuperAdminPage() {
 
   // Navigation tab: Libraries vs Plans
   const [mainTab, setMainTab] = useState<'libraries' | 'plans' | 'settings'>('libraries');
+
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTenantDetails, setSelectedTenantDetails] = useState<any | null>(null);
 
   // Library filters
   const [libraryFilter, setLibraryFilter] = useState<'pending' | 'active' | 'all'>('pending');
@@ -82,12 +86,26 @@ export function SuperAdminPage() {
   );
   const activeTenants = tenants.filter((t) => t.subscriptionStatus === 'active');
 
-  const displayedTenants =
+  const filteredByStatus =
     libraryFilter === 'pending'
       ? pendingTenants
       : libraryFilter === 'active'
       ? activeTenants
       : tenants;
+
+  const displayedTenants = filteredByStatus.filter((t) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      t.name?.toLowerCase().includes(query) ||
+      t.ownerName?.toLowerCase().includes(query) ||
+      t.ownerEmail?.toLowerCase().includes(query) ||
+      t.phone?.toLowerCase().includes(query) ||
+      t.city?.toLowerCase().includes(query) ||
+      t.address?.toLowerCase().includes(query) ||
+      t.lastUtrRef?.toLowerCase().includes(query)
+    );
+  });
 
   const handleApprove = (tenantId: string) => {
     approveTenant.mutate(
@@ -328,38 +346,52 @@ export function SuperAdminPage() {
             </div>
           </div>
 
-          {/* Sub Tab Filter */}
-          <div className="flex gap-2 border-b border-surface-700 pb-3">
-            <button
-              onClick={() => setLibraryFilter('pending')}
-              className={`rounded-lg px-4 py-2 text-xs font-bold transition flex items-center gap-1.5 ${
-                libraryFilter === 'pending'
-                  ? 'bg-amber-500 text-slate-950 shadow'
-                  : 'bg-surface-800 text-slate-300 hover:bg-surface-700'
-              }`}
-            >
-              <span>⏳</span> Pending Payment Approval ({pendingTenants.length})
-            </button>
-            <button
-              onClick={() => setLibraryFilter('active')}
-              className={`rounded-lg px-4 py-2 text-xs font-bold transition flex items-center gap-1.5 ${
-                libraryFilter === 'active'
-                  ? 'bg-emerald-600 text-white shadow'
-                  : 'bg-surface-800 text-slate-300 hover:bg-surface-700'
-              }`}
-            >
-              <span>✓</span> Active Libraries ({activeTenants.length})
-            </button>
-            <button
-              onClick={() => setLibraryFilter('all')}
-              className={`rounded-lg px-4 py-2 text-xs font-bold transition ${
-                libraryFilter === 'all'
-                  ? 'bg-brand-600 text-white shadow'
-                  : 'bg-surface-800 text-slate-300 hover:bg-surface-700'
-              }`}
-            >
-              All Records ({tenants.length})
-            </button>
+          {/* Sub Tab Filter & Search Bar */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-surface-700 pb-3">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setLibraryFilter('pending')}
+                className={`rounded-lg px-4 py-2 text-xs font-bold transition flex items-center gap-1.5 ${
+                  libraryFilter === 'pending'
+                    ? 'bg-amber-500 text-slate-950 shadow'
+                    : 'bg-surface-800 text-slate-300 hover:bg-surface-700'
+                }`}
+              >
+                <span>⏳</span> Pending Payment Approval ({pendingTenants.length})
+              </button>
+              <button
+                onClick={() => setLibraryFilter('active')}
+                className={`rounded-lg px-4 py-2 text-xs font-bold transition flex items-center gap-1.5 ${
+                  libraryFilter === 'active'
+                    ? 'bg-emerald-600 text-white shadow'
+                    : 'bg-surface-800 text-slate-300 hover:bg-surface-700'
+                }`}
+              >
+                <span>✓</span> Active Libraries ({activeTenants.length})
+              </button>
+              <button
+                onClick={() => setLibraryFilter('all')}
+                className={`rounded-lg px-4 py-2 text-xs font-bold transition ${
+                  libraryFilter === 'all'
+                    ? 'bg-brand-600 text-white shadow'
+                    : 'bg-surface-800 text-slate-300 hover:bg-surface-700'
+                }`}
+              >
+                All Records ({tenants.length})
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative min-w-[260px]">
+              <input
+                type="text"
+                placeholder="Search owner, email, phone, city..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-surface-900 border border-surface-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              />
+              <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+            </div>
           </div>
 
           {/* Table */}
@@ -395,11 +427,19 @@ export function SuperAdminPage() {
                     return (
                       <tr key={t._id} className="hover:bg-surface-700/30 transition">
                         <td className="px-5 py-3.5">
-                          <p className="font-bold text-white text-sm">{t.name}</p>
-                          <p className="text-[11px] text-slate-400">
-                            {t.ownerName} · {t.ownerEmail} {t.phone ? `· ${t.phone}` : ''}
-                          </p>
-                          {t.city && <span className="text-[10px] text-slate-400">📍 {t.city}</span>}
+                          <button
+                            onClick={() => setSelectedTenantDetails(t)}
+                            className="text-left group hover:opacity-80 transition cursor-pointer"
+                          >
+                            <p className="font-bold text-white text-sm group-hover:text-indigo-400 transition flex items-center gap-1.5">
+                              <span>{t.name}</span>
+                              <span className="text-[10px] text-slate-400 group-hover:underline">🔍 details</span>
+                            </p>
+                            <p className="text-[11px] text-slate-400">
+                              {t.ownerName} · {t.ownerEmail} {t.phone ? `· ${t.phone}` : ''}
+                            </p>
+                            {t.city && <span className="text-[10px] text-slate-400">📍 {t.city}</span>}
+                          </button>
                         </td>
 
                         <td className="px-5 py-3.5">
@@ -818,6 +858,138 @@ export function SuperAdminPage() {
             </div>
           </form>
         </div>
+      </Modal>
+
+      {/* Library & User Details Drawer / Modal */}
+      <Modal
+        isOpen={!!selectedTenantDetails}
+        onClose={() => setSelectedTenantDetails(null)}
+        title="Library & User Profile Details"
+        subtitle={`Registered library credentials and operational profile for ${selectedTenantDetails?.name || ''}`}
+        icon={<Building2 className="h-5 w-5 text-indigo-400" />}
+        maxWidth="md"
+      >
+        {selectedTenantDetails && (
+          <div className="space-y-5 text-xs">
+            {/* Library Identity Card */}
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <Building2 className="h-4 w-4 text-indigo-500" />
+                    {selectedTenantDetails.name}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                    Slug: {selectedTenantDetails.slug}
+                  </p>
+                </div>
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                    selectedTenantDetails.isActive
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                  }`}
+                >
+                  {selectedTenantDetails.isActive ? 'Active' : 'Suspended'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200 dark:border-slate-700/60">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">City / Location</span>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5 flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                    {selectedTenantDetails.city || 'Not specified'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Library Phone</span>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5 flex items-center gap-1">
+                    <Phone className="h-3.5 w-3.5 text-slate-400" />
+                    {selectedTenantDetails.phone || 'Not specified'}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Physical Address</span>
+                  <p className="font-medium text-slate-700 dark:text-slate-300 mt-0.5">
+                    {selectedTenantDetails.address || 'No physical address configured yet'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Owner & Account User Info */}
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 space-y-3">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-indigo-500" />
+                Library Owner Account
+              </h4>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Owner Name</span>
+                  <p className="font-bold text-slate-900 dark:text-white mt-0.5">
+                    {selectedTenantDetails.ownerName}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Login Email</span>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">
+                    {selectedTenantDetails.ownerEmail}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Registered On</span>
+                  <p className="font-medium text-slate-600 dark:text-slate-300 mt-0.5">
+                    {selectedTenantDetails.createdAt ? new Date(selectedTenantDetails.createdAt).toLocaleDateString() : '—'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Total Enrolled Students</span>
+                  <p className="font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 flex items-center gap-1">
+                    <Users className="h-3.5 w-3.5" />
+                    {selectedTenantDetails.totalStudents ?? 0} Students
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Subscription & Desks Capacity */}
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 space-y-2">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                Subscription & Capacity
+              </h4>
+
+              <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-400 block font-semibold uppercase">Tier</span>
+                  <span className="text-xs font-bold capitalize text-indigo-500">{selectedTenantDetails.subscriptionTier || 'Starter'}</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-400 block font-semibold uppercase">Desks Configured</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                    {selectedTenantDetails.configuredSeats || 0} / {selectedTenantDetails.maxSeats || 150}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-400 block font-semibold uppercase">Status</span>
+                  <span className="text-xs font-bold text-emerald-500 uppercase">{selectedTenantDetails.subscriptionStatus}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setSelectedTenantDetails(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Approval / Extension Modal */}

@@ -290,11 +290,26 @@ export function StudentProfilePage() {
             </div>
             <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
               <p className="text-xs text-slate-500 dark:text-slate-400">Assigned Seat</p>
-              <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">
-                {activeMembership.seatType === 'reserved'
-                  ? `Seat #${activeMembership.seatNumber || 'Reserved'}`
-                  : 'Floating Desk'}
-              </p>
+              <div className="mt-0.5">
+                {activeMembership.seatType === 'reserved' ? (
+                  (activeMembership.seatNumber || (activeMembership.seatId as any)?.seatNumber) ? (
+                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                      Seat #{activeMembership.seatNumber || (activeMembership.seatId as any)?.seatNumber}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => setShowAssignModal(true)}
+                      className="text-xs font-bold text-amber-500 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      ⚠️ No Desk Allocated (Click to Assign)
+                    </button>
+                  )
+                ) : (
+                  <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                    Floating Desk
+                  </span>
+                )}
+              </div>
             </div>
             <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
               <p className="text-xs text-slate-500 dark:text-slate-400">Validity Period</p>

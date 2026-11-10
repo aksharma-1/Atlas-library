@@ -44,6 +44,9 @@ function generateToken(user: AuthUser): string {
     email: user.email,
     role: user.role,
     tenantName: user.tenantName,
+    phone: user.phone,
+    city: user.city,
+    address: user.address,
     onboardingStep: user.onboardingStep,
     subscriptionStatus: user.subscriptionStatus,
     subscriptionTier: user.subscriptionTier,
@@ -346,6 +349,9 @@ export async function me(req: Request, res: Response, next: NextFunction): Promi
     const latestUser: AuthUser = {
       ...req.user,
       tenantName: tenant.name,
+      phone: tenant.phone,
+      city: tenant.city,
+      address: tenant.address,
       subscriptionStatus: tenant.subscriptionStatus,
       subscriptionTier: tenant.subscriptionTier,
       subscriptionExpiresAt: tenant.subscriptionExpiresAt ? tenant.subscriptionExpiresAt.toISOString() : undefined,
@@ -463,6 +469,163 @@ export async function resetPassword(req: Request, res: Response, next: NextFunct
 
     res.status(200).json({
       message: 'Password reset successfully! You can now sign in with your new password.',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+const updateProfileSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').trim().optional(),
+  phone: z.string().trim().optional(),
+  city: z.string().trim().optional(),
+  address: z.string().trim().optional(),
+  libraryName: z.string().min(2, 'Library name must be at least 2 characters').trim().optional(),
+  currentPassword: z.string().optional(),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters').optional(),
+});
+
+/**
+ * GET /api/v1/auth/profile
+ * Returns detailed profile of authenticated user & their library
+ */
+export async function getProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthenticated' });
+      return;
+    }
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    let tenantData = undefined;
+    if (user.tenantId) {
+      const tenant = await Tenant.findById(user.tenantId);
+      if (tenant) {
+        tenantData = {
+          id: tenant._id.toString(),
+          name: tenant.name,
+          slug: tenant.slug,
+          email: tenant.email,
+          phone: tenant.phone,
+          city: tenant.city,
+          address: tenant.address,
+          subscriptionTier: tenant.subscriptionTier,
+          subscriptionStatus: tenant.subscriptionStatus,
+          subscriptionExpiresAt: tenant.subscriptionExpiresAt ? tenant.subscriptionExpiresAt.toISOString() : undefined,
+          maxSeats: tenant.maxSeats,
+          createdAt: tenant.createdAt.toISOString(),
+        };
+      }
+    }
+
+    res.status(200).json({
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt.toISOString(),
+      },
+      tenant: tenantData,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PUT /api/v1/auth/profile
+ * Updates user profile details, library configuration, and optionally changes password.
+ */
+export async function updateProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthenticated' });
+      return;
+    }
+
+    const parsed = updateProfileSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        error: 'Validation failed',
+        details: parsed.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    const { name, phone, city, address, libraryName, currentPassword, newPassword } = parsed.data;
+
+    // Load user with passwordHash
+    const user = await User.findById(req.user.userId).select('+passwordHash');
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    // Handle password change if requested
+    if (newPassword) {
+      if (!currentPassword) {
+        res.status(400).json({ error: 'Current password is required to set a new password' });
+        return;
+      }
+      const isMatch = await user.comparePassword(currentPassword);
+      if (!isMatch) {
+        res.status(400).json({ error: 'Current password does not match' });
+        return;
+      }
+      const bcrypt = await import('bcryptjs');
+      user.passwordHash = await bcrypt.hash(newPassword, 12);
+    }
+
+    // Update user personal details
+    if (name) {
+      user.name = name;
+    }
+    await user.save();
+
+    // If user is associated with a tenant and is owner/staff, update Tenant details
+    let updatedTenant = null;
+    if (user.tenantId) {
+      const tenant = await Tenant.findById(user.tenantId);
+      if (tenant) {
+        if (libraryName && user.role === 'owner') {
+          tenant.name = libraryName;
+        }
+        if (phone !== undefined) {
+          tenant.phone = phone;
+        }
+        if (city !== undefined) {
+          tenant.city = city;
+        }
+        if (address !== undefined) {
+          tenant.address = address;
+        }
+        await tenant.save();
+        updatedTenant = tenant;
+      }
+    }
+
+    // Prepare updated AuthUser payload and re-issue cookie
+    const updatedAuthUser: AuthUser = {
+      ...req.user,
+      name: user.name,
+      tenantName: updatedTenant ? updatedTenant.name : req.user.tenantName,
+      phone: updatedTenant?.phone ?? req.user.phone,
+      city: updatedTenant?.city ?? req.user.city,
+      address: updatedTenant?.address ?? req.user.address,
+    };
+
+    const token = generateToken(updatedAuthUser);
+    res.cookie(AUTH_COOKIE, token, cookieOptions);
+
+    res.status(200).json({
+      message: 'Profile updated successfully',
+      user: updatedAuthUser,
     });
   } catch (err) {
     next(err);

@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { Student } from '../models/Student';
 import { Membership } from '../models/Membership';
 import { Payment } from '../models/Payment';
+import { Plan } from '../models/Plan';
+import { Seat } from '../models/Seat';
 
 const registerStudentSchema = z.object({
   name: z.string().min(1, 'Name is required').trim(),
@@ -11,6 +13,12 @@ const registerStudentSchema = z.object({
   membershipNumber: z.string().optional(),
   address: z.string().optional(),
   photoUrl: z.string().optional(),
+  // Optional instant seat & membership assignment fields
+  planId: z.string().optional(),
+  shiftId: z.string().optional(),
+  seatId: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
 });
 
 export async function listStudents(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -63,7 +71,58 @@ export async function createStudent(req: Request, res: Response, next: NextFunct
       photoUrl: parsed.data.photoUrl,
     });
 
-    res.status(201).json({ student });
+    let createdMembership = null;
+
+    // If planId was provided, immediately allocate the seat & activate membership
+    if (parsed.data.planId) {
+      const plan = await Plan.findOne({ _id: parsed.data.planId, tenantId });
+      if (plan) {
+        let seatId = parsed.data.seatId;
+
+        // If reserved plan, validate seat
+        if (plan.seatType === 'reserved') {
+          if (!seatId) {
+            res.status(400).json({ error: 'A reserved plan requires an assigned desk' });
+            return;
+          }
+          const seat = await Seat.findOne({ _id: seatId, tenantId });
+          if (!seat) {
+            res.status(404).json({ error: 'Assigned desk not found' });
+            return;
+          }
+          if (seat.status === 'maintenance' || seat.status === 'blocked') {
+            res.status(400).json({ error: `Desk ${seat.seatNumber} is under maintenance or blocked` });
+            return;
+          }
+
+          // Mark seat as occupied
+          await Seat.findByIdAndUpdate(seatId, { status: 'occupied' });
+        }
+
+        const now = new Date();
+        const start = parsed.data.startDate ? new Date(parsed.data.startDate) : now;
+        const end = parsed.data.endDate
+          ? new Date(parsed.data.endDate)
+          : new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+        createdMembership = await Membership.create({
+          tenantId,
+          studentId: student._id,
+          planId: plan._id,
+          shiftId: parsed.data.shiftId || undefined,
+          seatId: plan.seatType === 'reserved' ? seatId : undefined,
+          seatType: plan.seatType,
+          startDate: start,
+          endDate: end,
+          status: 'active',
+          feePaise: plan.feePaise,
+          paidPaise: 0,
+          paymentStatus: 'pending',
+        });
+      }
+    }
+
+    res.status(201).json({ student, membership: createdMembership });
   } catch (err) {
     next(err);
   }
@@ -89,7 +148,23 @@ export async function getStudentProfile(req: Request, res: Response, next: NextF
       Payment.find({ studentId: id, tenantId }).sort({ createdAt: -1 }),
     ]);
 
-    const activeMembership = memberships.find((m) => m.status === 'active');
+    const rawActiveMembership = memberships.find((m) => m.status === 'active');
+    
+    // Flatten populated fields (seatNumber, planName, shiftName) onto activeMembership for reliable client display
+    let activeMembership: Record<string, unknown> | undefined = undefined;
+    if (rawActiveMembership) {
+      const mObj = (rawActiveMembership.toObject ? rawActiveMembership.toObject() : rawActiveMembership) as Record<string, any>;
+      const seatObj = mObj.seatId as { _id?: string; seatNumber?: string } | undefined;
+      const planObj = mObj.planId as { _id?: string; name?: string; feePaise?: number } | undefined;
+      const shiftObj = mObj.shiftId as { _id?: string; name?: string } | undefined;
+
+      activeMembership = {
+        ...mObj,
+        seatNumber: seatObj?.seatNumber || mObj['seatNumber'],
+        planName: planObj?.name || mObj['planName'],
+        shiftName: shiftObj?.name || mObj['shiftName'],
+      };
+    }
 
     res.status(200).json({
       student,

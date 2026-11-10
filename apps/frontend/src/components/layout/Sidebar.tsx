@@ -5,6 +5,7 @@ import {
   Grid,
   CalendarClock,
   CreditCard,
+  UserCheck,
   Sparkles,
 } from 'lucide-react';
 
@@ -21,6 +22,7 @@ const navItems: NavItem[] = [
   { to: '/seats', label: 'Seating Map', icon: <Grid className="h-4 w-4" /> },
   { to: '/plans', label: 'Plans & Shifts', icon: <CalendarClock className="h-4 w-4" /> },
   { to: '/subscription', label: 'My Subscription', icon: <CreditCard className="h-4 w-4" /> },
+  { to: '/profile', label: 'Profile & Settings', icon: <UserCheck className="h-4 w-4" /> },
 ];
 
 export function Sidebar() {

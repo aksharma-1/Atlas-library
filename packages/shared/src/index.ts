@@ -12,6 +12,8 @@ export type {
   OnboardingStep,
   ForgotPasswordRequest,
   ResetPasswordRequest,
+  UpdateProfileRequest,
+  UserProfileDTO,
 } from './api/auth';
 export type {
   ShiftDTO,

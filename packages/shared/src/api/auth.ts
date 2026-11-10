@@ -27,11 +27,50 @@ export interface AuthUser {
   email: string;
   role: 'owner' | 'staff' | 'superadmin';
   tenantName?: string;
+  phone?: string;
+  city?: string;
+  address?: string;
   onboardingStep?: OnboardingStep;
   subscriptionStatus?: SubscriptionStatus;
   subscriptionTier?: SubscriptionTier;
   subscriptionExpiresAt?: string;
   maxSeats?: number;
+}
+
+/** Payload for updating user & library profile */
+export interface UpdateProfileRequest {
+  name?: string;
+  phone?: string;
+  city?: string;
+  address?: string;
+  libraryName?: string;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
+/** Full user profile details */
+export interface UserProfileDTO {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: 'owner' | 'staff' | 'superadmin';
+    createdAt: string;
+  };
+  tenant?: {
+    id: string;
+    name: string;
+    slug: string;
+    email: string;
+    phone?: string;
+    city?: string;
+    address?: string;
+    subscriptionTier?: string;
+    subscriptionStatus?: SubscriptionStatus;
+    subscriptionExpiresAt?: string;
+    maxSeats: number;
+    createdAt: string;
+  };
 }
 
 /** Request payload for requesting password reset OTP / link */

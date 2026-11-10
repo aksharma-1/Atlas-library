@@ -42,17 +42,26 @@ export async function recordPayment(req: Request, res: Response, next: NextFunct
     const count = await Payment.countDocuments({ tenantId });
     const receiptNumber = `REC-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
 
-    const payment = await Payment.create({
+    const paymentData: Record<string, unknown> = {
       tenantId,
       membershipId: membership._id,
       studentId: membership.studentId,
       receiptNumber,
       amountPaise,
       paymentMethod,
-      transactionRef,
-      idempotencyKey,
-      notes,
-    });
+    };
+
+    if (transactionRef) {
+      paymentData['transactionRef'] = transactionRef;
+    }
+    if (idempotencyKey && idempotencyKey.trim()) {
+      paymentData['idempotencyKey'] = idempotencyKey.trim();
+    }
+    if (notes) {
+      paymentData['notes'] = notes;
+    }
+
+    const payment = await Payment.create(paymentData);
 
     // Update membership payment tallies
     const newPaidPaise = membership.paidPaise + amountPaise;

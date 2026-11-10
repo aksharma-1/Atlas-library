@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useStudents, useCreateStudent, useUpdateStudent, useDeleteStudent, useFilteredMemberships } from '../hooks/useStudents';
+import { usePlans, useSeats, useShifts } from '../hooks/useLibrary';
 import type { StudentDTO } from '@atlas/shared';
-import { Modal, ConfirmModal } from '../components/ui';
-import { Bell, UserCheck, UserPlus, Search, Edit2, ArrowUpRight, MessageSquare } from 'lucide-react';
+import { Modal, ConfirmModal, CustomSelect } from '../components/ui';
+import { Bell, UserCheck, UserPlus, Search, Edit2, ArrowUpRight, MessageSquare, Armchair } from 'lucide-react';
 
 type TabType = 'all' | 'dues' | 'expiring_3' | 'expiring_7' | 'expired' | 'left';
 
@@ -41,6 +42,16 @@ export function StudentsPage() {
   const [membershipNumber, setMembershipNumber] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
 
+  // Instant Membership & Desk Assignment on Registration
+  const [assignDeskOnRegister, setAssignDeskOnRegister] = useState(true);
+  const [regPlanId, setRegPlanId] = useState('');
+  const [regShiftId, setRegShiftId] = useState('');
+  const [regSeatId, setRegSeatId] = useState('');
+  const [regStartDate, setRegStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [regEndDate, setRegEndDate] = useState(() =>
+    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  );
+
   // Edit Student state
   const [editingStudent, setEditingStudent] = useState<StudentDTO | null>(null);
   const [editName, setEditName] = useState('');
@@ -63,6 +74,12 @@ export function StudentsPage() {
   // Queries & Mutations
   const { data: students = [], isLoading: studentsLoading } = useStudents(search);
   const { data: filteredMemberships = [], isLoading: membershipsLoading } = useFilteredMemberships(activeTab);
+  const { data: plans = [] } = usePlans();
+  const { data: seats = [] } = useSeats();
+  const { data: shifts = [] } = useShifts();
+
+  const chosenPlan = plans.find((p) => p._id === regPlanId);
+  const availableSeats = seats.filter((s) => s.status === 'available');
 
   const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent();
@@ -80,6 +97,11 @@ export function StudentsPage() {
         address: address || undefined,
         membershipNumber: membershipNumber || undefined,
         photoUrl: photoUrl || undefined,
+        planId: assignDeskOnRegister && regPlanId ? regPlanId : undefined,
+        shiftId: assignDeskOnRegister && regShiftId ? regShiftId : undefined,
+        seatId: assignDeskOnRegister && chosenPlan?.seatType === 'reserved' && regSeatId ? regSeatId : undefined,
+        startDate: assignDeskOnRegister && regPlanId ? regStartDate : undefined,
+        endDate: assignDeskOnRegister && regPlanId ? regEndDate : undefined,
       },
       {
         onSuccess: () => {
@@ -90,6 +112,9 @@ export function StudentsPage() {
           setAddress('');
           setMembershipNumber('');
           setPhotoUrl('');
+          setRegPlanId('');
+          setRegShiftId('');
+          setRegSeatId('');
         },
       },
     );
@@ -262,7 +287,7 @@ export function StudentsPage() {
                       <td className="px-6 py-4 text-right space-x-2">
                         <Link
                           to={`/students/${s._id}`}
-                          className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-2.5 py-1 text-xs font-semibold hover:bg-indigo-600 hover:!text-white transition"
+                          className="inline-flex items-center gap-1 rounded-lg bg-indigo-500 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-2.5 py-1 text-xs font-semibold hover:bg-indigo-600 hover:!text-white transition"
                         >
                           Profile <ArrowUpRight className="h-3 w-3" />
                         </Link>
@@ -636,6 +661,103 @@ export function StudentsPage() {
               placeholder="e.g. Geeta Bhawan, Indore"
               className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
             />
+          </div>
+
+          {/* Instant Desk & Membership Allocation Section */}
+          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Armchair className="h-4 w-4 text-indigo-500" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Assign Membership & Desk Now
+                </span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={assignDeskOnRegister}
+                  onChange={(e) => setAssignDeskOnRegister(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+            </div>
+
+            {assignDeskOnRegister && (
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-850/60 border border-slate-200 dark:border-slate-800 space-y-3 animate-fade-in">
+                <div>
+                  <CustomSelect
+                    label="Select Plan *"
+                    value={regPlanId}
+                    onChange={(val) => setRegPlanId(val)}
+                    options={[
+                      { value: '', label: '-- Choose a Plan --' },
+                      ...plans.map((p) => ({
+                        value: p._id,
+                        label: `${p.name} (${p.seatType}) — ₹${(p.feePaise / 100).toFixed(0)}/mo`,
+                      })),
+                    ]}
+                  />
+                </div>
+
+                {chosenPlan?.seatType === 'reserved' && (
+                  <div>
+                    <CustomSelect
+                      label="Assign Reserved Desk *"
+                      value={regSeatId}
+                      onChange={(val) => setRegSeatId(val)}
+                      options={[
+                        { value: '', label: '-- Select an Available Desk --' },
+                        ...availableSeats.map((s) => ({
+                          value: s._id,
+                          label: `Desk ${s.seatNumber} (${s.section || 'Hall'})`,
+                        })),
+                      ]}
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <CustomSelect
+                    label="Select Operational Shift"
+                    value={regShiftId}
+                    onChange={(val) => setRegShiftId(val)}
+                    options={[
+                      { value: '', label: 'General / Full Day' },
+                      ...shifts.map((sh) => ({
+                        value: sh._id,
+                        label: `${sh.name} (${sh.startTime} - ${sh.endTime})`,
+                      })),
+                    ]}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={regStartDate}
+                      onChange={(e) => setRegStartDate(e.target.value)}
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-xs text-slate-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={regEndDate}
+                      onChange={(e) => setRegEndDate(e.target.value)}
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-xs text-slate-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
