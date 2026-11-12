@@ -3,7 +3,7 @@ import { authenticate } from '../middleware/authenticate';
 import { requireActiveTenant } from '../middleware/requireActiveTenant';
 import { listStudents, createStudent, getStudentProfile, updateStudent, deleteStudent } from '../controllers/student.controller';
 import { createMembership, markMembershipLeft, addGiftDays, listMembershipsWithFilters } from '../controllers/membership.controller';
-import { recordPayment, getReceipt } from '../controllers/payment.controller';
+import { recordPayment, getReceipt, deletePayment } from '../controllers/payment.controller';
 
 export const studentsRouter = Router();
 studentsRouter.use(authenticate, requireActiveTenant);
@@ -24,3 +24,4 @@ export const paymentsRouter = Router();
 paymentsRouter.use(authenticate, requireActiveTenant);
 paymentsRouter.post('/', recordPayment);
 paymentsRouter.get('/:id/receipt', getReceipt);
+paymentsRouter.delete('/:id', deletePayment);

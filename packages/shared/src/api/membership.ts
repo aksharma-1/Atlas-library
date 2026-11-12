@@ -34,6 +34,9 @@ export interface MembershipDTO {
   endDate: string;
   status: MembershipStatus;
   feePaise: number;
+  originalFeePaise?: number;
+  discountPaise?: number;
+  discountReason?: string;
   paidPaise: number;
   paymentStatus: PaymentStatus;
   createdAt: string;

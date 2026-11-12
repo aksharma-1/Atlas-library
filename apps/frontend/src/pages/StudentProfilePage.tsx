@@ -1,14 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useStudentProfile, useCreateMembership, useRecordPayment, useMarkMembershipLeft, useAddGiftDays, useUpdateStudent } from '../hooks/useStudents';
+import { useStudentProfile, useCreateMembership, useRecordPayment, useDeletePayment, useMarkMembershipLeft, useAddGiftDays, useUpdateStudent } from '../hooks/useStudents';
 import { usePlans, useSeats, useShifts } from '../hooks/useLibrary';
 import { formatDate, formatDateTime } from '../utils/date';
+import { renderWhatsAppReminder, openWhatsAppChat } from '../utils/whatsapp';
 import { useAuth } from '../hooks/useAuth';
 import { PrintableCard } from '../components/PrintableCard';
 import { PrintableReceipt } from '../components/PrintableReceipt';
 import type { PaymentDTO } from '@atlas/shared';
 import { CustomSelect, Modal, ConfirmModal } from '../components/ui';
-import { UserCheck, CreditCard, Gift, UserCog, Bell, ArrowLeft } from 'lucide-react';
+import { UserCheck, CreditCard, Gift, UserCog, Bell, ArrowLeft, Trash2 } from 'lucide-react';
 import {
   DateRangeDurationSelector,
   calculateEndDateFromDays,
@@ -27,6 +28,7 @@ export function StudentProfilePage() {
 
   const createMembership = useCreateMembership();
   const recordPayment = useRecordPayment();
+  const deletePayment = useDeletePayment();
   const markMembershipLeft = useMarkMembershipLeft();
   const addGiftDays = useAddGiftDays();
   const updateStudent = useUpdateStudent();
@@ -39,9 +41,11 @@ export function StudentProfilePage() {
   const [showMarkLeftConfirm, setShowMarkLeftConfirm] = useState(false);
   const [showEditStudentModal, setShowEditStudentModal] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
+  const [reminderMessageText, setReminderMessageText] = useState('');
   const [giftDaysCount, setGiftDaysCount] = useState('3');
   const [giftReason, setGiftReason] = useState('Festive bonus');
   const [receiptPayment, setReceiptPayment] = useState<PaymentDTO | null>(null);
+  const [paymentToDelete, setPaymentToDelete] = useState<PaymentDTO | null>(null);
 
   // Student Edit fields
   const [editName, setEditName] = useState('');
@@ -58,6 +62,8 @@ export function StudentProfilePage() {
   const [durationOption, setDurationOption] = useState<DurationOption>('30d');
   const [startDate, setStartDate] = useState(() => getTodayDateString());
   const [endDate, setEndDate] = useState(() => calculateEndDateFromDays(getTodayDateString(), 30));
+  const [membershipDiscountRupees, setMembershipDiscountRupees] = useState('0');
+  const [membershipDiscountReason, setMembershipDiscountReason] = useState('');
 
   // Payment form
   const [paymentAmountRupees, setPaymentAmountRupees] = useState('');
@@ -107,6 +113,8 @@ export function StudentProfilePage() {
     e.preventDefault();
     if (!selectedPlanId || !id) return;
 
+    const discountPaise = Math.round(parseFloat(membershipDiscountRupees || '0') * 100);
+
     createMembership.mutate(
       {
         studentId: id,
@@ -115,6 +123,8 @@ export function StudentProfilePage() {
         seatId: chosenPlan?.seatType === 'reserved' ? selectedSeatId : undefined,
         startDate,
         endDate,
+        discountPaise: discountPaise > 0 ? discountPaise : undefined,
+        discountReason: discountPaise > 0 ? membershipDiscountReason.trim() : undefined,
       },
       {
         onSuccess: () => {
@@ -122,6 +132,8 @@ export function StudentProfilePage() {
           setSelectedPlanId('');
           setSelectedShiftId('');
           setSelectedSeatId('');
+          setMembershipDiscountRupees('0');
+          setMembershipDiscountReason('');
           setDurationOption('30d');
           const today = getTodayDateString();
           setStartDate(today);
@@ -136,6 +148,11 @@ export function StudentProfilePage() {
     if (!activeMembership) return;
     const amountPaise = Math.round(parseFloat(paymentAmountRupees || '0') * 100);
     if (amountPaise <= 0) return;
+
+    if (amountPaise > duesRemainingPaise) {
+      alert(`Entered amount (₹${(amountPaise / 100).toFixed(0)}) cannot exceed the pending due of ₹${(duesRemainingPaise / 100).toFixed(0)}.`);
+      return;
+    }
 
     recordPayment.mutate(
       {
@@ -263,7 +280,16 @@ export function StudentProfilePage() {
               🪪 View ID Card
             </button>
             <button
-              onClick={() => setShowReminderModal(true)}
+              onClick={() => {
+                const text = renderWhatsAppReminder(user?.whatsappReminderTemplate, {
+                  studentName: student.name,
+                  seatNumber: (activeMembership?.seatId as any)?.seatNumber || activeMembership?.seatNumber || 'Seat',
+                  libraryName: user?.tenantName || 'StudySpace Library',
+                  phone: user?.phone || '',
+                });
+                setReminderMessageText(text);
+                setShowReminderModal(true);
+              }}
               className="rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-3 py-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:!text-white transition text-center justify-center"
             >
               📲 Reminder
@@ -375,9 +401,19 @@ export function StudentProfilePage() {
             <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <div>
                 <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Payment Status</p>
-                <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5 capitalize">
-                  {activeMembership.paymentStatus} (₹{(activeMembership.paidPaise / 100).toFixed(0)} / ₹{(activeMembership.feePaise / 100).toFixed(0)})
-                </p>
+                <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                  <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white capitalize">
+                    {activeMembership.paymentStatus} (₹{(activeMembership.paidPaise / 100).toFixed(0)} / ₹{(activeMembership.feePaise / 100).toFixed(0)})
+                  </p>
+                  {(activeMembership.discountPaise || 0) > 0 && (
+                    <span
+                      title={activeMembership.discountReason || 'Discount Applied'}
+                      className="inline-flex items-center gap-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-bold"
+                    >
+                      🏷️ -₹{((activeMembership.discountPaise || 0) / 100).toFixed(0)} off
+                    </span>
+                  )}
+                </div>
               </div>
               {duesRemainingPaise > 0 && (
                 <button
@@ -424,7 +460,7 @@ export function StudentProfilePage() {
                   <th className="px-4 py-2.5">Method</th>
                   <th className="px-4 py-2.5">Txn Ref</th>
                   <th className="px-4 py-2.5">Amount</th>
-                  <th className="px-4 py-2.5 text-right">Receipt</th>
+                  <th className="px-4 py-2.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -436,12 +472,21 @@ export function StudentProfilePage() {
                     <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{p.transactionRef || '—'}</td>
                     <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400">₹{(p.amountPaise / 100).toFixed(2)}</td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => setReceiptPayment(p)}
-                        className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
-                      >
-                        🖨️ Receipt
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setReceiptPayment(p)}
+                          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                        >
+                          🖨️ Receipt
+                        </button>
+                        <button
+                          onClick={() => setPaymentToDelete(p)}
+                          className="p-1 rounded-lg border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
+                          title="Delete / Reverse Payment"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -520,6 +565,50 @@ export function StudentProfilePage() {
             label="Membership Validity & Duration"
           />
 
+          {/* Discount / Negotiation Section */}
+          {chosenPlan && (
+            <div className="rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20 p-3 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Plan Standard Fee:</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">₹{(chosenPlan.feePaise / 100).toFixed(0)}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Discount / Concession (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={chosenPlan.feePaise / 100}
+                    value={membershipDiscountRupees}
+                    onChange={(e) => setMembershipDiscountRupees(e.target.value)}
+                    placeholder="0"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Reason / Note
+                  </label>
+                  <input
+                    type="text"
+                    value={membershipDiscountReason}
+                    onChange={(e) => setMembershipDiscountReason(e.target.value)}
+                    placeholder="e.g. Friend / Early bird"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t border-amber-200/60 dark:border-amber-900/30 text-xs">
+                <span className="font-bold text-slate-800 dark:text-slate-200">Final Payable Fee:</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                  ₹{Math.max(0, Math.round(chosenPlan.feePaise / 100 - parseFloat(membershipDiscountRupees || '0')))}
+                </span>
+              </div>
+            </div>
+          )}
+
           {createMembership.isError && (
             <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 text-xs">
               Failed to assign: {(createMembership.error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Conflict or server error'}
@@ -556,16 +645,27 @@ export function StudentProfilePage() {
       >
         <form onSubmit={handleRecordPayment} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Amount (₹) *</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Amount (₹) *</label>
+              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                Remaining Due: <strong className="text-amber-600 dark:text-amber-400">₹{(duesRemainingPaise / 100).toFixed(0)}</strong>
+              </span>
+            </div>
             <input
               type="number"
               step="1"
               min="1"
+              max={Math.max(1, Math.round(duesRemainingPaise / 100))}
               value={paymentAmountRupees}
               onChange={(e) => setPaymentAmountRupees(e.target.value)}
               className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
               required
             />
+            {parseFloat(paymentAmountRupees || '0') > duesRemainingPaise / 100 && (
+              <p className="mt-1 text-xs text-rose-500 font-medium">
+                Amount cannot exceed remaining due of ₹{(duesRemainingPaise / 100).toFixed(0)}
+              </p>
+            )}
           </div>
 
           <div>
@@ -574,10 +674,10 @@ export function StudentProfilePage() {
               value={paymentMethod}
               onChange={(val) => setPaymentMethod(val as any)}
               options={[
-                { value: 'upi', label: 'UPI (GPay / PhonePe / Paytm)' },
-                { value: 'cash', label: 'Cash' },
-                { value: 'card', label: 'Debit / Credit Card' },
-                { value: 'bank_transfer', label: 'Bank Transfer / NEFT' },
+                { value: 'upi', label: 'UPI (GPay / PhonePe / Paytm)', description: 'Fast QR & online transfer' },
+                { value: 'cash', label: 'Cash in Hand', description: 'Direct physical cash' },
+                { value: 'card', label: 'Debit / Credit Card', description: 'POS card swipe' },
+                { value: 'bank_transfer', label: 'Bank Transfer / NEFT', description: 'IMPS/RTGS bank deposit' },
               ]}
               required
             />
@@ -615,7 +715,7 @@ export function StudentProfilePage() {
             </button>
             <button
               type="submit"
-              disabled={recordPayment.isPending}
+              disabled={recordPayment.isPending || parseFloat(paymentAmountRupees || '0') > duesRemainingPaise / 100 || parseFloat(paymentAmountRupees || '0') <= 0}
               className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 disabled:opacity-50 shadow-sm"
             >
               {recordPayment.isPending ? 'Processing…' : 'Record & Generate Receipt'}
@@ -797,21 +897,45 @@ export function StudentProfilePage() {
         isOpen={showReminderModal}
         onClose={() => setShowReminderModal(false)}
         title="Send WhatsApp Renewal Reminder"
-        subtitle="Pre-drafted notification template for rapid dispatch"
+        subtitle={`Send instant renewal alert to ${student.name}`}
         icon={<Bell className="h-5 w-5 text-indigo-500" />}
         maxWidth="md"
       >
         <div className="space-y-4">
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs font-mono space-y-2 whitespace-pre-line text-slate-800 dark:text-slate-200">
-            {`📚 ${user?.tenantName || 'StudySpace Library'} Reminder\n\nDear ${student.name}(${activeMembership?.seatNumber || 'Seat'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Message Preview (Editable before sending)
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  const text = renderWhatsAppReminder(user?.whatsappReminderTemplate, {
+                    studentName: student.name,
+                    seatNumber: (activeMembership?.seatId as any)?.seatNumber || activeMembership?.seatNumber || 'Seat',
+                    libraryName: user?.tenantName || 'StudySpace Library',
+                    phone: user?.phone || '',
+                  });
+                  setReminderMessageText(text);
+                }}
+                className="text-[11px] font-semibold text-indigo-500 hover:text-indigo-400"
+              >
+                ↻ Reset to Template
+              </button>
+            </div>
+            <textarea
+              rows={8}
+              value={reminderMessageText}
+              onChange={(e) => setReminderMessageText(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-xs font-mono leading-relaxed text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
           </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
               onClick={() => {
-                const reminderText = `📚 ${user?.tenantName || 'StudySpace Library'} Reminder\n\nDear ${student.name}(${activeMembership?.seatNumber || 'Seat'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`;
-                navigator.clipboard.writeText(reminderText);
+                navigator.clipboard.writeText(reminderMessageText);
                 alert('Template copied to clipboard!');
               }}
               className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -821,10 +945,7 @@ export function StudentProfilePage() {
             <button
               type="button"
               onClick={() => {
-                const reminderText = `📚 ${user?.tenantName || 'StudySpace Library'} Reminder\n\nDear ${student.name}(${activeMembership?.seatNumber || 'Seat'}),\nAapki library seat renewal due hai. Kripya confirm karein ki aap seat renew karwa rahe hain ya seat chhod rahe hain.\nJaldi se bata dein, taaki seat ko accordingly update kiya ja sake.\nKeep reading, keep growing! 🌟`;
-                const cleanMobile = student.mobile.replace(/[^0-9]/g, '');
-                const fullMobile = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
-                window.open(`https://wa.me/${fullMobile}?text=${encodeURIComponent(reminderText)}`, '_blank');
+                openWhatsAppChat(student.mobile, reminderMessageText);
                 setShowReminderModal(false);
               }}
               className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-emerald-500 flex items-center gap-2 shadow-sm"
@@ -858,6 +979,24 @@ export function StudentProfilePage() {
           isLoading={markMembershipLeft.isPending}
         />
       )}
+
+      {/* Delete / Reverse Payment Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!paymentToDelete}
+        onClose={() => setPaymentToDelete(null)}
+        onConfirm={() => {
+          if (paymentToDelete) {
+            deletePayment.mutate(paymentToDelete._id, {
+              onSuccess: () => setPaymentToDelete(null),
+            });
+          }
+        }}
+        title="Reverse Payment Entry"
+        description={`Are you sure you want to delete receipt ${paymentToDelete?.receiptNumber} of ₹${paymentToDelete ? (paymentToDelete.amountPaise / 100).toFixed(0) : ''}? This will immediately deduct this amount from the student's paid total and restore any remaining dues.`}
+        confirmLabel="Delete / Reverse"
+        variant="danger"
+        isLoading={deletePayment.isPending}
+      />
     </div>
   );
 }

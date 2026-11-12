@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUserProfile, useUpdateProfile } from '../hooks/useAuth';
 import { formatDate } from '../utils/date';
+import { DEFAULT_WHATSAPP_REMINDER_TEMPLATE } from '../utils/whatsapp';
 import {
   User,
   Building2,
@@ -14,6 +15,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   Sparkles,
+  MessageSquare,
 } from 'lucide-react';
 
 export function ProfilePage() {
@@ -29,6 +31,7 @@ export function ProfilePage() {
   const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
   const [libraryName, setLibraryName] = useState('');
+  const [whatsappReminderTemplate, setWhatsappReminderTemplate] = useState('');
 
   // Password fields
   const [currentPassword, setCurrentPassword] = useState('');
@@ -46,6 +49,7 @@ export function ProfilePage() {
       setPhone(profile.tenant.phone || '');
       setCity(profile.tenant.city || '');
       setAddress(profile.tenant.address || '');
+      setWhatsappReminderTemplate(profile.tenant.whatsappReminderTemplate || DEFAULT_WHATSAPP_REMINDER_TEMPLATE);
     }
   }, [profile]);
 
@@ -57,6 +61,7 @@ export function ProfilePage() {
       city,
       address,
       libraryName: profile?.user.role === 'owner' ? libraryName : undefined,
+      whatsappReminderTemplate: profile?.user.role === 'owner' ? whatsappReminderTemplate : undefined,
     });
   };
 
@@ -341,6 +346,43 @@ export function ProfilePage() {
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="e.g. 2nd Floor, Apex Plaza, Bhanwarkua"
                     className="w-full rounded-xl border px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                    style={{
+                      backgroundColor: 'var(--bg-main)',
+                      borderColor: 'var(--border-subtle)',
+                      color: 'var(--text-main)',
+                    }}
+                  />
+                </div>
+
+                {/* WhatsApp Notification Template Settings */}
+                <div className="col-span-1 md:col-span-2 pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-emerald-500" />
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Custom WhatsApp Renewal Reminder Message
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setWhatsappReminderTemplate(DEFAULT_WHATSAPP_REMINDER_TEMPLATE)}
+                      className="text-[11px] font-semibold text-indigo-500 hover:text-indigo-400"
+                    >
+                      Reset to Default
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Customize your library's message sent to students. Available tags:{' '}
+                    <code className="text-indigo-500 font-mono">{"{student_name}"}</code>,{' '}
+                    <code className="text-indigo-500 font-mono">{"{seat_number}"}</code>,{' '}
+                    <code className="text-indigo-500 font-mono">{"{library_name}"}</code>,{' '}
+                    <code className="text-indigo-500 font-mono">{"{phone}"}</code>.
+                  </p>
+                  <textarea
+                    rows={6}
+                    value={whatsappReminderTemplate}
+                    onChange={(e) => setWhatsappReminderTemplate(e.target.value)}
+                    className="w-full rounded-xl border p-3 text-xs font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
                     style={{
                       backgroundColor: 'var(--bg-main)',
                       borderColor: 'var(--border-subtle)',

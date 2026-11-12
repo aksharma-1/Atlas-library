@@ -41,6 +41,9 @@ export function useCreateStudent() {
       seatId?: string;
       startDate?: string;
       endDate?: string;
+      discountPaise?: number;
+      discountReason?: string;
+      customFeePaise?: number;
       initialPaymentAmountPaise?: number;
       paymentMethod?: 'cash' | 'upi' | 'card' | 'bank_transfer';
       transactionRef?: string;
@@ -72,6 +75,9 @@ export function useCreateMembership() {
       seatId?: string;
       startDate: string;
       endDate: string;
+      discountPaise?: number;
+      discountReason?: string;
+      customFeePaise?: number;
     }) => {
       const { data } = await apiClient.post<{ membership: MembershipDTO }>('/memberships', payload);
       return data.membership;
@@ -113,6 +119,25 @@ export function useRecordPayment() {
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
       toast.error(err?.response?.data?.error || 'Failed to record payment');
+    },
+  });
+}
+
+export function useDeletePayment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await apiClient.delete<{ message: string }>(`/payments/${id}`);
+      return data;
+    },
+    onSuccess: (res) => {
+      toast.success(res?.message || 'Payment reversed successfully');
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to delete payment');
     },
   });
 }

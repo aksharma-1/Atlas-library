@@ -5,6 +5,7 @@ export { ConfirmModal } from './ConfirmModal';
 export { CustomSelect } from './CustomSelect';
 export type { SelectOption } from './CustomSelect';
 export { Pagination } from './Pagination';
+export { Switch } from './Switch';
 export { PrintableCard } from '../PrintableCard';
 export type { PrintableCardProps } from '../PrintableCard';
 export { PrintableReceipt } from '../PrintableReceipt';

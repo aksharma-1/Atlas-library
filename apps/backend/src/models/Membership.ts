@@ -13,6 +13,9 @@ export interface IMembership extends Document {
   endDate: Date;
   status: MembershipStatus;
   feePaise: number;
+  originalFeePaise?: number;
+  discountPaise?: number;
+  discountReason?: string;
   paidPaise: number;
   paymentStatus: PaymentStatus;
   createdAt: Date;
@@ -73,6 +76,27 @@ const membershipSchema = new Schema<IMembership>(
         validator: Number.isInteger,
         message: '{VALUE} is not an integer paise value',
       },
+    },
+    originalFeePaise: {
+      type: Number,
+      min: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: '{VALUE} is not an integer paise value',
+      },
+    },
+    discountPaise: {
+      type: Number,
+      default: 0,
+      min: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: '{VALUE} is not an integer paise value',
+      },
+    },
+    discountReason: {
+      type: String,
+      trim: true,
     },
     paidPaise: {
       type: Number,

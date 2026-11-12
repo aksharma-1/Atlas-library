@@ -36,6 +36,7 @@ export interface AuthUser {
   subscriptionExpiresAt?: string;
   maxSeats?: number;
   isActive?: boolean;
+  whatsappReminderTemplate?: string;
 }
 
 /** Payload for updating user & library profile */
@@ -47,6 +48,7 @@ export interface UpdateProfileRequest {
   libraryName?: string;
   currentPassword?: string;
   newPassword?: string;
+  whatsappReminderTemplate?: string;
 }
 
 /** Full user profile details */
@@ -66,6 +68,7 @@ export interface UserProfileDTO {
     phone?: string;
     city?: string;
     address?: string;
+    whatsappReminderTemplate?: string;
     subscriptionTier?: string;
     subscriptionStatus?: SubscriptionStatus;
     subscriptionExpiresAt?: string;

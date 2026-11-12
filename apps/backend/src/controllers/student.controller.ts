@@ -19,6 +19,9 @@ const registerStudentSchema = z.object({
   seatId: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  discountPaise: z.number().int().min(0).optional(),
+  discountReason: z.string().optional(),
+  customFeePaise: z.number().int().min(0).optional(),
   // Optional instant payment collection at registration
   initialPaymentAmountPaise: z.number().int().min(0).optional(),
   paymentMethod: z.enum(['cash', 'upi', 'card', 'bank_transfer']).optional(),
@@ -110,6 +113,19 @@ export async function createStudent(req: Request, res: Response, next: NextFunct
           ? new Date(parsed.data.endDate)
           : new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
 
+        // Determine final fee with discount / custom fee negotiation
+        const originalFee = plan.feePaise;
+        let finalFee = originalFee;
+        let appliedDiscount = 0;
+
+        if (typeof parsed.data.customFeePaise === 'number' && parsed.data.customFeePaise >= 0) {
+          finalFee = parsed.data.customFeePaise;
+          appliedDiscount = Math.max(0, originalFee - parsed.data.customFeePaise);
+        } else if (parsed.data.discountPaise && parsed.data.discountPaise > 0) {
+          appliedDiscount = Math.min(parsed.data.discountPaise, originalFee);
+          finalFee = Math.max(0, originalFee - appliedDiscount);
+        }
+
         createdMembership = await Membership.create({
           tenantId,
           studentId: student._id,
@@ -120,14 +136,22 @@ export async function createStudent(req: Request, res: Response, next: NextFunct
           startDate: start,
           endDate: end,
           status: 'active',
-          feePaise: plan.feePaise,
+          feePaise: finalFee,
+          originalFeePaise: originalFee,
+          discountPaise: appliedDiscount,
+          discountReason: appliedDiscount > 0 ? (parsed.data.discountReason || 'Discount / Special offer') : undefined,
           paidPaise: 0,
           paymentStatus: 'pending',
         });
 
         // If initial payment was collected at registration, record it immediately
-        const initialPaymentPaise = parsed.data.initialPaymentAmountPaise || 0;
+        let initialPaymentPaise = parsed.data.initialPaymentAmountPaise || 0;
         if (initialPaymentPaise > 0) {
+          // Guard against paying more than the final negotiated membership fee
+          if (initialPaymentPaise > finalFee) {
+            initialPaymentPaise = finalFee;
+          }
+
           const paymentCount = await Payment.countDocuments({ tenantId });
           const receiptNumber = `REC-${new Date().getFullYear()}-${String(paymentCount + 1).padStart(4, '0')}`;
 
@@ -143,7 +167,7 @@ export async function createStudent(req: Request, res: Response, next: NextFunct
           });
 
           const newPaid = initialPaymentPaise;
-          const newStatus = newPaid >= plan.feePaise ? 'paid' : 'partial';
+          const newStatus = newPaid >= finalFee ? 'paid' : 'partial';
           createdMembership.paidPaise = newPaid;
           createdMembership.paymentStatus = newStatus;
           await createdMembership.save();

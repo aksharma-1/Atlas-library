@@ -39,6 +39,7 @@ import {
   type DurationOption,
 } from '../components/DateRangeDurationSelector';
 import { formatDate } from '../utils/date';
+import { renderWhatsAppReminder, openWhatsAppChat } from '../utils/whatsapp';
 
 export function SeatsPage() {
   const { user } = useAuth();
@@ -355,13 +356,13 @@ export function SeatsPage() {
   };
 
   const handleWhatsApp = (mobile: string, studentName: string, seatNumber: string) => {
-    const cleanMobile = mobile.replace(/[^0-9]/g, '');
-    const fullMobile = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
-    const libraryTitle = user?.tenantName || 'StudySpace Library';
-    const text = encodeURIComponent(
-      `📚 ${libraryTitle} Notification\n\nHello ${studentName} (Desk ${seatNumber}),\nThis is a notification regarding your library membership & desk renewal.\nPlease visit reception or reply here if you have any questions.\nHappy learning! 🌟`,
-    );
-    window.open(`https://wa.me/${fullMobile}?text=${text}`, '_blank');
+    const text = renderWhatsAppReminder(user?.whatsappReminderTemplate, {
+      studentName,
+      seatNumber,
+      libraryName: user?.tenantName || 'StudySpace Library',
+      phone: user?.phone || '',
+    });
+    openWhatsAppChat(mobile, text);
   };
 
   // Color generator for seat grid items

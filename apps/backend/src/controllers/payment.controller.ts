@@ -38,6 +38,24 @@ export async function recordPayment(req: Request, res: Response, next: NextFunct
       return;
     }
 
+    // ── Due Overpayment Validation ───────────────────────────────────────────
+    const remainingDuePaise = Math.max(0, membership.feePaise - membership.paidPaise);
+    if (remainingDuePaise <= 0) {
+      res.status(400).json({
+        error: `This membership fee is already fully paid (₹${(membership.feePaise / 100).toFixed(0)} / ₹${(membership.feePaise / 100).toFixed(0)}). No further payment is due.`,
+      });
+      return;
+    }
+
+    if (amountPaise > remainingDuePaise) {
+      const dueRupees = (remainingDuePaise / 100).toFixed(0);
+      const attemptedRupees = (amountPaise / 100).toFixed(0);
+      res.status(400).json({
+        error: `Payment amount ₹${attemptedRupees} exceeds the remaining due of ₹${dueRupees}. Maximum payable amount is ₹${dueRupees}.`,
+      });
+      return;
+    }
+
     // Generate human receipt number (e.g. REC-2026-0001)
     const count = await Payment.countDocuments({ tenantId });
     const receiptNumber = `REC-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
@@ -98,6 +116,48 @@ export async function getReceipt(req: Request, res: Response, next: NextFunction
     }
 
     res.status(200).json({ payment });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * DELETE /api/v1/payments/:id
+ * Reverses an accidental or duplicate payment and adjusts the student's membership balance.
+ */
+export async function deletePayment(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user!.tenantId;
+
+    const payment = await Payment.findOne({ _id: id, tenantId });
+    if (!payment) {
+      res.status(404).json({ error: 'Payment entry not found' });
+      return;
+    }
+
+    const membership = await Membership.findOne({ _id: payment.membershipId, tenantId });
+    if (membership) {
+      // Deduct the deleted payment amount
+      const updatedPaidPaise = Math.max(0, membership.paidPaise - payment.amountPaise);
+      membership.paidPaise = updatedPaidPaise;
+
+      if (updatedPaidPaise >= membership.feePaise) {
+        membership.paymentStatus = 'paid';
+      } else if (updatedPaidPaise === 0) {
+        membership.paymentStatus = 'pending';
+      } else {
+        membership.paymentStatus = 'partial';
+      }
+
+      await membership.save();
+    }
+
+    await Payment.findByIdAndDelete(payment._id);
+
+    res.status(200).json({
+      message: `Receipt ${payment.receiptNumber} (₹${(payment.amountPaise / 100).toFixed(0)}) removed successfully`,
+    });
   } catch (err) {
     next(err);
   }

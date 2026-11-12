@@ -367,6 +367,7 @@ export async function me(req: Request, res: Response, next: NextFunction): Promi
       onboardingStep: tenant.onboardingStep,
       maxSeats: tenant.maxSeats,
       isActive: tenant.isActive,
+      whatsappReminderTemplate: tenant.whatsappReminderTemplate,
     };
 
     // If tenant status or active state changed in DB (e.g. approved or suspended by superadmin), re-issue updated cookie
@@ -492,6 +493,7 @@ const updateProfileSchema = z.object({
   libraryName: z.string().min(2, 'Library name must be at least 2 characters').trim().optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string().min(6, 'New password must be at least 6 characters').optional(),
+  whatsappReminderTemplate: z.string().max(2000).optional(),
 });
 
 /**
@@ -523,6 +525,7 @@ export async function getProfile(req: Request, res: Response, next: NextFunction
           phone: tenant.phone,
           city: tenant.city,
           address: tenant.address,
+          whatsappReminderTemplate: tenant.whatsappReminderTemplate,
           subscriptionTier: tenant.subscriptionTier,
           subscriptionStatus: tenant.subscriptionStatus,
           subscriptionExpiresAt: tenant.subscriptionExpiresAt ? tenant.subscriptionExpiresAt.toISOString() : undefined,
@@ -567,7 +570,7 @@ export async function updateProfile(req: Request, res: Response, next: NextFunct
       return;
     }
 
-    const { name, phone, city, address, libraryName, currentPassword, newPassword } = parsed.data;
+    const { name, phone, city, address, libraryName, currentPassword, newPassword, whatsappReminderTemplate } = parsed.data;
 
     // Load user with passwordHash
     const user = await User.findById(req.user.userId).select('+passwordHash');
@@ -614,6 +617,9 @@ export async function updateProfile(req: Request, res: Response, next: NextFunct
         if (address !== undefined) {
           tenant.address = address;
         }
+        if (whatsappReminderTemplate !== undefined) {
+          tenant.whatsappReminderTemplate = whatsappReminderTemplate.trim();
+        }
         await tenant.save();
         updatedTenant = tenant;
       }
@@ -627,6 +633,7 @@ export async function updateProfile(req: Request, res: Response, next: NextFunct
       phone: updatedTenant?.phone ?? req.user.phone,
       city: updatedTenant?.city ?? req.user.city,
       address: updatedTenant?.address ?? req.user.address,
+      whatsappReminderTemplate: updatedTenant?.whatsappReminderTemplate ?? req.user.whatsappReminderTemplate,
     };
 
     const token = generateToken(updatedAuthUser);

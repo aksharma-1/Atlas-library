@@ -31,6 +31,8 @@ export interface ITenant extends Document {
   lastPaymentSubmittedAt?: Date;
   /** Max seat inventory capacity allowed */
   maxSeats: number;
+  /** Custom WhatsApp reminder template with variables */
+  whatsappReminderTemplate?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +67,10 @@ const tenantSchema = new Schema<ITenant>(
       trim: true,
     },
     address: {
+      type: String,
+      trim: true,
+    },
+    whatsappReminderTemplate: {
       type: String,
       trim: true,
     },

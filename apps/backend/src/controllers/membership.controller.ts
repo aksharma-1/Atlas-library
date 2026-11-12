@@ -11,6 +11,9 @@ const createMembershipSchema = z.object({
   seatId: z.string().optional(),
   startDate: z.string().min(1, 'Start date is required'),
   endDate: z.string().min(1, 'End date is required'),
+  discountPaise: z.number().int().min(0).optional(),
+  discountReason: z.string().optional(),
+  customFeePaise: z.number().int().min(0).optional(),
 });
 
 export async function createMembership(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -22,12 +25,25 @@ export async function createMembership(req: Request, res: Response, next: NextFu
     }
 
     const tenantId = req.user!.tenantId;
-    const { studentId, planId, shiftId, seatId, startDate, endDate } = parsed.data;
+    const { studentId, planId, shiftId, seatId, startDate, endDate, discountPaise = 0, discountReason, customFeePaise } = parsed.data;
 
     const plan = await Plan.findOne({ _id: planId, tenantId });
     if (!plan) {
       res.status(404).json({ error: 'Plan not found' });
       return;
+    }
+
+    // Determine final fee with discount / custom fee negotiation
+    const originalFee = plan.feePaise;
+    let finalFee = originalFee;
+    let appliedDiscount = 0;
+
+    if (typeof customFeePaise === 'number' && customFeePaise >= 0) {
+      finalFee = customFeePaise;
+      appliedDiscount = Math.max(0, originalFee - customFeePaise);
+    } else if (discountPaise > 0) {
+      appliedDiscount = Math.min(discountPaise, originalFee);
+      finalFee = Math.max(0, originalFee - appliedDiscount);
     }
 
     // ── Conflict Prevention for Reserved Seats ───────────────────────────────
@@ -96,7 +112,10 @@ export async function createMembership(req: Request, res: Response, next: NextFu
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       status: 'active',
-      feePaise: plan.feePaise,
+      feePaise: finalFee,
+      originalFeePaise: originalFee,
+      discountPaise: appliedDiscount,
+      discountReason: appliedDiscount > 0 ? (discountReason || 'Discount / Special offer') : undefined,
       paidPaise: 0,
       paymentStatus: 'pending',
     });
