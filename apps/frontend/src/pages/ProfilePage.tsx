@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useUserProfile, useUpdateProfile } from '../hooks/useAuth';
+import { formatDate } from '../utils/date';
 import {
   User,
   Building2,
@@ -156,7 +157,7 @@ export function ProfilePage() {
             </div>
             <p className="text-[11px] text-slate-400 flex items-center gap-1">
               <Calendar className="h-3.5 w-3.5" />
-              Member since {profile?.user.createdAt ? new Date(profile.user.createdAt).toLocaleDateString() : '—'}
+              Member since {profile?.user.createdAt ? formatDate(profile.user.createdAt) : '—'}
             </p>
           </div>
         </div>

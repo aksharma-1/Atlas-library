@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStudents, useCreateStudent, useUpdateStudent, useDeleteStudent, useFilteredMemberships } from '../hooks/useStudents';
 import { usePlans, useSeats, useShifts } from '../hooks/useLibrary';
 import { useAuth } from '../hooks/useAuth';
 import type { StudentDTO } from '@atlas/shared';
-import { Modal, ConfirmModal, CustomSelect } from '../components/ui';
-import { Bell, UserCheck, UserPlus, Search, Edit2, Trash2, MessageSquare, Armchair } from 'lucide-react';
+import { Modal, ConfirmModal, CustomSelect, Pagination } from '../components/ui';
+import { Bell, UserCheck, UserPlus, Search, Edit2, Trash2, MessageSquare, Armchair, IndianRupee } from 'lucide-react';
+import { formatDate } from '../utils/date';
 import {
   DateRangeDurationSelector,
   calculateEndDateFromDays,
@@ -60,6 +61,12 @@ export function StudentsPage() {
   const [regStartDate, setRegStartDate] = useState(() => getTodayDateString());
   const [regEndDate, setRegEndDate] = useState(() => calculateEndDateFromDays(getTodayDateString(), 30));
 
+  // Instant Fee Collection on Registration
+  const [collectPaymentOnRegister, setCollectPaymentOnRegister] = useState(true);
+  const [regPaymentAmountRupees, setRegPaymentAmountRupees] = useState('');
+  const [regPaymentMethod, setRegPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'bank_transfer'>('cash');
+  const [regPaymentRef, setRegPaymentRef] = useState('');
+
   // Edit Student state
   const [editingStudent, setEditingStudent] = useState<StudentDTO | null>(null);
   const [editName, setEditName] = useState('');
@@ -86,8 +93,56 @@ export function StudentsPage() {
   const { data: seats = [] } = useSeats();
   const { data: shifts = [] } = useShifts();
 
+  // Pagination States
+  const [studentsPage, setStudentsPage] = useState(1);
+  const [studentsPageSize, setStudentsPageSize] = useState(10);
+  const [filterPage, setFilterPage] = useState(1);
+  const [filterPageSize, setFilterPageSize] = useState(10);
+
+  // Reset to page 1 on search or tab change
+  useEffect(() => {
+    setStudentsPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    setFilterPage(1);
+  }, [activeTab]);
+
+  // Paginated Students
+  const paginatedStudents = useMemo(() => {
+    const start = (studentsPage - 1) * studentsPageSize;
+    return students.slice(start, start + studentsPageSize);
+  }, [students, studentsPage, studentsPageSize]);
+
+  // Paginated Filtered Memberships
+  const paginatedFilteredMemberships = useMemo(() => {
+    const start = (filterPage - 1) * filterPageSize;
+    return filteredMemberships.slice(start, start + filterPageSize);
+  }, [filteredMemberships, filterPage, filterPageSize]);
+
   const chosenPlan = plans.find((p) => p._id === regPlanId);
-  const availableSeats = seats.filter((s) => s.status === 'available');
+
+  // Auto-fill payment amount when plan is selected
+  useEffect(() => {
+    if (chosenPlan) {
+      setRegPaymentAmountRupees((chosenPlan.feePaise / 100).toFixed(0));
+    }
+  }, [chosenPlan]);
+
+  // Shift-aware available desks
+  const availableSeats = useMemo(() => {
+    return seats.filter((s) => {
+      if (s.status === 'maintenance' || s.status === 'blocked') return false;
+      if (regShiftId) {
+        if (!s.shiftOccupants || s.shiftOccupants.length === 0) return true;
+        const occupied = s.shiftOccupants.some(
+          (so) => so.shiftId === regShiftId || so.shiftId === 'all',
+        );
+        return !occupied;
+      }
+      return s.status === 'available';
+    });
+  }, [seats, regShiftId]);
 
   const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent();
@@ -110,6 +165,13 @@ export function StudentsPage() {
         seatId: assignDeskOnRegister && chosenPlan?.seatType === 'reserved' && regSeatId ? regSeatId : undefined,
         startDate: assignDeskOnRegister && regPlanId ? regStartDate : undefined,
         endDate: assignDeskOnRegister && regPlanId ? regEndDate : undefined,
+        // Optional instant payment
+        initialPaymentAmountPaise:
+          assignDeskOnRegister && collectPaymentOnRegister && regPaymentAmountRupees
+            ? Math.round(parseFloat(regPaymentAmountRupees) * 100)
+            : undefined,
+        paymentMethod: assignDeskOnRegister && collectPaymentOnRegister ? regPaymentMethod : undefined,
+        transactionRef: assignDeskOnRegister && collectPaymentOnRegister && regPaymentRef ? regPaymentRef : undefined,
       },
       {
         onSuccess: () => {
@@ -123,6 +185,8 @@ export function StudentsPage() {
           setRegPlanId('');
           setRegShiftId('');
           setRegSeatId('');
+          setRegPaymentAmountRupees('');
+          setRegPaymentRef('');
           setRegDurationOption('30d');
           const today = getTodayDateString();
           setRegStartDate(today);
@@ -252,12 +316,12 @@ export function StudentsPage() {
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent mx-auto mb-2" />
                 Loading students directory…
               </div>
-            ) : students.length === 0 ? (
+            ) : paginatedStudents.length === 0 ? (
               <div className="py-12 text-center text-slate-400 text-sm px-4">
                 No students found. Register your first student above.
               </div>
             ) : (
-              students.map((s) => (
+              paginatedStudents.map((s) => (
                 <div
                   key={s._id}
                   onClick={() => navigate(`/students/${s._id}`)}
@@ -329,14 +393,14 @@ export function StudentsPage() {
                       Loading students directory…
                     </td>
                   </tr>
-                ) : students.length === 0 ? (
+                ) : paginatedStudents.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-12 text-center text-slate-400 text-sm">
                       No students found. Register your first student above.
                     </td>
                   </tr>
                 ) : (
-                  students.map((s) => (
+                  paginatedStudents.map((s) => (
                     <tr
                       key={s._id}
                       onClick={() => navigate(`/students/${s._id}`)}
@@ -366,7 +430,7 @@ export function StudentsPage() {
                       </td>
                       <td className="px-6 py-4 text-slate-600 dark:text-slate-300 font-mono text-xs">{s.mobile}</td>
                       <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400">
-                        {new Date(s.createdAt).toLocaleDateString()}
+                        {formatDate(s.createdAt)}
                       </td>
                       <td className="px-6 py-4 text-right space-x-1.5" onClick={(e) => e.stopPropagation()}>
                         <button
@@ -392,6 +456,18 @@ export function StudentsPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Students Directory Pagination */}
+          <Pagination
+            currentPage={studentsPage}
+            totalItems={students.length}
+            pageSize={studentsPageSize}
+            onPageChange={setStudentsPage}
+            onPageSizeChange={(newSize) => {
+              setStudentsPageSize(newSize);
+              setStudentsPage(1);
+            }}
+          />
         </div>
       ) : (
         /* Tabs 2-6: Filtered Memberships (Dues, Expiring 1-3, Expiring 1-7, Expired, Left) */
@@ -412,12 +488,12 @@ export function StudentsPage() {
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent mx-auto mb-2" />
                 Loading records…
               </div>
-            ) : filteredMemberships.length === 0 ? (
+            ) : paginatedFilteredMemberships.length === 0 ? (
               <div className="py-12 text-center text-slate-400 text-sm px-4">
                 No records found in this section.
               </div>
             ) : (
-              filteredMemberships.map((m: any) => {
+              paginatedFilteredMemberships.map((m: any) => {
                 const s = m.studentId || {};
                 const duePaise = Math.max(0, (m.feePaise || 0) - (m.paidPaise || 0));
                 const isExpired = new Date(m.endDate) < new Date();
@@ -457,7 +533,7 @@ export function StudentsPage() {
                       <div>
                         <span className="text-slate-400 block text-[10px]">Expiry</span>
                         <span className={`font-mono ${isExpired ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-slate-700 dark:text-slate-300'}`}>
-                          {new Date(m.endDate).toLocaleDateString()}
+                          {formatDate(m.endDate)}
                         </span>
                       </div>
 
@@ -532,14 +608,14 @@ export function StudentsPage() {
                       Loading records…
                     </td>
                   </tr>
-                ) : filteredMemberships.length === 0 ? (
+                ) : paginatedFilteredMemberships.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-slate-400 text-sm">
                       No records found in this section.
                     </td>
                   </tr>
                 ) : (
-                  filteredMemberships.map((m: any) => {
+                  paginatedFilteredMemberships.map((m: any) => {
                     const s = m.studentId || {};
                     const duePaise = Math.max(0, (m.feePaise || 0) - (m.paidPaise || 0));
                     const isExpired = new Date(m.endDate) < new Date();
@@ -579,7 +655,7 @@ export function StudentsPage() {
                         </td>
                         <td className="px-5 py-3.5 font-mono text-xs">
                           <span className={isExpired ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-slate-600 dark:text-slate-300'}>
-                            {new Date(m.endDate).toLocaleDateString()}
+                            {formatDate(m.endDate)}
                           </span>
                         </td>
 
@@ -626,6 +702,18 @@ export function StudentsPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Filtered Memberships Pagination */}
+          <Pagination
+            currentPage={filterPage}
+            totalItems={filteredMemberships.length}
+            pageSize={filterPageSize}
+            onPageChange={setFilterPage}
+            onPageSizeChange={(newSize) => {
+              setFilterPageSize(newSize);
+              setFilterPage(1);
+            }}
+          />
         </div>
       )}
 
@@ -922,6 +1010,76 @@ export function StudentsPage() {
                   onChangeDurationOption={setRegDurationOption}
                   label="Membership Validity & Duration"
                 />
+
+                {/* Instant Fee Collection */}
+                <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <IndianRupee className="h-4 w-4 text-emerald-500" />
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        Collect Fees at Registration
+                      </span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={collectPaymentOnRegister}
+                        onChange={(e) => setCollectPaymentOnRegister(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
+                  </div>
+
+                  {collectPaymentOnRegister && (
+                    <div className="grid grid-cols-2 gap-2.5 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 animate-fade-in">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                          Amount (₹) *
+                        </label>
+                        <input
+                          type="number"
+                          value={regPaymentAmountRupees}
+                          onChange={(e) => setRegPaymentAmountRupees(e.target.value)}
+                          placeholder="e.g. 600"
+                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white"
+                          required={collectPaymentOnRegister}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                          Payment Mode
+                        </label>
+                        <select
+                          value={regPaymentMethod}
+                          onChange={(e) => setRegPaymentMethod(e.target.value as any)}
+                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white"
+                        >
+                          <option value="cash">💵 Cash</option>
+                          <option value="upi">📱 UPI</option>
+                          <option value="card">💳 Card</option>
+                          <option value="bank_transfer">🏦 Bank Transfer</option>
+                        </select>
+                      </div>
+
+                      {regPaymentMethod === 'upi' && (
+                        <div className="col-span-2">
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            UPI Transaction Ref / UTR (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={regPaymentRef}
+                            onChange={(e) => setRegPaymentRef(e.target.value)}
+                            placeholder="e.g. 412389102847"
+                            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white font-mono"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

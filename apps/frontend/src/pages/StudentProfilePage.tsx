@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStudentProfile, useCreateMembership, useRecordPayment, useMarkMembershipLeft, useAddGiftDays, useUpdateStudent } from '../hooks/useStudents';
 import { usePlans, useSeats, useShifts } from '../hooks/useLibrary';
+import { formatDate, formatDateTime } from '../utils/date';
 import { useAuth } from '../hooks/useAuth';
 import { PrintableCard } from '../components/PrintableCard';
 import { PrintableReceipt } from '../components/PrintableReceipt';
@@ -77,7 +78,30 @@ export function StudentProfilePage() {
 
   // Selected plan details
   const chosenPlan = plans.find((p) => p._id === selectedPlanId);
-  const availableSeats = seats.filter((s) => s.status === 'available');
+
+  // Seat dropdown options: include seats that are vacant in this shift OR the student's own current seat
+  const availableSeats = useMemo(() => {
+    return seats.filter((s) => {
+      // Always allow student's currently assigned seat
+      if (activeMembership?.seatId && (s._id === activeMembership.seatId || s._id === (activeMembership.seatId as any)?._id)) {
+        return true;
+      }
+      // If seat is under maintenance or blocked, exclude
+      if (s.status === 'maintenance' || s.status === 'blocked') {
+        return false;
+      }
+      // If a shift is selected, check if this seat is free during this shift
+      if (selectedShiftId) {
+        if (!s.shiftOccupants || s.shiftOccupants.length === 0) return true;
+        // Occupied if someone has this shift or all day ('all')
+        const occupiedInShift = s.shiftOccupants.some(
+          (so) => so.shiftId === selectedShiftId || so.shiftId === 'all',
+        );
+        return !occupiedInShift;
+      }
+      return s.status === 'available';
+    });
+  }, [seats, activeMembership, selectedShiftId]);
 
   const handleAssignMembership = (e: React.FormEvent) => {
     e.preventDefault();
@@ -245,7 +269,29 @@ export function StudentProfilePage() {
               📲 Reminder
             </button>
             <button
-              onClick={() => setShowAssignModal(true)}
+              onClick={() => {
+                if (activeMembership) {
+                  // Pre-fill renewal data
+                  const mem = activeMembership as any;
+                  const pId = mem.planId?._id || mem.planId;
+                  const shId = mem.shiftId?._id || mem.shiftId;
+                  const stId = mem.seatId?._id || mem.seatId;
+                  setSelectedPlanId(typeof pId === 'string' ? pId : pId?._id || '');
+                  setSelectedShiftId(typeof shId === 'string' ? shId : shId?._id || '');
+                  setSelectedSeatId(typeof stId === 'string' ? stId : stId?._id || '');
+
+                  // Pre-fill dates: start from current endDate (or today if expired)
+                  const currentEnd = new Date(activeMembership.endDate);
+                  const isPast = currentEnd < new Date();
+                  const nextStart = isPast
+                    ? getTodayDateString()
+                    : currentEnd.toISOString().split('T')[0];
+                  setStartDate(nextStart);
+                  setEndDate(calculateEndDateFromDays(nextStart, 30));
+                  setDurationOption('30d');
+                }
+                setShowAssignModal(true);
+              }}
               className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 shadow-xs transition text-center justify-center"
             >
               {activeMembership ? '↻ Renew Plan' : '+ Assign Plan'}
@@ -323,7 +369,7 @@ export function StudentProfilePage() {
             <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800">
               <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Validity Period</p>
               <p className="text-[11px] sm:text-xs font-semibold text-slate-900 dark:text-white mt-1">
-                {new Date(activeMembership.startDate).toLocaleDateString()} – {new Date(activeMembership.endDate).toLocaleDateString()}
+                {formatDate(activeMembership.startDate)} – {formatDate(activeMembership.endDate)}
               </p>
             </div>
             <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
@@ -385,7 +431,7 @@ export function StudentProfilePage() {
                 {payments.map((p) => (
                   <tr key={p._id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition">
                     <td className="px-4 py-3 font-mono font-bold text-slate-900 dark:text-white">{p.receiptNumber}</td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{new Date(p.createdAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{formatDateTime(p.createdAt)}</td>
                     <td className="px-4 py-3 uppercase font-semibold text-slate-700 dark:text-slate-300">{p.paymentMethod}</td>
                     <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{p.transactionRef || '—'}</td>
                     <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400">₹{(p.amountPaise / 100).toFixed(2)}</td>
@@ -409,8 +455,8 @@ export function StudentProfilePage() {
       <Modal
         isOpen={showAssignModal}
         onClose={() => setShowAssignModal(false)}
-        title="Assign Membership"
-        subtitle="Enroll student in a membership plan, desk & study shift"
+              title={activeMembership ? "Renew Plan & Desk" : "Assign Membership"}
+              subtitle={activeMembership ? "Extend membership dates, desk reservation & collect renewal fees" : "Enroll student in a membership plan, desk & study shift"}
         icon={<UserCheck className="h-5 w-5 text-indigo-500" />}
         maxWidth="md"
       >
@@ -439,7 +485,7 @@ export function StudentProfilePage() {
                 onChange={(val) => setSelectedSeatId(val)}
                 options={[
                   { value: '', label: '-- Select an Available Seat --' },
-                  ...availableSeats.map((s) => ({
+                  ...availableSeats.map((s: any) => ({
                     value: s._id,
                     label: `Seat #${s.seatNumber} (${s.section})`,
                   })),

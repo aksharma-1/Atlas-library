@@ -38,6 +38,7 @@ import {
   getTodayDateString,
   type DurationOption,
 } from '../components/DateRangeDurationSelector';
+import { formatDate } from '../utils/date';
 
 export function SeatsPage() {
   const { user } = useAuth();
@@ -795,7 +796,7 @@ export function SeatsPage() {
                   <div>
                     <span className="text-slate-400 block text-[10px] uppercase">Expiry Date</span>
                     <span className="font-medium text-slate-700 dark:text-slate-300">
-                      {new Date(selectedSeat.occupant.endDate).toLocaleDateString()}
+                      {formatDate(selectedSeat.occupant.endDate)}
                     </span>
                   </div>
                   <div>
@@ -895,7 +896,7 @@ export function SeatsPage() {
                           {so.student.daysRemaining}d left
                         </span>
                         <div className="text-[10px] text-slate-400">
-                          {new Date(so.student.endDate).toLocaleDateString()}
+                          {formatDate(so.student.endDate)}
                         </div>
                       </div>
                     </div>

@@ -41,6 +41,10 @@ export function useCreateStudent() {
       seatId?: string;
       startDate?: string;
       endDate?: string;
+      initialPaymentAmountPaise?: number;
+      paymentMethod?: 'cash' | 'upi' | 'card' | 'bank_transfer';
+      transactionRef?: string;
+      paymentNotes?: string;
     }) => {
       const { data } = await apiClient.post<{ student: StudentDTO; membership?: MembershipDTO }>('/students', payload);
       return data.student;

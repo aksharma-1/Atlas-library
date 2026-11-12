@@ -112,13 +112,24 @@ html.light-mode .border {
 }
 
 /* ── HIGH-CONTRAST TEXT OVERRIDES IN LIGHT MODE (Stops washed out text) ──── */
-html.light-mode h1,
-html.light-mode h2,
-html.light-mode h3,
-html.light-mode h4,
-html.light-mode .text-white,
+html.light-mode h1:not([class*="text-white"]):not([class*="!text-white"]),
+html.light-mode h2:not([class*="text-white"]):not([class*="!text-white"]),
+html.light-mode h3:not([class*="text-white"]):not([class*="!text-white"]),
+html.light-mode h4:not([class*="text-white"]):not([class*="!text-white"]),
+html.light-mode p.text-white,
+html.light-mode span.text-white:not([class*="!text-white"]),
 html.light-mode .text-slate-100 {
   color: #0f172a !important; /* Deep Slate-900 */
+}
+
+/* Explicit white elements (badges, avatar icons, colored chips) MUST STAY PURE WHITE */
+.text-white,
+[class*="from-indigo-600"] *,
+[class*="from-indigo-600"],
+[class*="bg-indigo-600"] *,
+[class*="bg-indigo-600"],
+[class*="bg-gradient-to-"] * {
+  color: #ffffff !important;
 }
 
 html.light-mode .text-slate-200,

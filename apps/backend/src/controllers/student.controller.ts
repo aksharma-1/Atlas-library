@@ -19,6 +19,11 @@ const registerStudentSchema = z.object({
   seatId: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  // Optional instant payment collection at registration
+  initialPaymentAmountPaise: z.number().int().min(0).optional(),
+  paymentMethod: z.enum(['cash', 'upi', 'card', 'bank_transfer']).optional(),
+  transactionRef: z.string().optional(),
+  paymentNotes: z.string().optional(),
 });
 
 export async function listStudents(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -119,6 +124,30 @@ export async function createStudent(req: Request, res: Response, next: NextFunct
           paidPaise: 0,
           paymentStatus: 'pending',
         });
+
+        // If initial payment was collected at registration, record it immediately
+        const initialPaymentPaise = parsed.data.initialPaymentAmountPaise || 0;
+        if (initialPaymentPaise > 0) {
+          const paymentCount = await Payment.countDocuments({ tenantId });
+          const receiptNumber = `REC-${new Date().getFullYear()}-${String(paymentCount + 1).padStart(4, '0')}`;
+
+          await Payment.create({
+            tenantId,
+            membershipId: createdMembership._id,
+            studentId: student._id,
+            receiptNumber,
+            amountPaise: initialPaymentPaise,
+            paymentMethod: parsed.data.paymentMethod || 'cash',
+            transactionRef: parsed.data.transactionRef || undefined,
+            notes: parsed.data.paymentNotes || 'Collected at registration',
+          });
+
+          const newPaid = initialPaymentPaise;
+          const newStatus = newPaid >= plan.feePaise ? 'paid' : 'partial';
+          createdMembership.paidPaise = newPaid;
+          createdMembership.paymentStatus = newStatus;
+          await createdMembership.save();
+        }
       }
     }
 

@@ -49,6 +49,7 @@ export async function createMembership(req: Request, res: Response, next: NextFu
       }
 
       // Check for overlapping active memberships on this seat for the SAME shift (or all shifts if full day)
+      // If student is renewing their own seat, exclude their own current active membership from conflict
       const shiftCondition: Record<string, unknown> = {};
       if (shiftId) {
         shiftCondition['$or'] = [
@@ -61,6 +62,7 @@ export async function createMembership(req: Request, res: Response, next: NextFu
       const conflictingMembership = await Membership.findOne({
         tenantId,
         seatId,
+        studentId: { $ne: studentId }, // Allow student to renew their own seat
         status: 'active',
         startDate: { $lte: new Date(endDate) },
         endDate: { $gte: new Date(startDate) },
@@ -207,6 +209,7 @@ export async function listMembershipsWithFilters(req: Request, res: Response, ne
       query['status'] = 'active';
       query['endDate'] = { $gte: startOfToday, $lte: sevenDaysLater };
     } else if (filter === 'dues') {
+      query['status'] = 'active';
       query['$expr'] = { $gt: ['$feePaise', '$paidPaise'] };
     } else if (filter === 'left') {
       query['status'] = 'left';
