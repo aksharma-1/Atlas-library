@@ -65,25 +65,11 @@ export function StudentProfilePage() {
   const [transactionRef, setTransactionRef] = useState('');
   const [notes, setNotes] = useState('');
 
-  if (isLoading || !profile) {
-    return (
-      <div className="flex h-64 flex-col items-center justify-center text-slate-400 text-sm gap-2">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-        <span>Loading student profile…</span>
-      </div>
-    );
-  }
-
-  const { student, activeMembership, payments } = profile;
-
-  // Selected plan details
-  const chosenPlan = plans.find((p) => p._id === selectedPlanId);
-
   // Seat dropdown options: include seats that are vacant in this shift OR the student's own current seat
   const availableSeats = useMemo(() => {
     return seats.filter((s) => {
       // Always allow student's currently assigned seat
-      if (activeMembership?.seatId && (s._id === activeMembership.seatId || s._id === (activeMembership.seatId as any)?._id)) {
+      if (profile?.activeMembership?.seatId && (s._id === profile.activeMembership.seatId || s._id === (profile.activeMembership.seatId as any)?._id)) {
         return true;
       }
       // If seat is under maintenance or blocked, exclude
@@ -101,7 +87,21 @@ export function StudentProfilePage() {
       }
       return s.status === 'available';
     });
-  }, [seats, activeMembership, selectedShiftId]);
+  }, [seats, profile?.activeMembership, selectedShiftId]);
+
+  if (isLoading || !profile) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center text-slate-400 text-sm gap-2">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+        <span>Loading student profile…</span>
+      </div>
+    );
+  }
+
+  const { student, activeMembership, payments } = profile;
+
+  // Selected plan details
+  const chosenPlan = plans.find((p) => p._id === selectedPlanId);
 
   const handleAssignMembership = (e: React.FormEvent) => {
     e.preventDefault();
