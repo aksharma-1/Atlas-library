@@ -13,7 +13,7 @@ import {
   deleteSeat,
   deleteSeatsBySection,
 } from '../controllers/seat.controller';
-import { getDashboardStats } from '../controllers/dashboard.controller';
+import { getDashboardStats, getRevenueStats } from '../controllers/dashboard.controller';
 
 export const shiftsRouter = Router();
 shiftsRouter.use(authenticate, requireActiveTenant);
@@ -43,3 +43,4 @@ seatsRouter.post('/change', changeSeat);
 export const dashboardRouter = Router();
 dashboardRouter.use(authenticate, requireActiveTenant);
 dashboardRouter.get('/stats', getDashboardStats);
+dashboardRouter.get('/revenue', getRevenueStats);

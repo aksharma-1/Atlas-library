@@ -77,4 +77,42 @@ export interface DashboardStatsDTO {
   expiringIn3DaysCount: number;
   expiringIn7DaysCount: number;
   expiredCount: number;
+  todayRevenuePaise?: number;
+  thisMonthRevenuePaise?: number;
+}
+
+export interface RevenueDailyPoint {
+  date: string;       // YYYY-MM-DD
+  label: string;      // "12 Nov"
+  amountPaise: number;
+  txnCount: number;
+}
+
+export interface RevenueStatsDTO {
+  totalRevenuePaise: number;
+  todayRevenuePaise: number;
+  thisMonthRevenuePaise: number;
+  lastMonthRevenuePaise: number;
+  duesOutstandingPaise: number;
+  dueStudentsCount: number;
+  totalTransactionsCount: number;
+  averagePaymentPaise: number;
+  paymentMethodBreakdown: {
+    method: 'cash' | 'upi' | 'card' | 'bank_transfer';
+    amountPaise: number;
+    count: number;
+    percentage: number;
+  }[];
+  dailyTrends: RevenueDailyPoint[];
+  recentTransactions: {
+    _id: string;
+    receiptNumber: string;
+    studentName: string;
+    membershipNumber?: string;
+    amountPaise: number;
+    paymentMethod: string;
+    transactionRef?: string;
+    notes?: string;
+    createdAt: string;
+  }[];
 }

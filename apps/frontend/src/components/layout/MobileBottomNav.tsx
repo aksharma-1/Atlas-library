@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Grid, CalendarClock, UserCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Grid, IndianRupee, UserCheck } from 'lucide-react';
 
 interface BottomNavItem {
   to: string;
@@ -9,9 +9,9 @@ interface BottomNavItem {
 
 const bottomNavItems: BottomNavItem[] = [
   { to: '/dashboard', label: 'Home', icon: <LayoutDashboard className="h-5 w-5" /> },
+  { to: '/revenue', label: 'Revenue', icon: <IndianRupee className="h-5 w-5" /> },
   { to: '/students', label: 'Students', icon: <Users className="h-5 w-5" /> },
   { to: '/seats', label: 'Seats', icon: <Grid className="h-5 w-5" /> },
-  { to: '/plans', label: 'Plans', icon: <CalendarClock className="h-5 w-5" /> },
   { to: '/profile', label: 'Profile', icon: <UserCheck className="h-5 w-5" /> },
 ];
 

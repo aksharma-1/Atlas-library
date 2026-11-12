@@ -7,6 +7,7 @@ import {
   CreditCard,
   UserCheck,
   Sparkles,
+  IndianRupee,
 } from 'lucide-react';
 
 interface NavItem {
@@ -18,6 +19,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
+  { to: '/revenue', label: 'Revenue & Billing', icon: <IndianRupee className="h-4 w-4" /> },
   { to: '/students', label: 'Students & Members', icon: <Users className="h-4 w-4" /> },
   { to: '/seats', label: 'Seating Map', icon: <Grid className="h-4 w-4" /> },
   { to: '/plans', label: 'Plans & Shifts', icon: <CalendarClock className="h-4 w-4" /> },

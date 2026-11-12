@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { Payment } from '../models/Payment';
 import { Membership } from '../models/Membership';
+import { getNextReceiptNumber } from '../models/Counter';
 
 const recordPaymentSchema = z.object({
   membershipId: z.string().min(1, 'Membership ID is required'),
@@ -20,7 +21,7 @@ export async function recordPayment(req: Request, res: Response, next: NextFunct
       return;
     }
 
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.user!.tenantId!;
     const { membershipId, amountPaise, paymentMethod, transactionRef, idempotencyKey, notes } = parsed.data;
 
     // ── Idempotency Check ───────────────────────────────────────────────────
@@ -56,9 +57,8 @@ export async function recordPayment(req: Request, res: Response, next: NextFunct
       return;
     }
 
-    // Generate human receipt number (e.g. REC-2026-0001)
-    const count = await Payment.countDocuments({ tenantId });
-    const receiptNumber = `REC-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
+    // Atomically generate collision-proof receipt number (e.g. REC-2026-0001)
+    const receiptNumber = await getNextReceiptNumber(tenantId);
 
     const paymentData: Record<string, unknown> = {
       tenantId,
@@ -104,7 +104,7 @@ export async function recordPayment(req: Request, res: Response, next: NextFunct
 export async function getReceipt(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.user!.tenantId!;
 
     const payment = await Payment.findOne({ _id: id, tenantId })
       .populate('studentId', 'name mobile membershipNumber address')
@@ -128,7 +128,7 @@ export async function getReceipt(req: Request, res: Response, next: NextFunction
 export async function deletePayment(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.user!.tenantId!;
 
     const payment = await Payment.findOne({ _id: id, tenantId });
     if (!payment) {

@@ -23,6 +23,8 @@ export type {
   SeatDTO,
   SeatStudentInfo,
   DashboardStatsDTO,
+  RevenueStatsDTO,
+  RevenueDailyPoint,
 } from './api/library';
 export type {
   SaasPlanDTO,

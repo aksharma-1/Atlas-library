@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { RevenuePage } from './pages/RevenuePage';
 import { SeatsPage } from './pages/SeatsPage';
 import { PlansPage } from './pages/PlansPage';
 import { StudentsPage } from './pages/StudentsPage';
@@ -50,6 +51,16 @@ function App() {
             <ProtectedRoute>
               <AppShell>
                 <DashboardPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/revenue"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <RevenuePage />
               </AppShell>
             </ProtectedRoute>
           }

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/client';
-import type { ShiftDTO, PlanDTO, SeatDTO, DashboardStatsDTO } from '@atlas/shared';
+import type { ShiftDTO, PlanDTO, SeatDTO, DashboardStatsDTO, RevenueStatsDTO } from '@atlas/shared';
 import toast from 'react-hot-toast';
 
 // ── Dashboard Stats ──────────────────────────────────────────────────────────
@@ -9,6 +9,18 @@ export function useDashboardStats() {
     queryKey: ['dashboard', 'stats'],
     queryFn: async () => {
       const { data } = await apiClient.get<{ stats: DashboardStatsDTO }>('/dashboard/stats');
+      return data.stats;
+    },
+    staleTime: 30 * 1000,
+  });
+}
+
+// ── Revenue Stats ────────────────────────────────────────────────────────────
+export function useRevenueStats() {
+  return useQuery({
+    queryKey: ['dashboard', 'revenue'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ stats: RevenueStatsDTO }>('/dashboard/revenue');
       return data.stats;
     },
     staleTime: 30 * 1000,

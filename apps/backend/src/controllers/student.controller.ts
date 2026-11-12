@@ -5,6 +5,7 @@ import { Membership } from '../models/Membership';
 import { Payment } from '../models/Payment';
 import { Plan } from '../models/Plan';
 import { Seat } from '../models/Seat';
+import { getNextReceiptNumber } from '../models/Counter';
 
 const registerStudentSchema = z.object({
   name: z.string().min(1, 'Name is required').trim(),
@@ -31,7 +32,7 @@ const registerStudentSchema = z.object({
 
 export async function listStudents(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.user!.tenantId!;
     const { search } = req.query;
 
     const query: Record<string, unknown> = { tenantId };
@@ -60,7 +61,7 @@ export async function createStudent(req: Request, res: Response, next: NextFunct
       return;
     }
 
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.user!.tenantId!;
 
     // Generate unique membership number if not provided (e.g., ATL-0001)
     let membershipNumber = parsed.data.membershipNumber?.trim();
@@ -152,8 +153,8 @@ export async function createStudent(req: Request, res: Response, next: NextFunct
             initialPaymentPaise = finalFee;
           }
 
-          const paymentCount = await Payment.countDocuments({ tenantId });
-          const receiptNumber = `REC-${new Date().getFullYear()}-${String(paymentCount + 1).padStart(4, '0')}`;
+          // Atomically generate collision-proof receipt number
+          const receiptNumber = await getNextReceiptNumber(tenantId);
 
           await Payment.create({
             tenantId,
@@ -184,7 +185,7 @@ export async function createStudent(req: Request, res: Response, next: NextFunct
 export async function getStudentProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.user!.tenantId!;
 
     const student = await Student.findOne({ _id: id, tenantId });
     if (!student) {
@@ -242,7 +243,7 @@ const updateStudentSchema = z.object({
 export async function updateStudent(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.user!.tenantId!;
 
     const parsed = updateStudentSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -270,7 +271,7 @@ export async function updateStudent(req: Request, res: Response, next: NextFunct
 export async function deleteStudent(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.user!.tenantId!;
 
     const student = await Student.findOne({ _id: id, tenantId });
     if (!student) {

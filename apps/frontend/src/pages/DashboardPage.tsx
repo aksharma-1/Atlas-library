@@ -14,6 +14,7 @@ import {
   UserPlus,
   PlusCircle,
   Layers,
+  TrendingUp,
 } from 'lucide-react';
 import { Card, StatCard, Badge, Button } from '../components/ui';
 
@@ -83,11 +84,11 @@ export function DashboardPage() {
           />
         </Link>
 
-        <Link to="/students?tab=dues">
+        <Link to="/revenue">
           <StatCard
             title="Dues Outstanding"
             value={isLoading ? '…' : `₹${((stats?.duesOutstandingPaise ?? 0) / 100).toFixed(0)}`}
-            subtitle={`${stats?.dueMembersCount ?? 0} student(s) with pending dues`}
+            subtitle={`${stats?.dueMembersCount ?? 0} pending • ₹${(((stats?.todayRevenuePaise ?? 0) / 100).toFixed(0))} collected today`}
             icon={<IndianRupee className="h-5 w-5" />}
             accentColor="amber"
           />
@@ -225,6 +226,11 @@ export function DashboardPage() {
             <Link to="/plans">
               <Button size="sm" variant="outline" icon={<Layers className="h-3.5 w-3.5" />}>
                 Manage Shifts & Plans
+              </Button>
+            </Link>
+            <Link to="/revenue">
+              <Button size="sm" variant="secondary" icon={<TrendingUp className="h-3.5 w-3.5 text-emerald-400" />}>
+                Revenue Dashboard
               </Button>
             </Link>
           </div>
