@@ -68,6 +68,15 @@ export async function createStudent(req: Request, res: Response, next: NextFunct
     if (!membershipNumber) {
       const count = await Student.countDocuments({ tenantId });
       membershipNumber = `MEM-${String(count + 1).padStart(4, '0')}`;
+    } else {
+      // Validate that manual membership number does not already exist for this tenant
+      const existing = await Student.findOne({ tenantId, membershipNumber });
+      if (existing) {
+        res.status(409).json({
+          error: `Membership ID "${membershipNumber}" is already assigned to ${existing.name}. Please enter a unique ID or leave blank to auto-generate.`,
+        });
+        return;
+      }
     }
 
     const student = await Student.create({
@@ -204,19 +213,21 @@ export async function getStudentProfile(req: Request, res: Response, next: NextF
 
     const rawActiveMembership = memberships.find((m) => m.status === 'active');
     
-    // Flatten populated fields (seatNumber, planName, shiftName) onto activeMembership for reliable client display
+    // Flatten populated fields (seatNumber, planName, shiftName, shift hours) onto activeMembership for reliable client display
     let activeMembership: Record<string, unknown> | undefined = undefined;
     if (rawActiveMembership) {
       const mObj = (rawActiveMembership.toObject ? rawActiveMembership.toObject() : rawActiveMembership) as Record<string, any>;
       const seatObj = mObj.seatId as { _id?: string; seatNumber?: string } | undefined;
       const planObj = mObj.planId as { _id?: string; name?: string; feePaise?: number } | undefined;
-      const shiftObj = mObj.shiftId as { _id?: string; name?: string } | undefined;
+      const shiftObj = mObj.shiftId as { _id?: string; name?: string; startTime?: string; endTime?: string } | undefined;
 
       activeMembership = {
         ...mObj,
         seatNumber: seatObj?.seatNumber || mObj['seatNumber'],
         planName: planObj?.name || mObj['planName'],
         shiftName: shiftObj?.name || mObj['shiftName'],
+        shiftStartTime: shiftObj?.startTime,
+        shiftEndTime: shiftObj?.endTime,
       };
     }
 
@@ -249,6 +260,21 @@ export async function updateStudent(req: Request, res: Response, next: NextFunct
     if (!parsed.success) {
       res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors });
       return;
+    }
+
+    if (parsed.data.membershipNumber) {
+      const trimmed = parsed.data.membershipNumber.trim();
+      const existing = await Student.findOne({
+        tenantId,
+        membershipNumber: trimmed,
+        _id: { $ne: id },
+      });
+      if (existing) {
+        res.status(409).json({
+          error: `Membership ID "${trimmed}" is already assigned to ${existing.name}.`,
+        });
+        return;
+      }
     }
 
     const student = await Student.findOneAndUpdate(

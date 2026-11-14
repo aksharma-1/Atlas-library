@@ -27,6 +27,8 @@ export interface MembershipDTO {
   planName?: string;
   shiftId?: string;
   shiftName?: string;
+  shiftStartTime?: string;
+  shiftEndTime?: string;
   seatId?: string;
   seatNumber?: string;
   seatType: 'reserved' | 'non-reserved';

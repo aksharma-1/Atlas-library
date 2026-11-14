@@ -25,17 +25,24 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
       shiftsCount,
       studentsCount,
       memberships,
+      activeMembershipsWithSeat,
       expiredCount,
       expiring3Count,
       expiring7Count,
       todayPayments,
       monthPayments,
     ] = await Promise.all([
-      Seat.find({ tenantId: tenantObjectId }).select('status'),
+      Seat.find({ tenantId: tenantObjectId }).select('_id status'),
       Plan.countDocuments({ tenantId: tenantObjectId, isActive: true }),
       Shift.countDocuments({ tenantId: tenantObjectId, isActive: true }),
       Student.countDocuments({ tenantId: tenantObjectId }),
       Membership.find({ tenantId: tenantObjectId, status: 'active' }).select('feePaise paidPaise'),
+      // Fetch distinct seats that currently have an active membership
+      Membership.find({
+        tenantId: tenantObjectId,
+        status: 'active',
+        seatId: { $ne: null },
+      }).select('seatId'),
       Membership.countDocuments({
         tenantId: tenantObjectId,
         $or: [
@@ -63,15 +70,28 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
       ]),
     ]);
 
+    // Build set of occupied seat ID strings from active memberships
+    const occupiedSeatIds = new Set<string>();
+    for (const m of activeMembershipsWithSeat) {
+      if (m.seatId) {
+        occupiedSeatIds.add(m.seatId.toString());
+      }
+    }
+
     const totalSeats = seats.length;
     let availableSeats = 0;
     let occupiedSeats = 0;
     let maintenanceSeats = 0;
 
     for (const seat of seats) {
-      if (seat.status === 'available') availableSeats++;
-      else if (seat.status === 'occupied') occupiedSeats++;
-      else if (seat.status === 'maintenance' || seat.status === 'blocked') maintenanceSeats++;
+      const sId = seat._id.toString();
+      if (seat.status === 'maintenance' || seat.status === 'blocked') {
+        maintenanceSeats++;
+      } else if (occupiedSeatIds.has(sId) || seat.status === 'occupied') {
+        occupiedSeats++;
+      } else {
+        availableSeats++;
+      }
     }
 
     let duesOutstandingPaise = 0;

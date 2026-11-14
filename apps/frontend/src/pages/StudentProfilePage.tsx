@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStudentProfile, useCreateMembership, useRecordPayment, useDeletePayment, useMarkMembershipLeft, useAddGiftDays, useUpdateStudent } from '../hooks/useStudents';
 import { usePlans, useSeats, useShifts } from '../hooks/useLibrary';
@@ -8,8 +8,8 @@ import { useAuth } from '../hooks/useAuth';
 import { PrintableCard } from '../components/PrintableCard';
 import { PrintableReceipt } from '../components/PrintableReceipt';
 import type { PaymentDTO } from '@atlas/shared';
-import { CustomSelect, Modal, ConfirmModal } from '../components/ui';
-import { UserCheck, CreditCard, Gift, UserCog, Bell, ArrowLeft, Trash2 } from 'lucide-react';
+import { CustomSelect, Modal, ConfirmModal, Switch } from '../components/ui';
+import { UserCheck, CreditCard, Gift, UserCog, Bell, ArrowLeft, Trash2, Clock, Calendar, Armchair, IndianRupee } from 'lucide-react';
 import {
   DateRangeDurationSelector,
   calculateEndDateFromDays,
@@ -65,7 +65,13 @@ export function StudentProfilePage() {
   const [membershipDiscountRupees, setMembershipDiscountRupees] = useState('0');
   const [membershipDiscountReason, setMembershipDiscountReason] = useState('');
 
-  // Payment form
+  // Renewal Instant Payment collection states
+  const [collectPaymentOnRenewal, setCollectPaymentOnRenewal] = useState(true);
+  const [renewalPaymentAmountRupees, setRenewalPaymentAmountRupees] = useState('');
+  const [renewalPaymentMethod, setRenewalPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'bank_transfer'>('cash');
+  const [renewalPaymentRef, setRenewalPaymentRef] = useState('');
+
+  // Payment form (Record Payment Modal)
   const [paymentAmountRupees, setPaymentAmountRupees] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'bank_transfer'>('upi');
   const [transactionRef, setTransactionRef] = useState('');
@@ -95,6 +101,19 @@ export function StudentProfilePage() {
     });
   }, [seats, profile?.activeMembership, selectedShiftId]);
 
+  // Selected plan details
+  const chosenPlan = plans.find((p) => p._id === selectedPlanId);
+  const durationMultiplier = durationOption === '60d' ? 2 : durationOption === '90d' ? 3 : 1;
+  const standardFeeRupees = chosenPlan ? (chosenPlan.feePaise / 100) * durationMultiplier : 0;
+  const finalPayableFeeRupees = Math.max(0, Math.round(standardFeeRupees - parseFloat(membershipDiscountRupees || '0')));
+
+  // Auto-fill renewal payment amount when plan, duration, or discount changes
+  useEffect(() => {
+    if (chosenPlan) {
+      setRenewalPaymentAmountRupees(finalPayableFeeRupees.toString());
+    }
+  }, [chosenPlan, durationOption, membershipDiscountRupees, finalPayableFeeRupees]);
+
   if (isLoading || !profile) {
     return (
       <div className="flex h-64 flex-col items-center justify-center text-slate-400 text-sm gap-2">
@@ -105,9 +124,6 @@ export function StudentProfilePage() {
   }
 
   const { student, activeMembership, payments } = profile;
-
-  // Selected plan details
-  const chosenPlan = plans.find((p) => p._id === selectedPlanId);
 
   const handleAssignMembership = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,8 +139,16 @@ export function StudentProfilePage() {
         seatId: chosenPlan?.seatType === 'reserved' ? selectedSeatId : undefined,
         startDate,
         endDate,
+        customFeePaise: durationMultiplier > 1 ? Math.round(standardFeeRupees * 100) : undefined,
         discountPaise: discountPaise > 0 ? discountPaise : undefined,
         discountReason: discountPaise > 0 ? membershipDiscountReason.trim() : undefined,
+        // Optional instant payment collection at renewal
+        initialPaymentAmountPaise:
+          collectPaymentOnRenewal && renewalPaymentAmountRupees
+            ? Math.round(parseFloat(renewalPaymentAmountRupees) * 100)
+            : undefined,
+        paymentMethod: collectPaymentOnRenewal ? renewalPaymentMethod : undefined,
+        transactionRef: collectPaymentOnRenewal && renewalPaymentRef ? renewalPaymentRef : undefined,
       },
       {
         onSuccess: () => {
@@ -134,6 +158,8 @@ export function StudentProfilePage() {
           setSelectedSeatId('');
           setMembershipDiscountRupees('0');
           setMembershipDiscountReason('');
+          setRenewalPaymentAmountRupees('');
+          setRenewalPaymentRef('');
           setDurationOption('30d');
           const today = getTodayDateString();
           setStartDate(today);
@@ -222,7 +248,7 @@ export function StudentProfilePage() {
     : 0;
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-6xl pb-12">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto pb-12">
       {/* ── Student Profile Header ── */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-6 shadow-sm">
         <Link
@@ -362,70 +388,141 @@ export function StudentProfilePage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
-            <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Plan & Seat Type</p>
-              <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5 capitalize">
-                {activeMembership.seatType}
-              </p>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Assigned Seat</p>
-              <div className="mt-0.5">
-                {activeMembership.seatType === 'reserved' ? (
-                  (activeMembership.seatNumber || (activeMembership.seatId as any)?.seatNumber) ? (
-                    <span className="text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400">
-                      Seat #{activeMembership.seatNumber || (activeMembership.seatId as any)?.seatNumber}
-                    </span>
+          <div className="space-y-4">
+            {/* ── Highlighted Plan, Shift & Desk Banner ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 sm:p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 shadow-sm">
+              {/* Plan Details */}
+              <div className="flex items-start gap-3 p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                <div className="p-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 shrink-0">
+                  <UserCheck className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Enrolled Plan
+                  </p>
+                  <p className="text-sm font-extrabold text-slate-900 dark:text-white truncate mt-0.5">
+                    {activeMembership.planName || 'Standard Membership'}
+                  </p>
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold capitalize mt-0.5">
+                    {activeMembership.seatType === 'reserved' ? 'Reserved Desk Plan' : 'Floating / Non-Reserved Plan'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Shift Details */}
+              <div className="flex items-start gap-3 p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Operational Shift
+                  </p>
+                  <p className="text-sm font-extrabold text-slate-900 dark:text-white truncate mt-0.5">
+                    {activeMembership.shiftName || 'General / Full Day'}
+                  </p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400 font-mono font-bold mt-0.5">
+                    {activeMembership.shiftStartTime && activeMembership.shiftEndTime
+                      ? `${activeMembership.shiftStartTime} – ${activeMembership.shiftEndTime}`
+                      : 'All Day Access'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Desk & Space Allocation */}
+              <div className="flex items-start gap-3 p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                <div className="p-2.5 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 shrink-0">
+                  <Armchair className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Desk Allocation
+                  </p>
+                  {activeMembership.seatType === 'reserved' ? (
+                    (activeMembership.seatNumber || (activeMembership.seatId as any)?.seatNumber) ? (
+                      <div className="mt-0.5">
+                        <p className="text-sm font-extrabold text-purple-700 dark:text-purple-400">
+                          Desk #{activeMembership.seatNumber || (activeMembership.seatId as any)?.seatNumber}
+                        </p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">Reserved Dedicated Seat</p>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowAssignModal(true)}
+                        className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer mt-1"
+                      >
+                        ⚠️ Assign Desk
+                      </button>
+                    )
                   ) : (
-                    <button
-                      onClick={() => setShowAssignModal(true)}
-                      className="text-xs font-bold text-amber-500 hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      ⚠️ Assign Desk
-                    </button>
-                  )
-                ) : (
-                  <span className="text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400">
-                    Floating Desk
-                  </span>
-                )}
+                    <div className="mt-0.5">
+                      <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200">Floating Desk</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">First-come First-served</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Validity Period</p>
-              <p className="text-[11px] sm:text-xs font-semibold text-slate-900 dark:text-white mt-1">
-                {formatDate(activeMembership.startDate)} – {formatDate(activeMembership.endDate)}
-              </p>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <div>
-                <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Payment Status</p>
-                <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                  <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white capitalize">
-                    {activeMembership.paymentStatus} (₹{(activeMembership.paidPaise / 100).toFixed(0)} / ₹{(activeMembership.feePaise / 100).toFixed(0)})
+
+            {/* ── Key Metrics & Fee Breakdown Grid ── */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Validity Period</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <Calendar className="h-3.5 w-3.5 text-indigo-500" />
+                  <p className="text-[11px] sm:text-xs font-semibold text-slate-900 dark:text-white">
+                    {formatDate(activeMembership.startDate)} – {formatDate(activeMembership.endDate)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Total Agreed Fee</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-xs sm:text-sm font-mono font-bold text-slate-900 dark:text-white">
+                    ₹{(activeMembership.feePaise / 100).toFixed(0)}
                   </p>
                   {(activeMembership.discountPaise || 0) > 0 && (
                     <span
                       title={activeMembership.discountReason || 'Discount Applied'}
-                      className="inline-flex items-center gap-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-bold"
+                      className="inline-flex items-center gap-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-1.5 py-0.2 text-[10px] font-bold"
                     >
-                      🏷️ -₹{((activeMembership.discountPaise || 0) / 100).toFixed(0)} off
+                      -₹{((activeMembership.discountPaise || 0) / 100).toFixed(0)}
                     </span>
                   )}
                 </div>
               </div>
-              {duesRemainingPaise > 0 && (
-                <button
-                  onClick={() => {
-                    setPaymentAmountRupees((duesRemainingPaise / 100).toString());
-                    setShowPaymentModal(true);
-                  }}
-                  className="rounded-lg bg-indigo-600 px-3 py-1 text-xs font-semibold !text-white hover:bg-indigo-500 shadow shrink-0"
-                >
-                  Pay Due
-                </button>
-              )}
+
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Paid Amount</p>
+                <p className="text-xs sm:text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  ₹{(activeMembership.paidPaise / 100).toFixed(0)}
+                </p>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Pending Dues</p>
+                  <p
+                    className={`text-xs sm:text-sm font-mono font-bold mt-0.5 ${
+                      duesRemainingPaise > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'
+                    }`}
+                  >
+                    ₹{(duesRemainingPaise / 100).toFixed(0)}
+                  </p>
+                </div>
+                {duesRemainingPaise > 0 && (
+                  <button
+                    onClick={() => {
+                      setPaymentAmountRupees((duesRemainingPaise / 100).toString());
+                      setShowPaymentModal(true);
+                    }}
+                    className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold !text-white hover:bg-indigo-500 shadow shrink-0"
+                  >
+                    Pay Due
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -569,8 +666,10 @@ export function StudentProfilePage() {
           {chosenPlan && (
             <div className="rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20 p-3 space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-700 dark:text-slate-300">Plan Standard Fee:</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">₹{(chosenPlan.feePaise / 100).toFixed(0)}</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                  Plan Standard Fee {durationMultiplier > 1 ? `(${durationMultiplier} months)` : ''}:
+                </span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">₹{standardFeeRupees.toFixed(0)}</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -580,7 +679,7 @@ export function StudentProfilePage() {
                   <input
                     type="number"
                     min="0"
-                    max={chosenPlan.feePaise / 100}
+                    max={standardFeeRupees}
                     value={membershipDiscountRupees}
                     onChange={(e) => setMembershipDiscountRupees(e.target.value)}
                     placeholder="0"
@@ -603,9 +702,86 @@ export function StudentProfilePage() {
               <div className="flex items-center justify-between pt-1 border-t border-amber-200/60 dark:border-amber-900/30 text-xs">
                 <span className="font-bold text-slate-800 dark:text-slate-200">Final Payable Fee:</span>
                 <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
-                  ₹{Math.max(0, Math.round(chosenPlan.feePaise / 100 - parseFloat(membershipDiscountRupees || '0')))}
+                  ₹{finalPayableFeeRupees}
                 </span>
               </div>
+            </div>
+          )}
+
+          {/* Instant Fee Collection & Receipt Section */}
+          {chosenPlan && (
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                    <IndianRupee className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">Collect Fee & Issue Receipt</h4>
+                    <p className="text-[11px] text-slate-400">Record payment upfront or collect later</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={collectPaymentOnRenewal}
+                  onChange={(val) => setCollectPaymentOnRenewal(val)}
+                  activeColor="emerald"
+                />
+              </div>
+
+              {collectPaymentOnRenewal && (
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                          Amount Paid (₹) *
+                        </label>
+                        <span className="text-[10px] text-slate-400">
+                          Max: ₹{finalPayableFeeRupees}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        max={finalPayableFeeRupees}
+                        value={renewalPaymentAmountRupees}
+                        onChange={(e) => setRenewalPaymentAmountRupees(e.target.value)}
+                        placeholder={finalPayableFeeRupees.toString()}
+                        className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <CustomSelect
+                        label="Payment Mode"
+                        value={renewalPaymentMethod}
+                        onChange={(val) => setRenewalPaymentMethod(val as any)}
+                        options={[
+                          { value: 'cash', label: 'Cash In Hand' },
+                          { value: 'upi', label: 'UPI / QR Code' },
+                          { value: 'card', label: 'Debit / Credit Card' },
+                          { value: 'bank_transfer', label: 'Bank Transfer (NEFT/IMPS)' },
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  {renewalPaymentMethod !== 'cash' && (
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Transaction Ref / UTR / Note (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={renewalPaymentRef}
+                        onChange={(e) => setRenewalPaymentRef(e.target.value)}
+                        placeholder="e.g. UPI Ref #412389102847"
+                        className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white font-mono"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

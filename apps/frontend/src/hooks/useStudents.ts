@@ -78,6 +78,10 @@ export function useCreateMembership() {
       discountPaise?: number;
       discountReason?: string;
       customFeePaise?: number;
+      initialPaymentAmountPaise?: number;
+      paymentMethod?: 'cash' | 'upi' | 'card' | 'bank_transfer';
+      transactionRef?: string;
+      paymentNotes?: string;
     }) => {
       const { data } = await apiClient.post<{ membership: MembershipDTO }>('/memberships', payload);
       return data.membership;
@@ -85,8 +89,11 @@ export function useCreateMembership() {
     onSuccess: (_, vars) => {
       toast.success('Desk assigned & membership activated!');
       queryClient.invalidateQueries({ queryKey: ['students', vars.studentId] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['seats'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
+      queryClient.invalidateQueries({ queryKey: ['revenueStats'] });
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
       toast.error(err?.response?.data?.error || 'Failed to assign membership');
@@ -188,6 +195,28 @@ export function useDeleteStudent() {
   });
 }
 
+export function useVacateSeat() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ membershipId }: { membershipId: string; studentId: string }) => {
+      const { data } = await apiClient.patch<{ message: string; membership: MembershipDTO }>(
+        `/memberships/${membershipId}/vacate`,
+      );
+      return data;
+    },
+    onSuccess: (_, vars) => {
+      toast.success('Desk vacated. Student membership remains active!');
+      queryClient.invalidateQueries({ queryKey: ['students', vars.studentId] });
+      queryClient.invalidateQueries({ queryKey: ['seats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to vacate desk');
+    },
+  });
+}
+
 export function useMarkMembershipLeft() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -198,14 +227,56 @@ export function useMarkMembershipLeft() {
       return data;
     },
     onSuccess: (_, vars) => {
-      toast.success('Seat vacated and marked as Left');
+      toast.success('Student marked as Left library');
       queryClient.invalidateQueries({ queryKey: ['students', vars.studentId] });
       queryClient.invalidateQueries({ queryKey: ['seats'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
-      toast.error(err?.response?.data?.error || 'Failed to vacate seat');
+      toast.error(err?.response?.data?.error || 'Failed to mark student as left');
+    },
+  });
+}
+
+export function useDeleteMembership() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (membershipId: string) => {
+      const { data } = await apiClient.delete<{ message: string }>(`/memberships/${membershipId}`);
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Membership record removed');
+      queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['seats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to delete membership record');
+    },
+  });
+}
+
+export function useClearAllLeftMemberships() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await apiClient.delete<{ message: string; deletedCount: number }>(
+        '/memberships/clear-left',
+      );
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || 'Cleared all left membership records');
+      queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['seats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || 'Failed to clear records');
     },
   });
 }

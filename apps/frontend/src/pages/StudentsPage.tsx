@@ -1,6 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useStudents, useCreateStudent, useUpdateStudent, useDeleteStudent, useFilteredMemberships } from '../hooks/useStudents';
+import {
+  useStudents,
+  useCreateStudent,
+  useUpdateStudent,
+  useDeleteStudent,
+  useFilteredMemberships,
+  useDeleteMembership,
+  useClearAllLeftMemberships,
+} from '../hooks/useStudents';
 import { usePlans, useSeats, useShifts } from '../hooks/useLibrary';
 import { useAuth } from '../hooks/useAuth';
 import type { StudentDTO } from '@atlas/shared';
@@ -196,14 +204,17 @@ export function StudentsPage() {
 
   const chosenPlan = plans.find((p) => p._id === regPlanId);
 
-  // Auto-fill payment amount when plan is selected or discount changes
+  // Multiplier for duration: 30d -> 1, 60d -> 2, 90d -> 3
+  const durationMultiplier = regDurationOption === '60d' ? 2 : regDurationOption === '90d' ? 3 : 1;
+  const standardFeeRupees = chosenPlan ? (chosenPlan.feePaise / 100) * durationMultiplier : 0;
+  const finalPayableFeeRupees = Math.max(0, Math.round(standardFeeRupees - parseFloat(regDiscountRupees || '0')));
+
+  // Auto-fill payment amount when plan, duration, or discount changes
   useEffect(() => {
     if (chosenPlan) {
-      const discount = Math.max(0, parseFloat(regDiscountRupees || '0'));
-      const netPayable = Math.max(0, Math.round(chosenPlan.feePaise / 100 - discount));
-      setRegPaymentAmountRupees(netPayable.toString());
+      setRegPaymentAmountRupees(finalPayableFeeRupees.toString());
     }
-  }, [chosenPlan, regDiscountRupees]);
+  }, [chosenPlan, regDurationOption, regDiscountRupees]);
 
   // Shift-aware available desks
   const availableSeats = useMemo(() => {
@@ -223,6 +234,12 @@ export function StudentsPage() {
   const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent();
   const deleteStudent = useDeleteStudent();
+  const deleteMembershipMutation = useDeleteMembership();
+  const clearAllLeftMutation = useClearAllLeftMemberships();
+
+  // Membership record deletion state
+  const [membershipToDelete, setMembershipToDelete] = useState<{ id: string; studentName: string } | null>(null);
+  const [showClearAllLeftConfirm, setShowClearAllLeftConfirm] = useState(false);
 
   const handleCreateStudent = (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,6 +258,10 @@ export function StudentsPage() {
         seatId: assignDeskOnRegister && chosenPlan?.seatType === 'reserved' && regSeatId ? regSeatId : undefined,
         startDate: assignDeskOnRegister && regPlanId ? regStartDate : undefined,
         endDate: assignDeskOnRegister && regPlanId ? regEndDate : undefined,
+        customFeePaise:
+          assignDeskOnRegister && durationMultiplier > 1
+            ? Math.round(standardFeeRupees * 100)
+            : undefined,
         discountPaise:
           assignDeskOnRegister && parseFloat(regDiscountRupees || '0') > 0
             ? Math.round(parseFloat(regDiscountRupees) * 100)
@@ -347,7 +368,7 @@ export function StudentsPage() {
   ];
 
   return (
-    <div className="space-y-6 max-w-7xl pb-12">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -605,9 +626,20 @@ export function StudentsPage() {
             <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
               {tabs.find((t) => t.id === activeTab)?.label} ({filteredMemberships.length})
             </h3>
-            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
-              Showing filtered records
-            </span>
+            <div className="flex items-center gap-2">
+              {activeTab === 'left' && filteredMemberships.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowClearAllLeftConfirm(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-600 hover:!text-white transition shadow-xs"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Clear All Left Records
+                </button>
+              )}
+              <span className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
+                Showing filtered records
+              </span>
+            </div>
           </div>
 
           {/* Mobile Filtered Cards (< md) */}
@@ -690,7 +722,7 @@ export function StudentsPage() {
                         </div>
                       )}
 
-                      <div onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
                           onClick={() => handleOpenReminderModal(s.name, seatNo, s.mobile)}
@@ -698,6 +730,16 @@ export function StudentsPage() {
                         >
                           <MessageSquare className="h-3.5 w-3.5" /> Alert
                         </button>
+                        {activeTab === 'left' && (
+                          <button
+                            type="button"
+                            onClick={() => setMembershipToDelete({ id: m._id, studentName: s.name || 'Student' })}
+                            className="inline-flex items-center justify-center h-7 w-7 rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 transition shadow-xs"
+                            title="Delete this left membership record"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -863,14 +905,26 @@ export function StudentsPage() {
                         )}
 
                         <td className="px-5 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenReminderModal(s.name, seatNo, s.mobile)}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-600 hover:!text-white px-2.5 py-1 text-xs font-semibold transition shadow-sm"
-                            title="Send Renewal Reminder"
-                          >
-                            <MessageSquare className="h-3.5 w-3.5" /> Reminder
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenReminderModal(s.name, seatNo, s.mobile)}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-600 hover:!text-white px-2.5 py-1 text-xs font-semibold transition shadow-sm"
+                              title="Send Renewal Reminder"
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" /> Reminder
+                            </button>
+                            {activeTab === 'left' && (
+                              <button
+                                type="button"
+                                onClick={() => setMembershipToDelete({ id: m._id, studentName: s.name || 'Student' })}
+                                className="inline-flex items-center justify-center h-7 w-7 rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 transition shadow-xs"
+                                title="Delete this left membership record"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1266,8 +1320,10 @@ export function StudentsPage() {
                 {chosenPlan && (
                   <div className="rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20 p-3 space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">Standard Plan Price:</span>
-                      <span className="font-mono font-bold text-slate-900 dark:text-white">₹{(chosenPlan.feePaise / 100).toFixed(0)}</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        Standard Fee ({durationMultiplier > 1 ? `${durationMultiplier} Months` : '1 Month'}):
+                      </span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-white">₹{standardFeeRupees.toFixed(0)}</span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1278,7 +1334,7 @@ export function StudentsPage() {
                         <input
                           type="number"
                           min="0"
-                          max={chosenPlan.feePaise / 100}
+                          max={standardFeeRupees}
                           value={regDiscountRupees}
                           onChange={(e) => setRegDiscountRupees(e.target.value)}
                           placeholder="0"
@@ -1293,7 +1349,7 @@ export function StudentsPage() {
                           type="text"
                           value={regDiscountReason}
                           onChange={(e) => setRegDiscountReason(e.target.value)}
-                          placeholder="e.g. Friend / Early bird"
+                          placeholder="e.g. 2-Month bundle / Early bird"
                           className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white"
                         />
                       </div>
@@ -1302,7 +1358,7 @@ export function StudentsPage() {
                     <div className="flex items-center justify-between pt-1.5 border-t border-amber-200/60 dark:border-amber-900/30 text-xs">
                       <span className="font-bold text-slate-800 dark:text-slate-200">Net Payable Membership Fee:</span>
                       <span className="font-mono font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">
-                        ₹{Math.max(0, Math.round(chosenPlan.feePaise / 100 - parseFloat(regDiscountRupees || '0')))}
+                        ₹{finalPayableFeeRupees}
                       </span>
                     </div>
                   </div>
@@ -1434,6 +1490,40 @@ export function StudentsPage() {
         confirmLabel="Delete Student"
         variant="danger"
         isLoading={deleteStudent.isPending}
+      />
+
+      {/* Delete Single Left Membership Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!membershipToDelete}
+        onClose={() => setMembershipToDelete(null)}
+        onConfirm={() => {
+          if (membershipToDelete) {
+            deleteMembershipMutation.mutate(membershipToDelete.id, {
+              onSuccess: () => setMembershipToDelete(null),
+            });
+          }
+        }}
+        title={`Delete Left Membership Record`}
+        description={`Are you sure you want to delete this historical left membership record for "${membershipToDelete?.studentName || 'Student'}"?`}
+        confirmLabel="Delete Record"
+        variant="danger"
+        isLoading={deleteMembershipMutation.isPending}
+      />
+
+      {/* Clear All Left Memberships Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showClearAllLeftConfirm}
+        onClose={() => setShowClearAllLeftConfirm(false)}
+        onConfirm={() => {
+          clearAllLeftMutation.mutate(undefined, {
+            onSuccess: () => setShowClearAllLeftConfirm(false),
+          });
+        }}
+        title="Clear All Left Membership Records"
+        description="Are you sure you want to delete all historical left membership records? Active students and active memberships will NOT be affected."
+        confirmLabel="Clear All Left Records"
+        variant="danger"
+        isLoading={clearAllLeftMutation.isPending}
       />
     </div>
   );

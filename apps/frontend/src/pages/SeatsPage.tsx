@@ -11,7 +11,7 @@ import {
   usePlans,
   useChangeSeat,
 } from '../hooks/useLibrary';
-import { useStudents, useCreateMembership, useMarkMembershipLeft } from '../hooks/useStudents';
+import { useStudents, useCreateMembership, useVacateSeat } from '../hooks/useStudents';
 import { useAuth } from '../hooks/useAuth';
 import type { SeatDTO, SeatStatus } from '@atlas/shared';
 import { CustomSelect, Modal, ConfirmModal } from '../components/ui';
@@ -68,7 +68,7 @@ export function SeatsPage() {
   const updateStatus = useUpdateSeatStatus();
   const changeSeatMutation = useChangeSeat();
   const createMembershipMutation = useCreateMembership();
-  const markLeftMutation = useMarkMembershipLeft();
+  const vacateSeatMutation = useVacateSeat();
 
   // Generator form
   const [startNum, setStartNum] = useState(1);
@@ -338,11 +338,11 @@ export function SeatsPage() {
     setConfirmConfig({
       isOpen: true,
       title: `Vacate Desk ${seatNumber}`,
-      description: `Are you sure you want to vacate desk ${seatNumber}? The active student membership will be marked as left and the desk will become available immediately.`,
+      description: `Are you sure you want to vacate desk ${seatNumber}? The desk will become available immediately for other students. The student's membership will remain active (floating) until explicitly marked as Left.`,
       confirmLabel: 'Vacate Desk',
       variant: 'warning',
       action: () => {
-        markLeftMutation.mutate(
+        vacateSeatMutation.mutate(
           { membershipId, studentId },
           {
             onSuccess: () => {
@@ -384,7 +384,7 @@ export function SeatsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl pb-12">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -652,15 +652,22 @@ export function SeatsPage() {
                   </div>
 
                   {/* Bottom: Days remaining badge or section */}
-                  <div className="text-[9px] opacity-75 font-mono">
+                  <div className="text-[9px] font-mono leading-tight">
                     {isOccupied && seat.occupant ? (
                       seat.occupant.hasDues ? (
-                        <span className="text-rose-500 font-bold">Due</span>
+                        <div className="flex flex-col items-center">
+                          <span className="text-rose-600 dark:text-rose-400 font-extrabold">Due</span>
+                          <span className="text-[8px] text-slate-500 dark:text-slate-400 opacity-90 font-medium">
+                            {seat.occupant.daysRemaining}d left
+                          </span>
+                        </div>
                       ) : (
-                        <span>{seat.occupant.daysRemaining}d left</span>
+                        <span className="opacity-80 text-slate-600 dark:text-slate-300">
+                          {seat.occupant.daysRemaining}d left
+                        </span>
                       )
                     ) : (
-                      <span className="truncate max-w-[65px]">{seat.section || 'Hall'}</span>
+                      <span className="truncate max-w-[65px] opacity-75">{seat.section || 'Hall'}</span>
                     )}
                   </div>
                 </button>
@@ -1298,7 +1305,7 @@ export function SeatsPage() {
         isLoading={
           deleteSeatMutation.isPending ||
           deleteSeatsBySectionMutation.isPending ||
-          markLeftMutation.isPending
+          vacateSeatMutation.isPending
         }
       />
     </div>

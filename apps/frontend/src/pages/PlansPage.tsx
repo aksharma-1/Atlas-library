@@ -163,7 +163,7 @@ export function PlansPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-6xl">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto pb-12">
       <div>
         <h1 className="text-2xl font-bold text-white">Plans & Shifts</h1>
         <p className="mt-1 text-sm text-slate-400">

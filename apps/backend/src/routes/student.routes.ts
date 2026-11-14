@@ -2,7 +2,15 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/authenticate';
 import { requireActiveTenant } from '../middleware/requireActiveTenant';
 import { listStudents, createStudent, getStudentProfile, updateStudent, deleteStudent } from '../controllers/student.controller';
-import { createMembership, markMembershipLeft, addGiftDays, listMembershipsWithFilters } from '../controllers/membership.controller';
+import {
+  createMembership,
+  markMembershipLeft,
+  vacateSeat,
+  deleteMembership,
+  clearAllLeftMemberships,
+  addGiftDays,
+  listMembershipsWithFilters,
+} from '../controllers/membership.controller';
 import { recordPayment, getReceipt, deletePayment } from '../controllers/payment.controller';
 
 export const studentsRouter = Router();
@@ -17,6 +25,9 @@ export const membershipsRouter = Router();
 membershipsRouter.use(authenticate, requireActiveTenant);
 membershipsRouter.get('/', listMembershipsWithFilters);
 membershipsRouter.post('/', createMembership);
+membershipsRouter.delete('/clear-left', clearAllLeftMemberships);
+membershipsRouter.delete('/:id', deleteMembership);
+membershipsRouter.patch('/:id/vacate', vacateSeat);
 membershipsRouter.patch('/:id/left', markMembershipLeft);
 membershipsRouter.post('/:id/gift-days', addGiftDays);
 

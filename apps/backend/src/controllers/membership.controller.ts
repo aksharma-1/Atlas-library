@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { Membership } from '../models/Membership';
 import { Plan } from '../models/Plan';
 import { Seat } from '../models/Seat';
+import { Payment } from '../models/Payment';
+import { getNextReceiptNumber } from '../models/Counter';
 
 const createMembershipSchema = z.object({
   studentId: z.string().min(1, 'Student ID is required'),
@@ -14,6 +16,11 @@ const createMembershipSchema = z.object({
   discountPaise: z.number().int().min(0).optional(),
   discountReason: z.string().optional(),
   customFeePaise: z.number().int().min(0).optional(),
+  // Instant fee collection at renewal/assignment
+  initialPaymentAmountPaise: z.number().int().min(0).optional(),
+  paymentMethod: z.enum(['cash', 'upi', 'card', 'bank_transfer']).optional(),
+  transactionRef: z.string().optional(),
+  paymentNotes: z.string().optional(),
 });
 
 export async function createMembership(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -120,7 +127,71 @@ export async function createMembership(req: Request, res: Response, next: NextFu
       paymentStatus: 'pending',
     });
 
+    // If initial payment was collected at renewal/assignment, record it immediately
+    let initialPaymentPaise = parsed.data.initialPaymentAmountPaise || 0;
+    if (initialPaymentPaise > 0) {
+      if (initialPaymentPaise > finalFee) {
+        initialPaymentPaise = finalFee;
+      }
+
+      const receiptNumber = await getNextReceiptNumber(tenantId!);
+
+      await Payment.create({
+        tenantId,
+        membershipId: membership._id,
+        studentId,
+        receiptNumber,
+        amountPaise: initialPaymentPaise,
+        paymentMethod: parsed.data.paymentMethod || 'cash',
+        transactionRef: parsed.data.transactionRef || undefined,
+        notes: parsed.data.paymentNotes || 'Collected at renewal',
+      });
+
+      const newPaid = initialPaymentPaise;
+      const newStatus = newPaid >= finalFee ? 'paid' : 'partial';
+      membership.paidPaise = newPaid;
+      membership.paymentStatus = newStatus;
+      await membership.save();
+    }
+
     res.status(201).json({ membership });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function vacateSeat(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user!.tenantId;
+
+    const membership = await Membership.findOne({ _id: id, tenantId });
+    if (!membership) {
+      res.status(404).json({ error: 'Membership not found' });
+      return;
+    }
+
+    const oldSeatId = membership.seatId;
+
+    // Unassign seat from membership but keep membership status active
+    membership.seatId = undefined;
+    membership.seatType = 'non-reserved';
+    await membership.save();
+
+    // Free the seat if reserved
+    if (oldSeatId) {
+      const remainingOnSeat = await Membership.countDocuments({
+        tenantId,
+        seatId: oldSeatId,
+        status: 'active',
+        endDate: { $gte: new Date() },
+      });
+      if (remainingOnSeat === 0) {
+        await Seat.findByIdAndUpdate(oldSeatId, { status: 'available' });
+      }
+    }
+
+    res.status(200).json({ message: 'Desk vacated successfully. Student membership remains active.', membership });
   } catch (err) {
     next(err);
   }
@@ -151,6 +222,57 @@ export async function markMembershipLeft(req: Request, res: Response, next: Next
     await membership.save();
 
     res.status(200).json({ message: 'Membership marked as left and seat released', membership });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteMembership(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user!.tenantId;
+
+    const membership = await Membership.findOne({ _id: id, tenantId });
+    if (!membership) {
+      res.status(404).json({ error: 'Membership record not found' });
+      return;
+    }
+
+    // Free the seat if it was reserved
+    if (membership.seatId && membership.status === 'active') {
+      const remaining = await Membership.countDocuments({
+        tenantId,
+        seatId: membership.seatId,
+        _id: { $ne: membership._id },
+        status: 'active',
+        endDate: { $gte: new Date() },
+      });
+      if (remaining === 0) {
+        await Seat.findByIdAndUpdate(membership.seatId, { status: 'available' });
+      }
+    }
+
+    await Membership.deleteOne({ _id: id, tenantId });
+
+    res.status(200).json({ message: 'Membership record deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function clearAllLeftMemberships(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const tenantId = req.user!.tenantId;
+
+    const result = await Membership.deleteMany({
+      tenantId,
+      status: 'left',
+    });
+
+    res.status(200).json({
+      message: `Successfully cleared ${result.deletedCount} left membership records`,
+      deletedCount: result.deletedCount,
+    });
   } catch (err) {
     next(err);
   }
@@ -244,7 +366,10 @@ export async function listMembershipsWithFilters(req: Request, res: Response, ne
       .populate('seatId', 'seatNumber')
       .sort({ endDate: 1 });
 
-    res.status(200).json({ memberships });
+    // Filter out orphaned memberships where student document no longer exists
+    const validMemberships = memberships.filter((m) => m.studentId != null);
+
+    res.status(200).json({ memberships: validMemberships });
   } catch (err) {
     next(err);
   }
