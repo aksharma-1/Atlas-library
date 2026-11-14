@@ -33,6 +33,7 @@ const cookieOptions = {
   secure: env.NODE_ENV === 'production',
   // Partitioned cookie (CHIPS) enables cross-site cookies in modern mobile browsers
   partitioned: env.NODE_ENV === 'production',
+  path: '/',
   // 24 h in milliseconds (mirrors JWT_EXPIRES_IN default)
   maxAge: 24 * 60 * 60 * 1000,
 };
@@ -322,11 +323,18 @@ export async function login(
  * Clears the auth cookie.
  */
 export function logout(_req: Request, res: Response): void {
-  res.clearCookie(AUTH_COOKIE, {
+  const isProd = env.NODE_ENV === 'production';
+  const clearOpts = {
     httpOnly: true,
-    sameSite: (env.NODE_ENV === 'production' ? 'none' : 'strict') as 'none' | 'strict',
-    secure: env.NODE_ENV === 'production',
-  });
+    sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
+    secure: isProd,
+    path: '/',
+    partitioned: isProd,
+  };
+
+  res.clearCookie(AUTH_COOKIE, clearOpts);
+  // Also clear without partitioned/sameSite just in case of legacy browser context
+  res.clearCookie(AUTH_COOKIE, { path: '/' });
   res.status(200).json({ message: 'Logged out successfully' });
 }
 

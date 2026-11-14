@@ -3,8 +3,12 @@ import { z } from 'zod';
 import { Membership } from '../models/Membership';
 import { Plan } from '../models/Plan';
 import { Seat } from '../models/Seat';
+import { Student } from '../models/Student';
+import { Shift } from '../models/Shift';
 import { Payment } from '../models/Payment';
 import { getNextReceiptNumber } from '../models/Counter';
+
+import { syncExpiredMemberships } from '../services/membershipSync.service';
 
 const createMembershipSchema = z.object({
   studentId: z.string().min(1, 'Student ID is required'),
@@ -19,6 +23,7 @@ const createMembershipSchema = z.object({
   // Instant fee collection at renewal/assignment
   initialPaymentAmountPaise: z.number().int().min(0).optional(),
   paymentMethod: z.enum(['cash', 'upi', 'card', 'bank_transfer']).optional(),
+  paymentDate: z.string().optional(),
   transactionRef: z.string().optional(),
   paymentNotes: z.string().optional(),
 });
@@ -34,10 +39,25 @@ export async function createMembership(req: Request, res: Response, next: NextFu
     const tenantId = req.user!.tenantId;
     const { studentId, planId, shiftId, seatId, startDate, endDate, discountPaise = 0, discountReason, customFeePaise } = parsed.data;
 
+    // Verify student belongs to this tenant
+    const student = await Student.findOne({ _id: studentId, tenantId });
+    if (!student) {
+      res.status(404).json({ error: 'Student not found' });
+      return;
+    }
+
     const plan = await Plan.findOne({ _id: planId, tenantId });
     if (!plan) {
       res.status(404).json({ error: 'Plan not found' });
       return;
+    }
+
+    if (shiftId) {
+      const shift = await Shift.findOne({ _id: shiftId, tenantId });
+      if (!shift) {
+        res.status(404).json({ error: 'Shift not found' });
+        return;
+      }
     }
 
     // Determine final fee with discount / custom fee negotiation
@@ -143,6 +163,7 @@ export async function createMembership(req: Request, res: Response, next: NextFu
         receiptNumber,
         amountPaise: initialPaymentPaise,
         paymentMethod: parsed.data.paymentMethod || 'cash',
+        paymentDate: parsed.data.paymentDate ? new Date(parsed.data.paymentDate) : new Date(),
         transactionRef: parsed.data.transactionRef || undefined,
         notes: parsed.data.paymentNotes || 'Collected at renewal',
       });
@@ -331,16 +352,16 @@ export async function listMembershipsWithFilters(req: Request, res: Response, ne
     const tenantId = req.user!.tenantId;
     const { filter } = req.query;
 
+    // Automatically synchronize any past-due memberships to 'expired' status
+    await syncExpiredMemberships(tenantId);
+
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
 
     const query: Record<string, unknown> = { tenantId };
 
     if (filter === 'expired') {
-      query['$or'] = [
-        { status: 'expired' },
-        { status: 'active', endDate: { $lt: startOfToday } },
-      ];
+      query['status'] = 'expired';
     } else if (filter === 'expiring_3') {
       const threeDaysLater = new Date(startOfToday.getTime() + 3 * 24 * 60 * 60 * 1000);
       query['status'] = 'active';
@@ -354,6 +375,13 @@ export async function listMembershipsWithFilters(req: Request, res: Response, ne
       query['$expr'] = { $gt: ['$feePaise', '$paidPaise'] };
     } else if (filter === 'left') {
       query['status'] = 'left';
+    } else if (filter === 'no_seat') {
+      query['status'] = 'active';
+      query['endDate'] = { $gte: startOfToday };
+      query['$or'] = [
+        { seatId: null },
+        { seatId: { $exists: false } }
+      ];
     } else if (filter === 'active') {
       query['status'] = 'active';
       query['endDate'] = { $gte: startOfToday };

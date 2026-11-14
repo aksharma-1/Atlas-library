@@ -12,20 +12,21 @@ import {
   updateProfile,
 } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/authenticate';
+import { authLimiter, passwordResetLimiter } from '../middleware/rateLimiter';
 
 export const authRouter = Router();
 
-/** POST /api/v1/auth/login  — public */
-authRouter.post('/login', login);
+/** POST /api/v1/auth/login  — public with rate limiting */
+authRouter.post('/login', authLimiter, login);
 
-/** POST /api/v1/auth/register — public self-service registration */
-authRouter.post('/register', register);
+/** POST /api/v1/auth/register — public self-service registration with rate limiting */
+authRouter.post('/register', authLimiter, register);
 
-/** POST /api/v1/auth/forgot-password — public request reset code */
-authRouter.post('/forgot-password', forgotPassword);
+/** POST /api/v1/auth/forgot-password — public request reset code with strict rate limiting */
+authRouter.post('/forgot-password', passwordResetLimiter, forgotPassword);
 
-/** POST /api/v1/auth/reset-password — public verify code & set new password */
-authRouter.post('/reset-password', resetPassword);
+/** POST /api/v1/auth/reset-password — public verify code & set new password with strict rate limiting */
+authRouter.post('/reset-password', passwordResetLimiter, resetPassword);
 
 /** POST /api/v1/auth/logout — public (clears cookie) */
 authRouter.post('/logout', logout);

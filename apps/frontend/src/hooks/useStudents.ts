@@ -46,6 +46,7 @@ export function useCreateStudent() {
       customFeePaise?: number;
       initialPaymentAmountPaise?: number;
       paymentMethod?: 'cash' | 'upi' | 'card' | 'bank_transfer';
+      paymentDate?: string;
       transactionRef?: string;
       paymentNotes?: string;
     }) => {
@@ -56,7 +57,7 @@ export function useCreateStudent() {
       toast.success(`Student "${student.name}" registered successfully!`);
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['seats'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
@@ -80,6 +81,7 @@ export function useCreateMembership() {
       customFeePaise?: number;
       initialPaymentAmountPaise?: number;
       paymentMethod?: 'cash' | 'upi' | 'card' | 'bank_transfer';
+      paymentDate?: string;
       transactionRef?: string;
       paymentNotes?: string;
     }) => {
@@ -91,7 +93,7 @@ export function useCreateMembership() {
       queryClient.invalidateQueries({ queryKey: ['students', vars.studentId] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['seats'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
       queryClient.invalidateQueries({ queryKey: ['revenueStats'] });
     },
@@ -108,6 +110,7 @@ export function useRecordPayment() {
       membershipId: string;
       amountPaise: number;
       paymentMethod: 'cash' | 'upi' | 'card' | 'bank_transfer';
+      paymentDate?: string;
       transactionRef?: string;
       idempotencyKey?: string;
       notes?: string;
@@ -121,7 +124,7 @@ export function useRecordPayment() {
     onSuccess: (data) => {
       toast.success(`Payment of ₹${(data.payment.amountPaise / 100).toFixed(0)} recorded successfully!`);
       queryClient.invalidateQueries({ queryKey: ['students'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {

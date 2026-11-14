@@ -11,6 +11,10 @@ export interface StudentDTO {
   membershipNumber: string;
   address?: string;
   photoUrl?: string;
+  currentSeat?: string | null;
+  seatType?: 'reserved' | 'non-reserved' | null;
+  membershipStatus?: string | null;
+  hasSeat?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -55,6 +59,7 @@ export interface PaymentDTO {
   receiptNumber: string;
   amountPaise: number;
   paymentMethod: PaymentMethod;
+  paymentDate?: string;
   transactionRef?: string;
   idempotencyKey?: string;
   notes?: string;

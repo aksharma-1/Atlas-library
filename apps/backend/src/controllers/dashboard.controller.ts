@@ -8,10 +8,15 @@ import { Membership } from '../models/Membership';
 import { Payment } from '../models/Payment';
 import type { RevenueStatsDTO } from '@atlas/shared';
 
+import { syncExpiredMemberships } from '../services/membershipSync.service';
+
 export async function getDashboardStats(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const rawTenantId = req.user!.tenantId!;
     const tenantObjectId = new Types.ObjectId(rawTenantId);
+
+    // Auto-update any expired memberships for this tenant
+    await syncExpiredMemberships(tenantObjectId);
 
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
@@ -45,10 +50,7 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
       }).select('seatId'),
       Membership.countDocuments({
         tenantId: tenantObjectId,
-        $or: [
-          { status: 'expired' },
-          { status: 'active', endDate: { $lt: startOfToday } },
-        ],
+        status: 'expired',
       }),
       Membership.countDocuments({
         tenantId: tenantObjectId,
@@ -61,11 +63,25 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
         endDate: { $gte: startOfToday, $lte: sevenDaysLater },
       }),
       Payment.aggregate([
-        { $match: { tenantId: tenantObjectId, createdAt: { $gte: startOfToday } } },
+        {
+          $match: {
+            tenantId: tenantObjectId,
+            $expr: {
+              $gte: [{ $ifNull: ['$paymentDate', '$createdAt'] }, startOfToday],
+            },
+          },
+        },
         { $group: { _id: null, total: { $sum: '$amountPaise' } } },
       ]),
       Payment.aggregate([
-        { $match: { tenantId: tenantObjectId, createdAt: { $gte: startOfMonth } } },
+        {
+          $match: {
+            tenantId: tenantObjectId,
+            $expr: {
+              $gte: [{ $ifNull: ['$paymentDate', '$createdAt'] }, startOfMonth],
+            },
+          },
+        },
         { $group: { _id: null, total: { $sum: '$amountPaise' } } },
       ]),
     ]);
@@ -160,17 +176,41 @@ export async function getRevenueStats(req: Request, res: Response, next: NextFun
       ]),
       // Today
       Payment.aggregate([
-        { $match: { tenantId: tenantObjectId, createdAt: { $gte: startOfToday } } },
+        {
+          $match: {
+            tenantId: tenantObjectId,
+            $expr: {
+              $gte: [{ $ifNull: ['$paymentDate', '$createdAt'] }, startOfToday],
+            },
+          },
+        },
         { $group: { _id: null, total: { $sum: '$amountPaise' } } },
       ]),
       // This Month
       Payment.aggregate([
-        { $match: { tenantId: tenantObjectId, createdAt: { $gte: startOfThisMonth } } },
+        {
+          $match: {
+            tenantId: tenantObjectId,
+            $expr: {
+              $gte: [{ $ifNull: ['$paymentDate', '$createdAt'] }, startOfThisMonth],
+            },
+          },
+        },
         { $group: { _id: null, total: { $sum: '$amountPaise' } } },
       ]),
       // Last Month
       Payment.aggregate([
-        { $match: { tenantId: tenantObjectId, createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } } },
+        {
+          $match: {
+            tenantId: tenantObjectId,
+            $expr: {
+              $and: [
+                { $gte: [{ $ifNull: ['$paymentDate', '$createdAt'] }, startOfLastMonth] },
+                { $lte: [{ $ifNull: ['$paymentDate', '$createdAt'] }, endOfLastMonth] },
+              ],
+            },
+          },
+        },
         { $group: { _id: null, total: { $sum: '$amountPaise' } } },
       ]),
       // Breakdown by paymentMethod
@@ -186,11 +226,18 @@ export async function getRevenueStats(req: Request, res: Response, next: NextFun
       ]),
       // Daily trend for the past 14 days
       Payment.aggregate([
-        { $match: { tenantId: tenantObjectId, createdAt: { $gte: fourteenDaysAgo } } },
+        {
+          $match: {
+            tenantId: tenantObjectId,
+            $expr: {
+              $gte: [{ $ifNull: ['$paymentDate', '$createdAt'] }, fourteenDaysAgo],
+            },
+          },
+        },
         {
           $group: {
             _id: {
-              $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+              $dateToString: { format: '%Y-%m-%d', date: { $ifNull: ['$paymentDate', '$createdAt'] } },
             },
             total: { $sum: '$amountPaise' },
             count: { $sum: 1 },
@@ -200,7 +247,7 @@ export async function getRevenueStats(req: Request, res: Response, next: NextFun
       ]),
       // Recent transactions with student populate
       Payment.find({ tenantId: tenantObjectId })
-        .sort({ createdAt: -1 })
+        .sort({ paymentDate: -1, createdAt: -1 })
         .limit(15)
         .populate<{ studentId: { name: string; membershipNumber?: string } }>('studentId', 'name membershipNumber'),
       // Active dues calculation

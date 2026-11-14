@@ -9,6 +9,7 @@ export interface IPayment extends Document {
   receiptNumber: string;
   amountPaise: number;
   paymentMethod: PaymentMethod;
+  paymentDate: Date;
   transactionRef?: string;
   idempotencyKey?: string;
   notes?: string;
@@ -53,6 +54,11 @@ const paymentSchema = new Schema<IPayment>(
       type: String,
       enum: ['cash', 'upi', 'card', 'bank_transfer'] satisfies PaymentMethod[],
       required: true,
+    },
+    paymentDate: {
+      type: Date,
+      default: Date.now,
+      index: true,
     },
     transactionRef: {
       type: String,

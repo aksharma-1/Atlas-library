@@ -11,11 +11,10 @@
  * - Memberships
  * - Payments
  *
- * Then creates ONLY a clean standalone Super-Admin user:
- * - Role: 'superadmin'
- * - Email: admin@atlas.com
- * - Password: Admin@1234
- * - NO tenantId or library attached (pure platform supervisor)
+ * Then creates ONLY a clean standalone Super-Admin user using environment variables:
+ * - SUPERADMIN_EMAIL
+ * - SUPERADMIN_PASSWORD
+ * - SUPERADMIN_NAME
  *
  * Usage:
  *   npm run seed          (from repo root)
@@ -35,10 +34,25 @@ import { Payment } from '../models/Payment';
 const MONGODB_URI =
   process.env['MONGODB_URI'] ?? 'mongodb://localhost:27017/atlas_dev';
 
+const email = process.env['SUPERADMIN_EMAIL']?.trim().toLowerCase();
+const password = process.env['SUPERADMIN_PASSWORD'];
+const name = process.env['SUPERADMIN_NAME'] || 'Platform Super Admin';
+
+if (!email || !password) {
+  console.error('❌  Security Error: SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD must be configured in environment variables.');
+  console.error('    Please set them in apps/backend/.env or your deployment environment.');
+  process.exit(1);
+}
+
+if (password.length < 8) {
+  console.error('❌  Security Error: SUPERADMIN_PASSWORD must be at least 8 characters long.');
+  process.exit(1);
+}
+
 const SUPER_ADMIN = {
-  name: 'Platform Super Admin',
-  email: 'admin@atlas.com',
-  password: 'Admin@1234',
+  name,
+  email,
+  password,
   role: 'superadmin' as const,
 };
 
@@ -71,11 +85,6 @@ async function seed(): Promise<void> {
 
   console.log(`✅  Created standalone Super Admin user: ${adminUser.email} (ID: ${adminUser._id})`);
   console.log('ℹ️   Super Admin has NO library attached and supervises all tenants via /admin.');
-
-  console.log('\n🔑  Platform Super Admin Credentials:');
-  console.log(`   Email:    ${SUPER_ADMIN.email}`);
-  console.log(`   Password: ${SUPER_ADMIN.password}`);
-  console.log(`   URL:      http://localhost:5173/admin`);
   console.log('\n✅  Platform reset & seed complete.\n');
 }
 

@@ -1,6 +1,7 @@
 import { env } from './config/env';
 import { connectDB, disconnectDB } from './db/connect';
 import { createApp } from './app';
+import { syncExpiredMemberships } from './services/membershipSync.service';
 
 /**
  * Application entry point.
@@ -14,6 +15,14 @@ import { createApp } from './app';
 async function main(): Promise<void> {
   // Connect to MongoDB before accepting requests
   await connectDB();
+
+  // Run initial sync of expired memberships across all tenants on boot
+  syncExpiredMemberships().catch((err) => console.error('Initial expiry sync error:', err));
+
+  // Periodic hourly sync of expired memberships
+  setInterval(() => {
+    syncExpiredMemberships().catch((err) => console.error('Periodic expiry sync error:', err));
+  }, 60 * 60 * 1000);
 
   const app = createApp();
 

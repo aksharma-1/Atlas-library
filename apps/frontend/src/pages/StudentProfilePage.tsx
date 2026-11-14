@@ -68,11 +68,13 @@ export function StudentProfilePage() {
   // Renewal Instant Payment collection states
   const [collectPaymentOnRenewal, setCollectPaymentOnRenewal] = useState(true);
   const [renewalPaymentAmountRupees, setRenewalPaymentAmountRupees] = useState('');
+  const [renewalPaymentDate, setRenewalPaymentDate] = useState(() => getTodayDateString());
   const [renewalPaymentMethod, setRenewalPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'bank_transfer'>('cash');
   const [renewalPaymentRef, setRenewalPaymentRef] = useState('');
 
   // Payment form (Record Payment Modal)
   const [paymentAmountRupees, setPaymentAmountRupees] = useState('');
+  const [paymentDate, setPaymentDate] = useState(() => getTodayDateString());
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'bank_transfer'>('upi');
   const [transactionRef, setTransactionRef] = useState('');
   const [notes, setNotes] = useState('');
@@ -148,6 +150,7 @@ export function StudentProfilePage() {
             ? Math.round(parseFloat(renewalPaymentAmountRupees) * 100)
             : undefined,
         paymentMethod: collectPaymentOnRenewal ? renewalPaymentMethod : undefined,
+        paymentDate: collectPaymentOnRenewal && renewalPaymentDate ? renewalPaymentDate : undefined,
         transactionRef: collectPaymentOnRenewal && renewalPaymentRef ? renewalPaymentRef : undefined,
       },
       {
@@ -185,6 +188,7 @@ export function StudentProfilePage() {
         membershipId: activeMembership._id,
         amountPaise,
         paymentMethod,
+        paymentDate: paymentDate || undefined,
         transactionRef: transactionRef || undefined,
         notes: notes || undefined,
       },
@@ -730,7 +734,7 @@ export function StudentProfilePage() {
 
               {collectPaymentOnRenewal && (
                 <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300">
@@ -747,6 +751,18 @@ export function StudentProfilePage() {
                         value={renewalPaymentAmountRupees}
                         onChange={(e) => setRenewalPaymentAmountRupees(e.target.value)}
                         placeholder={finalPayableFeeRupees.toString()}
+                        className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Payment / Collection Date
+                      </label>
+                      <input
+                        type="date"
+                        value={renewalPaymentDate}
+                        onChange={(e) => setRenewalPaymentDate(e.target.value)}
                         className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white font-mono"
                       />
                     </div>
@@ -820,28 +836,43 @@ export function StudentProfilePage() {
         maxWidth="md"
       >
         <form onSubmit={handleRecordPayment} className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Amount (₹) *</label>
-              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                Remaining Due: <strong className="text-amber-600 dark:text-amber-400">₹{(duesRemainingPaise / 100).toFixed(0)}</strong>
-              </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Amount (₹) *</label>
+                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                  Due: <strong className="text-amber-600 dark:text-amber-400">₹{(duesRemainingPaise / 100).toFixed(0)}</strong>
+                </span>
+              </div>
+              <input
+                type="number"
+                step="1"
+                min="1"
+                max={Math.max(1, Math.round(duesRemainingPaise / 100))}
+                value={paymentAmountRupees}
+                onChange={(e) => setPaymentAmountRupees(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white font-mono"
+                required
+              />
+              {parseFloat(paymentAmountRupees || '0') > duesRemainingPaise / 100 && (
+                <p className="mt-1 text-xs text-rose-500 font-medium">
+                  Amount cannot exceed remaining due of ₹{(duesRemainingPaise / 100).toFixed(0)}
+                </p>
+              )}
             </div>
-            <input
-              type="number"
-              step="1"
-              min="1"
-              max={Math.max(1, Math.round(duesRemainingPaise / 100))}
-              value={paymentAmountRupees}
-              onChange={(e) => setPaymentAmountRupees(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
-              required
-            />
-            {parseFloat(paymentAmountRupees || '0') > duesRemainingPaise / 100 && (
-              <p className="mt-1 text-xs text-rose-500 font-medium">
-                Amount cannot exceed remaining due of ₹{(duesRemainingPaise / 100).toFixed(0)}
-              </p>
-            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Payment Date *
+              </label>
+              <input
+                type="date"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white font-mono"
+                required
+              />
+            </div>
           </div>
 
           <div>

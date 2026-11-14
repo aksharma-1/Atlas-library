@@ -23,7 +23,7 @@ import {
   type DurationOption,
 } from '../components/DateRangeDurationSelector';
 
-type TabType = 'all' | 'dues' | 'expiring_3' | 'expiring_7' | 'expired' | 'left';
+type TabType = 'all' | 'no_seat' | 'dues' | 'expiring_3' | 'expiring_7' | 'expired' | 'left';
 
 export function StudentsPage() {
   const navigate = useNavigate();
@@ -32,14 +32,14 @@ export function StudentsPage() {
   const urlTab = searchParams.get('tab') as TabType | null;
 
   const [activeTab, setActiveTab] = useState<TabType>(
-    urlTab && ['all', 'dues', 'expiring_3', 'expiring_7', 'expired', 'left'].includes(urlTab) ? urlTab : 'all',
+    urlTab && ['all', 'no_seat', 'dues', 'expiring_3', 'expiring_7', 'expired', 'left'].includes(urlTab) ? urlTab : 'all',
   );
   const [search, setSearch] = useState('');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
 
   // Synchronize URL query parameter with active tab
   useEffect(() => {
-    if (urlTab && ['all', 'dues', 'expiring_3', 'expiring_7', 'expired', 'left'].includes(urlTab)) {
+    if (urlTab && ['all', 'no_seat', 'dues', 'expiring_3', 'expiring_7', 'expired', 'left'].includes(urlTab)) {
       setActiveTab(urlTab);
     }
   }, [urlTab]);
@@ -74,6 +74,7 @@ export function StudentsPage() {
   // Instant Fee Collection on Registration
   const [collectPaymentOnRegister, setCollectPaymentOnRegister] = useState(true);
   const [regPaymentAmountRupees, setRegPaymentAmountRupees] = useState('');
+  const [regPaymentDate, setRegPaymentDate] = useState(() => getTodayDateString());
   const [regDiscountRupees, setRegDiscountRupees] = useState('0');
   const [regDiscountReason, setRegDiscountReason] = useState('');
   const [regPaymentMethod, setRegPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'bank_transfer'>('cash');
@@ -276,6 +277,7 @@ export function StudentsPage() {
             ? Math.round(parseFloat(regPaymentAmountRupees) * 100)
             : undefined,
         paymentMethod: assignDeskOnRegister && collectPaymentOnRegister ? regPaymentMethod : undefined,
+        paymentDate: assignDeskOnRegister && collectPaymentOnRegister && regPaymentDate ? regPaymentDate : undefined,
         transactionRef: assignDeskOnRegister && collectPaymentOnRegister && regPaymentRef ? regPaymentRef : undefined,
       },
       {
@@ -360,6 +362,7 @@ export function StudentsPage() {
 
   const tabs: { id: TabType; label: string; icon: string }[] = [
     { id: 'all', label: 'All Members', icon: '👥' },
+    { id: 'no_seat', label: 'No Desk Assigned', icon: '🪑' },
     { id: 'dues', label: 'Fees Due', icon: '💰' },
     { id: 'expiring_3', label: 'Expiring in 3 Days', icon: '⚠️' },
     { id: 'expiring_7', label: 'Expiring in 7 Days', icon: '📅' },
@@ -456,10 +459,19 @@ export function StudentsPage() {
                     <div className="min-w-0">
                       <p className="font-bold text-slate-900 dark:text-white truncate">{s.name}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">{s.mobile || 'No mobile'}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-2 mt-1">
                         <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
                           {s.membershipNumber || 'ID N/A'}
                         </span>
+                        {s.currentSeat ? (
+                          <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                            Seat {s.currentSeat}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                            ⚠️ No Desk
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -519,6 +531,7 @@ export function StudentsPage() {
                     </div>
                   </th>
                   <th className="px-6 py-3.5">Mobile</th>
+                  <th className="px-6 py-3.5">Desk / Status</th>
                   <th
                     onClick={() => toggleStudentSort('createdAt')}
                     className="px-6 py-3.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors"
@@ -538,14 +551,14 @@ export function StudentsPage() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                 {studentsLoading ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-slate-400 text-sm">
+                    <td colSpan={6} className="py-12 text-center text-slate-400 text-sm">
                       <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent mx-auto mb-2" />
                       Loading students directory…
                     </td>
                   </tr>
                 ) : paginatedStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-slate-400 text-sm">
+                    <td colSpan={6} className="py-12 text-center text-slate-400 text-sm">
                       No students found. Register your first student above.
                     </td>
                   </tr>
@@ -579,6 +592,18 @@ export function StudentsPage() {
                         {s.membershipNumber}
                       </td>
                       <td className="px-6 py-4 text-slate-600 dark:text-slate-300 font-mono text-xs">{s.mobile}</td>
+                      <td className="px-6 py-4">
+                        {s.currentSeat ? (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                            <Armchair className="h-3 w-3" />
+                            Seat {s.currentSeat}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                            ⚠️ No Desk Assigned
+                          </span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400">
                         {formatDate(s.createdAt)}
                       </td>
@@ -1391,7 +1416,7 @@ export function StudentsPage() {
 
               {collectPaymentOnRegister && (
                 <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800 animate-fade-in">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -1412,6 +1437,18 @@ export function StudentsPage() {
                         placeholder="e.g. 500"
                         className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-950 focus:ring-2 focus:ring-emerald-500 outline-none transition"
                         required={collectPaymentOnRegister}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Payment / Collection Date
+                      </label>
+                      <input
+                        type="date"
+                        value={regPaymentDate}
+                        onChange={(e) => setRegPaymentDate(e.target.value)}
+                        className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-950 focus:ring-2 focus:ring-emerald-500 outline-none transition"
                       />
                     </div>
 

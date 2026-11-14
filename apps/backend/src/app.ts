@@ -39,9 +39,18 @@ export function createApp(): Express {
   app.use(helmet());
 
   // ── CORS ───────────────────────────────────────────────────────────────────
+  // Support comma-separated origins in env.CORS_ORIGIN (e.g. production domain + Netlify preview URLs)
+  const allowedOrigins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
   app.use(
     cors({
-      origin: env.CORS_ORIGIN,
+      origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+          return callback(null, true);
+        }
+        return callback(new Error(`CORS blocked request from origin: ${origin}`));
+      },
       credentials: true,
     }),
   );

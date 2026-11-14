@@ -8,6 +8,7 @@ const recordPaymentSchema = z.object({
   membershipId: z.string().min(1, 'Membership ID is required'),
   amountPaise: z.number().int().min(1, 'Amount must be positive integer paise'),
   paymentMethod: z.enum(['cash', 'upi', 'card', 'bank_transfer']),
+  paymentDate: z.string().optional(),
   transactionRef: z.string().optional(),
   idempotencyKey: z.string().optional(),
   notes: z.string().optional(),
@@ -22,7 +23,7 @@ export async function recordPayment(req: Request, res: Response, next: NextFunct
     }
 
     const tenantId = req.user!.tenantId!;
-    const { membershipId, amountPaise, paymentMethod, transactionRef, idempotencyKey, notes } = parsed.data;
+    const { membershipId, amountPaise, paymentMethod, paymentDate, transactionRef, idempotencyKey, notes } = parsed.data;
 
     // ── Idempotency Check ───────────────────────────────────────────────────
     if (idempotencyKey) {
@@ -67,6 +68,7 @@ export async function recordPayment(req: Request, res: Response, next: NextFunct
       receiptNumber,
       amountPaise,
       paymentMethod,
+      paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
     };
 
     if (transactionRef) {
@@ -153,7 +155,7 @@ export async function deletePayment(req: Request, res: Response, next: NextFunct
       await membership.save();
     }
 
-    await Payment.findByIdAndDelete(payment._id);
+    await Payment.deleteOne({ _id: payment._id, tenantId });
 
     res.status(200).json({
       message: `Receipt ${payment.receiptNumber} (₹${(payment.amountPaise / 100).toFixed(0)}) removed successfully`,

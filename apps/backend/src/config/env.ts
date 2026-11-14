@@ -17,6 +17,14 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   /** JWT expiry duration string understood by jsonwebtoken, e.g. "24h", "7d" */
   JWT_EXPIRES_IN: z.string().default('24h'),
+  /** Super Admin initial setup credentials — required in production for bootstrapping safely */
+  SUPERADMIN_EMAIL: z.string().email().optional(),
+  SUPERADMIN_PASSWORD: z.string().min(8).optional(),
+  SUPERADMIN_NAME: z.string().default('Platform Super Admin'),
+  /** Rate Limiting configurations */
+  AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(15 * 60 * 1000), // 15 mins
+  AUTH_RATE_LIMIT_MAX_ATTEMPTS: z.coerce.number().int().positive().default(10), // 10 attempts
+  PASSWORD_RESET_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5), // 5 attempts per window
 });
 
 const result = envSchema.safeParse(process.env);

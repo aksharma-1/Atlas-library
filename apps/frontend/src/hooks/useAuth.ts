@@ -254,8 +254,16 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => apiClient.post('/auth/logout'),
     onSuccess: () => {
-      queryClient.clear();
-      navigate('/login');
+      // Explicitly set ['auth', 'me'] to null so no extra /auth/me call or 401 is triggered
+      queryClient.setQueryData(ME_KEY, null);
+      queryClient.removeQueries({ queryKey: ME_KEY });
+      // SPA instant navigate without whole-page browser reload
+      navigate('/login', { replace: true });
+    },
+    onError: () => {
+      queryClient.setQueryData(ME_KEY, null);
+      queryClient.removeQueries({ queryKey: ME_KEY });
+      navigate('/login', { replace: true });
     },
   });
 }

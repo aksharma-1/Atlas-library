@@ -26,6 +26,7 @@ const registerStudentSchema = z.object({
   // Optional instant payment collection at registration
   initialPaymentAmountPaise: z.number().int().min(0).optional(),
   paymentMethod: z.enum(['cash', 'upi', 'card', 'bank_transfer']).optional(),
+  paymentDate: z.string().optional(),
   transactionRef: z.string().optional(),
   paymentNotes: z.string().optional(),
 });
@@ -46,8 +47,40 @@ export async function listStudents(req: Request, res: Response, next: NextFuncti
       ];
     }
 
-    const students = await Student.find(query).sort({ createdAt: -1 });
-    res.status(200).json({ students });
+    const students = await Student.find(query).sort({ createdAt: -1 }).lean();
+    
+    // Attach latest active membership summary including seat info
+    const studentIds = students.map((s) => s._id);
+    const memberships = await Membership.find({
+      tenantId,
+      studentId: { $in: studentIds },
+      status: { $ne: 'left' },
+    })
+      .populate('seatId', 'seatNumber')
+      .populate('planId', 'name')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const membershipMap = new Map<string, any>();
+    for (const m of memberships) {
+      const sId = m.studentId.toString();
+      if (!membershipMap.has(sId)) {
+        membershipMap.set(sId, m);
+      }
+    }
+
+    const studentsWithMembership = students.map((s) => {
+      const activeM = membershipMap.get(s._id.toString());
+      return {
+        ...s,
+        currentSeat: activeM?.seatId?.seatNumber || null,
+        seatType: activeM?.seatType || null,
+        membershipStatus: activeM?.status || null,
+        hasSeat: Boolean(activeM?.seatId),
+      };
+    });
+
+    res.status(200).json({ students: studentsWithMembership });
   } catch (err) {
     next(err);
   }
@@ -172,6 +205,7 @@ export async function createStudent(req: Request, res: Response, next: NextFunct
             receiptNumber,
             amountPaise: initialPaymentPaise,
             paymentMethod: parsed.data.paymentMethod || 'cash',
+            paymentDate: parsed.data.paymentDate ? new Date(parsed.data.paymentDate) : new Date(),
             transactionRef: parsed.data.transactionRef || undefined,
             notes: parsed.data.paymentNotes || 'Collected at registration',
           });
