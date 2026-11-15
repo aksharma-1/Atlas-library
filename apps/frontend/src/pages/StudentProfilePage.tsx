@@ -49,6 +49,7 @@ export function StudentProfilePage() {
 
   // Student Edit fields
   const [editName, setEditName] = useState('');
+  const [editGender, setEditGender] = useState<'male' | 'female' | 'other' | ''>('');
   const [editMobile, setEditMobile] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editAddress, setEditAddress] = useState('');
@@ -144,6 +145,7 @@ export function StudentProfilePage() {
         customFeePaise: durationMultiplier > 1 ? Math.round(standardFeeRupees * 100) : undefined,
         discountPaise: discountPaise > 0 ? discountPaise : undefined,
         discountReason: discountPaise > 0 ? membershipDiscountReason.trim() : undefined,
+        replaceExisting: true,
         // Optional instant payment collection at renewal
         initialPaymentAmountPaise:
           collectPaymentOnRenewal && renewalPaymentAmountRupees
@@ -233,6 +235,7 @@ export function StudentProfilePage() {
       {
         id,
         name: editName.trim(),
+        gender: editGender || undefined,
         mobile: editMobile.trim(),
         email: editEmail.trim() || undefined,
         address: editAddress.trim() || undefined,
@@ -278,6 +281,19 @@ export function StudentProfilePage() {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white truncate">{student.name}</h1>
+                {student.gender && (
+                  <span
+                    className={`rounded-md px-2 py-0.5 text-xs font-semibold capitalize ${
+                      student.gender === 'female'
+                        ? 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border border-pink-500/20'
+                        : student.gender === 'male'
+                        ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'
+                        : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+                    }`}
+                  >
+                    {student.gender === 'female' ? '♀ Female' : student.gender === 'male' ? '♂ Male' : '⚧ Other'}
+                  </span>
+                )}
                 <span className="rounded-md bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
                   {student.membershipNumber}
                 </span>
@@ -292,6 +308,7 @@ export function StudentProfilePage() {
             <button
               onClick={() => {
                 setEditName(student.name);
+                setEditGender(student.gender || '');
                 setEditMobile(student.mobile);
                 setEditEmail(student.email || '');
                 setEditAddress(student.address || '');
@@ -359,7 +376,9 @@ export function StudentProfilePage() {
       {/* ── Active Membership Banner ── */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 space-y-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-900 dark:text-white">Current Active Membership</h2>
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">
+            {activeMembership?.status === 'expired' ? 'Membership (Expired — Action Needed)' : 'Current Active Membership'}
+          </h2>
           {activeMembership && (
             <div className="flex items-center gap-2">
               <button
@@ -374,9 +393,15 @@ export function StudentProfilePage() {
               >
                 🚪 Mark as Left
               </button>
-              <span className="rounded-md bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-semibold capitalize">
-                ● Active
-              </span>
+              {activeMembership.status === 'expired' ? (
+                <span className="rounded-md bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 border border-rose-500/30 px-2.5 py-0.5 text-xs font-semibold capitalize">
+                  ● Expired
+                </span>
+              ) : (
+                <span className="rounded-md bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-semibold capitalize">
+                  ● Active
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -947,6 +972,16 @@ export function StudentProfilePage() {
           onClose={() => setReceiptPayment(null)}
           payment={receiptPayment}
           student={student}
+          membership={
+            // Find the specific membership this receipt belongs to, or fallback to activeMembership
+            profile.membershipHistory?.find(
+              (m) =>
+                m._id ===
+                (typeof receiptPayment.membershipId === 'object'
+                  ? (receiptPayment.membershipId as any)._id
+                  : receiptPayment.membershipId)
+            ) || activeMembership
+          }
           tenantName={user?.tenantName}
         />
       )}
@@ -1046,6 +1081,32 @@ export function StudentProfilePage() {
                 onChange={(e) => setEditMembershipNumber(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
               />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Gender (Optional)
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { value: 'male', label: '👨 Male' },
+                { value: 'female', label: '👩 Female' },
+                { value: 'other', label: '⚧ Other' },
+              ].map((g) => (
+                <button
+                  key={g.value}
+                  type="button"
+                  onClick={() => setEditGender(editGender === g.value ? '' : (g.value as any))}
+                  className={`rounded-xl py-2 px-3 text-xs font-semibold border transition text-center ${
+                    editGender === g.value
+                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs'
+                      : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  {g.label}
+                </button>
+              ))}
             </div>
           </div>
 

@@ -30,6 +30,14 @@ export function errorHandler(
     return;
   }
 
+  // Handle payload too large error (413 from express body-parser)
+  if (err.name === 'PayloadTooLargeError' || err.statusCode === 413 || (err as any).type === 'entity.too.large') {
+    res.status(413).json({
+      error: 'The uploaded file is too large. Please upload an image under 5MB.',
+    });
+    return;
+  }
+
   const httpStatus = err.statusCode ?? 500;
 
   // Never leak internal error details in 500 responses

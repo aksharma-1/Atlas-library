@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useUserProfile, useUpdateProfile } from '../hooks/useAuth';
+import React, { useState, useEffect, useRef } from 'react';
+import { useUserProfile, useUpdateProfile, useUploadLogo } from '../hooks/useAuth';
 import { formatDate } from '../utils/date';
 import { DEFAULT_WHATSAPP_REMINDER_TEMPLATE } from '../utils/whatsapp';
+import toast from 'react-hot-toast';
 import {
   User,
   Building2,
@@ -16,11 +17,15 @@ import {
   CheckCircle2,
   Sparkles,
   MessageSquare,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 export function ProfilePage() {
   const { data: profile, isLoading } = useUserProfile();
   const updateProfileMutation = useUpdateProfile();
+  const uploadLogoMutation = useUploadLogo();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<'details' | 'security'>('details');
@@ -32,6 +37,7 @@ export function ProfilePage() {
   const [address, setAddress] = useState('');
   const [libraryName, setLibraryName] = useState('');
   const [whatsappReminderTemplate, setWhatsappReminderTemplate] = useState('');
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   // Password fields
   const [currentPassword, setCurrentPassword] = useState('');
@@ -50,8 +56,40 @@ export function ProfilePage() {
       setCity(profile.tenant.city || '');
       setAddress(profile.tenant.address || '');
       setWhatsappReminderTemplate(profile.tenant.whatsappReminderTemplate || DEFAULT_WHATSAPP_REMINDER_TEMPLATE);
+      setLogoPreview(profile.tenant.logoUrl || null);
     }
   }, [profile]);
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select a valid image file (PNG, JPG, SVG, WebP)');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setLogoPreview(base64);
+      uploadLogoMutation.mutate(base64, {
+        onError: () => {
+          // Revert preview on failure
+          setLogoPreview(profile?.tenant?.logoUrl || null);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        },
+      });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSaveDetails = (e: React.FormEvent) => {
     e.preventDefault();
@@ -272,6 +310,70 @@ export function ProfilePage() {
                     (Only library owners can modify library business identity)
                   </span>
                 )}
+              </div>
+
+              {/* Library Brand Logo Upload */}
+              <div className="mb-6 p-4 rounded-xl border border-dashed border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/30 dark:bg-indigo-950/20 flex flex-col sm:flex-row items-center gap-4">
+                <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl overflow-hidden border-2 border-indigo-500/30 bg-white dark:bg-slate-900 flex items-center justify-center shrink-0 shadow-sm relative group">
+                  {logoPreview ? (
+                    <img
+                      src={logoPreview}
+                      alt="Library Logo Preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <ImageIcon className="h-8 w-8 text-indigo-400" />
+                  )}
+                  {uploadLogoMutation.isPending && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                      <Loader2 className="h-6 w-6 text-white animate-spin" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1 text-center sm:text-left space-y-1">
+                  <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-center sm:justify-start gap-1.5">
+                    <span>Library Brand Logo</span>
+                    <span className="text-[10px] font-normal text-indigo-500 bg-indigo-100 dark:bg-indigo-950/60 px-2 py-0.5 rounded-full">
+                      Receipts & ID Cards
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Uploaded logo appears on official payment receipts, student identity cards, and the header.
+                  </p>
+                  {isOwner && (
+                    <div className="pt-1 flex items-center justify-center sm:justify-start gap-2">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleLogoChange}
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadLogoMutation.isPending}
+                        className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold flex items-center gap-1.5 transition shadow-sm cursor-pointer disabled:opacity-50"
+                      >
+                        <Upload className="h-3.5 w-3.5" />
+                        <span>{uploadLogoMutation.isPending ? 'Uploading to Cloudinary...' : 'Upload New Logo'}</span>
+                      </button>
+                      {logoPreview && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLogoPreview(null);
+                            uploadLogoMutation.mutate('');
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-rose-500/10 hover:text-rose-500 text-[11px] font-semibold transition cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

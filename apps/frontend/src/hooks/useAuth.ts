@@ -163,6 +163,35 @@ export function useUpdateProfile() {
   });
 }
 
+/** useUploadLogo — Upload library logo */
+export function useUploadLogo() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (image: string) => {
+      const { data } = await apiClient.post<{ message: string; logoUrl: string; user: AuthUser }>(
+        '/auth/upload-logo',
+        { image },
+      );
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(ME_KEY, data.user);
+      queryClient.invalidateQueries({ queryKey: ['auth', 'profile'] });
+      toast.success('Library logo uploaded successfully!');
+    },
+    onError: (err: any) => {
+      let msg = 'Failed to upload logo';
+      if (err.response?.status === 413) {
+        msg = 'The image file is too large. Please select an image under 5MB.';
+      } else if (err.response?.data?.error) {
+        msg = err.response.data.error;
+      }
+      toast.error(msg);
+    },
+  });
+}
+
 /** useApproveTenantSubscription — Super-admin approves UPI payment */
 export function useApproveTenantSubscription() {
   const queryClient = useQueryClient();

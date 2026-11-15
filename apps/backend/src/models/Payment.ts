@@ -6,6 +6,8 @@ export interface IPayment extends Document {
   tenantId: Types.ObjectId;
   membershipId: Types.ObjectId;
   studentId: Types.ObjectId;
+  studentName?: string;
+  membershipNumber?: string;
   receiptNumber: string;
   amountPaise: number;
   paymentMethod: PaymentMethod;
@@ -36,6 +38,14 @@ const paymentSchema = new Schema<IPayment>(
       ref: 'Student',
       required: true,
       index: true,
+    },
+    studentName: {
+      type: String,
+      trim: true,
+    },
+    membershipNumber: {
+      type: String,
+      trim: true,
     },
     receiptNumber: {
       type: String,

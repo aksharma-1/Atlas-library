@@ -1,23 +1,31 @@
 import { Membership } from '../models/Membership';
+import { getStartOfTodayIST } from '../utils/date';
 import type { Types } from 'mongoose';
 
 /**
- * Automatically updates memberships whose endDate is strictly before the beginning of today
- * from 'active' to 'expired'.
+ * Automatically updates memberships whose validity period has fully concluded from 'active' to 'expired'.
  *
- * NOTE: As per business requirements:
- * - A student keeps their desk until they are explicitly marked as left or their desk is vacated.
- * - However, if a seat has NO active memberships left, its status or occupancy remains handled
- *   consistently by the seat allocation logic.
+ * TIMEZONE & BACKWARD-COMPATIBILITY RULES:
+ * 1. Under Indian Standard Time (IST), any membership ending today (e.g. 15 November) must remain
+ *    active throughout the entire calendar day in IST.
+ * 2. A membership can only be marked 'expired' if:
+ *    - Its stored `endDate` has already passed in real-time (`endDate < now`), AND
+ *    - Its stored `endDate` is strictly before the beginning of the current calendar day in IST (`endDate < startOfTodayIST`).
+ *    This dual-guard completely protects:
+ *    a) New records normalized to 23:59:59.999 IST
+ *    b) Legacy records normalized to 23:59:59.999 UTC
+ *    c) Any partial/unnormalized timestamps created during the day
  */
 export async function syncExpiredMemberships(tenantId?: Types.ObjectId | string): Promise<number> {
   try {
     const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const startOfTodayIST = getStartOfTodayIST(now);
 
+    // Expire ONLY if the membership ended before the start of today in IST
+    // AND has passed real-time `now`.
     const filter: Record<string, unknown> = {
       status: 'active',
-      endDate: { $lt: startOfToday },
+      endDate: { $lt: startOfTodayIST },
     };
 
     if (tenantId) {

@@ -7,7 +7,12 @@ import { User } from '../models/User';
 import { Tenant } from '../models/Tenant';
 import { Shift } from '../models/Shift';
 import { Plan } from '../models/Plan';
-import type { AuthUser } from '@atlas/shared';
+import { SaasPlan } from '../models/SaasPlan';
+import { SaasPayment } from '../models/SaasPayment';
+import { PlatformConfig } from '../models/PlatformConfig';
+import { withTransaction } from '../utils/transaction';
+import { uploadLogoToCloudinary } from '../services/cloudinary.service';
+import type { AuthUser, SubscriptionStatus } from '@atlas/shared';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -27,12 +32,18 @@ const registerSchema = z.object({
 export const AUTH_COOKIE = 'atlas_token';
 
 // Shared cookie options
+// Note: When accessing through HTTPS tunnels (e.g. devtunnels / ngrok), sameSite must be 'none' and secure must be true
+// even in development so browsers permit cross-origin cookies.
+const isHttpsTunnel =
+  typeof env.CORS_ORIGIN === 'string' &&
+  (env.CORS_ORIGIN.includes('.devtunnels.ms') || env.CORS_ORIGIN.includes('.ngrok') || env.CORS_ORIGIN.startsWith('https://'));
+
 const cookieOptions = {
   httpOnly: true,
-  sameSite: (env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
-  secure: env.NODE_ENV === 'production',
+  sameSite: (env.NODE_ENV === 'production' || isHttpsTunnel ? 'none' : 'lax') as 'none' | 'lax',
+  secure: env.NODE_ENV === 'production' || isHttpsTunnel,
   // Partitioned cookie (CHIPS) enables cross-site cookies in modern mobile browsers
-  partitioned: env.NODE_ENV === 'production',
+  partitioned: env.NODE_ENV === 'production' || isHttpsTunnel,
   path: '/',
   // 24 h in milliseconds (mirrors JWT_EXPIRES_IN default)
   maxAge: 24 * 60 * 60 * 1000,
@@ -55,6 +66,9 @@ function generateToken(user: AuthUser): string {
     subscriptionTier: user.subscriptionTier,
     subscriptionExpiresAt: user.subscriptionExpiresAt,
     maxSeats: user.maxSeats,
+    // Store only hosted URLs in JWT; base64 data URIs would overflow Set-Cookie header limits (4KB)
+    logoUrl: user.logoUrl && !user.logoUrl.startsWith('data:') ? user.logoUrl : undefined,
+    whatsappReminderTemplate: user.whatsappReminderTemplate,
   };
 
   return jwt.sign(payload, env.JWT_SECRET, {
@@ -239,7 +253,7 @@ export async function submitPaymentUtr(
 ): Promise<void> {
   try {
     const tenantId = req.user!.tenantId;
-    const { tier = 'growth', utr } = req.body;
+    const { tier = 'growth', utr, billingCycle = 'monthly' } = req.body;
 
     if (!utr || typeof utr !== 'string' || utr.trim().length < 6) {
       res.status(400).json({ error: 'Please enter a valid 12-digit UPI reference / UTR number' });
@@ -253,16 +267,96 @@ export async function submitPaymentUtr(
     }
 
     const chosenTier = String(tier).trim();
+    const cycle = billingCycle === 'yearly' ? 'yearly' : 'monthly';
+    const trimmedUtr = utr.trim();
 
-    tenant.subscriptionTier = chosenTier;
-    tenant.subscriptionStatus = 'pending_approval';
-    tenant.lastUtrRef = utr.trim();
-    tenant.lastPaymentSubmittedAt = new Date();
-    await tenant.save();
+    // 1. Proactive check for existing UTR to give a clean 409 Conflict
+    const existingPayment = await SaasPayment.findOne({ utr: trimmedUtr });
+    if (existingPayment) {
+      res.status(409).json({
+        error: 'This UPI reference / UTR number has already been submitted. Please check the UTR and try again.',
+      });
+      return;
+    }
+
+    // Retrieve SaaS plan details snapshot for pricing & audit trail
+    const saasPlan = await SaasPlan.findOne({ code: chosenTier });
+    const config = await PlatformConfig.findOne({ key: 'global' });
+    const yearlyDiscount = config?.yearlyDiscountPercent ?? 20;
+
+    let calculatedAmountPaise = (saasPlan?.monthlyPrice || 999) * 100;
+    if (cycle === 'yearly') {
+      const yearlyBase = (saasPlan?.monthlyPrice || 999) * 12;
+      const discounted = Math.round(yearlyBase * (1 - yearlyDiscount / 100));
+      calculatedAmountPaise = discounted * 100;
+    }
+
+    // 2. Execute SaasPayment creation and Tenant update inside an atomic transaction
+    let paymentRecord: any;
+    let nextSubscriptionStatus: SubscriptionStatus;
+
+    // If tenant is currently active and their existing subscriptionExpiresAt has not passed,
+    // keep status as 'active' so they retain access to library APIs without interruption.
+    // Otherwise, transition to 'pending_approval'.
+    const now = new Date();
+    const isCurrentlyActiveAndValid =
+      tenant.subscriptionStatus === 'active' &&
+      tenant.subscriptionExpiresAt &&
+      tenant.subscriptionExpiresAt > now;
+
+    nextSubscriptionStatus = isCurrentlyActiveAndValid ? 'active' : 'pending_approval';
+
+    try {
+      paymentRecord = await withTransaction(async (session) => {
+        // Double-check uniqueness inside transaction in case of concurrent submissions
+        const duplicateQuery = SaasPayment.findOne({ utr: trimmedUtr });
+        if (session) duplicateQuery.session(session);
+        const inTxDuplicate = await duplicateQuery;
+        if (inTxDuplicate) {
+          const err: any = new Error('Duplicate UTR detected');
+          err.code = 11000;
+          throw err;
+        }
+
+        const createOptions = session ? { session } : {};
+        const [createdPayment] = await SaasPayment.create(
+          [
+            {
+              tenantId: tenant._id,
+              saasPlanId: saasPlan?._id,
+              planCode: chosenTier,
+              planName: saasPlan?.name || (chosenTier.charAt(0).toUpperCase() + chosenTier.slice(1) + ' Plan'),
+              amountPaise: calculatedAmountPaise,
+              billingCycle: cycle,
+              utr: trimmedUtr,
+              status: 'pending',
+              submittedAt: new Date(),
+            },
+          ],
+          createOptions,
+        );
+
+        tenant.subscriptionTier = chosenTier;
+        tenant.subscriptionStatus = nextSubscriptionStatus;
+        tenant.lastUtrRef = trimmedUtr;
+        tenant.lastPaymentSubmittedAt = new Date();
+        await tenant.save(createOptions);
+
+        return createdPayment;
+      });
+    } catch (txErr: any) {
+      if (txErr.code === 11000 || txErr.message?.includes('duplicate key') || txErr.message?.includes('Duplicate UTR')) {
+        res.status(409).json({
+          error: 'This UPI reference / UTR number has already been submitted. Please check the UTR and try again.',
+        });
+        return;
+      }
+      throw txErr;
+    }
 
     const updatedPayload: AuthUser = {
       ...req.user!,
-      subscriptionStatus: 'pending_approval',
+      subscriptionStatus: nextSubscriptionStatus,
       subscriptionTier: chosenTier,
       isActive: tenant.isActive,
     };
@@ -271,6 +365,7 @@ export async function submitPaymentUtr(
     res.cookie(AUTH_COOKIE, token, cookieOptions);
     res.status(200).json({
       user: updatedPayload,
+      paymentId: paymentRecord._id,
       message: 'Payment reference submitted successfully! Super-admin will verify and activate your library shortly.',
     });
   } catch (err) {
@@ -363,6 +458,20 @@ export async function me(req: Request, res: Response, next: NextFunction): Promi
       return;
     }
 
+    // Proactively sync past-due expiration if expired while active
+    const now = new Date();
+    if (
+      tenant.subscriptionStatus === 'active' &&
+      tenant.subscriptionExpiresAt &&
+      tenant.subscriptionExpiresAt < now
+    ) {
+      await Tenant.updateOne(
+        { _id: tenant._id, subscriptionStatus: 'active' },
+        { $set: { subscriptionStatus: 'past_due' } },
+      );
+      tenant.subscriptionStatus = 'past_due';
+    }
+
     const latestUser: AuthUser = {
       ...req.user,
       tenantName: tenant.name,
@@ -375,6 +484,7 @@ export async function me(req: Request, res: Response, next: NextFunction): Promi
       onboardingStep: tenant.onboardingStep,
       maxSeats: tenant.maxSeats,
       isActive: tenant.isActive,
+      logoUrl: tenant.logoUrl,
       whatsappReminderTemplate: tenant.whatsappReminderTemplate,
     };
 
@@ -499,6 +609,7 @@ const updateProfileSchema = z.object({
   city: z.string().trim().optional(),
   address: z.string().trim().optional(),
   libraryName: z.string().min(2, 'Library name must be at least 2 characters').trim().optional(),
+  logoUrl: z.string().optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string().min(6, 'New password must be at least 6 characters').optional(),
   whatsappReminderTemplate: z.string().max(2000).optional(),
@@ -533,6 +644,7 @@ export async function getProfile(req: Request, res: Response, next: NextFunction
           phone: tenant.phone,
           city: tenant.city,
           address: tenant.address,
+          logoUrl: tenant.logoUrl,
           whatsappReminderTemplate: tenant.whatsappReminderTemplate,
           subscriptionTier: tenant.subscriptionTier,
           subscriptionStatus: tenant.subscriptionStatus,
@@ -578,7 +690,7 @@ export async function updateProfile(req: Request, res: Response, next: NextFunct
       return;
     }
 
-    const { name, phone, city, address, libraryName, currentPassword, newPassword, whatsappReminderTemplate } = parsed.data;
+    const { name, phone, city, address, libraryName, logoUrl, currentPassword, newPassword, whatsappReminderTemplate } = parsed.data;
 
     // Load user with passwordHash
     const user = await User.findById(req.user.userId).select('+passwordHash');
@@ -616,6 +728,9 @@ export async function updateProfile(req: Request, res: Response, next: NextFunct
         if (libraryName && user.role === 'owner') {
           tenant.name = libraryName;
         }
+        if (logoUrl !== undefined && user.role === 'owner') {
+          tenant.logoUrl = logoUrl;
+        }
         if (phone !== undefined) {
           tenant.phone = phone;
         }
@@ -641,6 +756,7 @@ export async function updateProfile(req: Request, res: Response, next: NextFunct
       phone: updatedTenant?.phone ?? req.user.phone,
       city: updatedTenant?.city ?? req.user.city,
       address: updatedTenant?.address ?? req.user.address,
+      logoUrl: updatedTenant?.logoUrl ?? req.user.logoUrl,
       whatsappReminderTemplate: updatedTenant?.whatsappReminderTemplate ?? req.user.whatsappReminderTemplate,
     };
 
@@ -649,6 +765,60 @@ export async function updateProfile(req: Request, res: Response, next: NextFunct
 
     res.status(200).json({
       message: 'Profile updated successfully',
+      user: updatedAuthUser,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+const uploadLogoSchema = z.object({
+  image: z.string().min(1, 'Image data is required'),
+});
+
+/**
+ * POST /api/v1/auth/upload-logo
+ * Uploads library logo to Cloudinary and saves to tenant record.
+ */
+export async function uploadLogo(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user || !req.user.tenantId) {
+      res.status(401).json({ error: 'Unauthenticated or missing library tenant' });
+      return;
+    }
+
+    const parsed = uploadLogoSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        error: 'Validation failed',
+        details: parsed.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    const { image } = parsed.data;
+    const uploadedUrl = await uploadLogoToCloudinary(image, `tenant_${req.user.tenantId}_logos`);
+
+    const tenant = await Tenant.findById(req.user.tenantId);
+    if (!tenant) {
+      res.status(404).json({ error: 'Tenant not found' });
+      return;
+    }
+
+    tenant.logoUrl = uploadedUrl;
+    await tenant.save();
+
+    const updatedAuthUser: AuthUser = {
+      ...req.user,
+      logoUrl: uploadedUrl,
+    };
+
+    const token = generateToken(updatedAuthUser);
+    res.cookie(AUTH_COOKIE, token, cookieOptions);
+
+    res.status(200).json({
+      message: 'Logo uploaded successfully',
+      logoUrl: uploadedUrl,
       user: updatedAuthUser,
     });
   } catch (err) {

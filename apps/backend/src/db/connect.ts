@@ -66,6 +66,42 @@ export async function connectDB(): Promise<void> {
       // Do not block app startup if index migration encounters non-fatal condition
       console.warn('⚠️  Payment index check/migration notice:', (indexMigrationErr as Error).message);
     }
+
+    // Safe migration for SaasPayment unique UTR index:
+    // Check for any historical duplicate UTR records before creating unique index
+    try {
+      const saasPaymentCollection = mongoose.connection.collection('saaspayments');
+      const saasIndexes = await saasPaymentCollection.indexes();
+      const hasUniqueUtr = saasIndexes.some(
+        (idx) => idx.name === 'utr_1' && idx.unique === true,
+      );
+
+      if (!hasUniqueUtr) {
+        // Check if duplicate UTR records exist
+        const duplicates = await saasPaymentCollection
+          .aggregate([
+            { $group: { _id: '$utr', count: { $sum: 1 } } },
+            { $match: { count: { $gt: 1 } } },
+          ])
+          .toArray();
+
+        if (duplicates.length > 0) {
+          console.warn(
+            `⚠️  Cannot automatically create unique index on SaasPayment.utr: found ${duplicates.length} duplicate UTR(s). Please review and resolve duplicates before unique index creation.`,
+          );
+        } else {
+          // Drop old non-unique utr index if present
+          const oldUtrIndex = saasIndexes.find((idx) => idx.name === 'utr_1' && !idx.unique);
+          if (oldUtrIndex) {
+            await saasPaymentCollection.dropIndex('utr_1');
+          }
+          await saasPaymentCollection.createIndex({ utr: 1 }, { unique: true, background: true });
+          console.log('✅  SaasPayment unique UTR index successfully ensured.');
+        }
+      }
+    } catch (saasIdxErr) {
+      console.warn('⚠️  SaasPayment UTR index check notice:', (saasIdxErr as Error).message);
+    }
   } catch (error) {
     console.error(`❌  MongoDB connection failed → ${masked}`);
     throw error;

@@ -9,6 +9,7 @@ import { Payment } from '../models/Payment';
 import { getNextReceiptNumber } from '../models/Counter';
 
 import { syncExpiredMemberships } from '../services/membershipSync.service';
+import { normalizeDateBoundaries } from '../utils/date';
 
 const createMembershipSchema = z.object({
   studentId: z.string().min(1, 'Student ID is required'),
@@ -26,6 +27,7 @@ const createMembershipSchema = z.object({
   paymentDate: z.string().optional(),
   transactionRef: z.string().optional(),
   paymentNotes: z.string().optional(),
+  replaceExisting: z.boolean().optional(),
 });
 
 export async function createMembership(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -37,12 +39,43 @@ export async function createMembership(req: Request, res: Response, next: NextFu
     }
 
     const tenantId = req.user!.tenantId;
-    const { studentId, planId, shiftId, seatId, startDate, endDate, discountPaise = 0, discountReason, customFeePaise } = parsed.data;
+    const {
+      studentId,
+      planId,
+      shiftId,
+      seatId,
+      startDate: rawStartDate,
+      endDate: rawEndDate,
+      discountPaise = 0,
+      discountReason,
+      customFeePaise,
+      replaceExisting,
+    } = parsed.data;
+
+    const { startDate, endDate } = normalizeDateBoundaries(rawStartDate, rawEndDate);
 
     // Verify student belongs to this tenant
     const student = await Student.findOne({ _id: studentId, tenantId });
     if (!student) {
       res.status(404).json({ error: 'Student not found' });
+      return;
+    }
+
+    // Check if student already has an active membership whose validity extends beyond the new start date
+    const existingActiveMemberships = await Membership.find({
+      tenantId,
+      studentId,
+      status: 'active',
+      endDate: { $gte: startDate },
+    });
+
+    if (existingActiveMemberships.length > 0 && !replaceExisting) {
+      // If student already has an active, valid membership covering this time, prevent unintentional destruction
+      // Staff must either renew from the existing expiry date, or explicitly set replaceExisting: true.
+      res.status(409).json({
+        error: 'Student already has an active membership valid during this period. To renew, select a start date after the current end date, or confirm replacement.',
+        existingMembershipId: existingActiveMemberships[0]?._id,
+      });
       return;
     }
 
@@ -106,9 +139,9 @@ export async function createMembership(req: Request, res: Response, next: NextFu
         tenantId,
         seatId,
         studentId: { $ne: studentId }, // Allow student to renew their own seat
-        status: 'active',
-        startDate: { $lte: new Date(endDate) },
-        endDate: { $gte: new Date(startDate) },
+        status: { $in: ['active', 'expired'] },
+        startDate: { $lte: endDate },
+        endDate: { $gte: startDate },
         ...shiftCondition,
       });
 
@@ -123,10 +156,25 @@ export async function createMembership(req: Request, res: Response, next: NextFu
       await Seat.findByIdAndUpdate(seatId, { status: 'occupied' });
     }
 
-    // Terminate/Expire any existing active membership for this student
+    // If replacing an active membership or assigning after one that ended earlier,
+    // expire only prior memberships that ended on or before the new startDate or when explicitly replacing.
     await Membership.updateMany(
-      { tenantId, studentId, status: 'active' },
-      { $set: { status: 'expired' } },
+      {
+        tenantId,
+        studentId,
+        status: { $in: ['active', 'expired'] },
+        $or: [
+          { endDate: { $lte: startDate } },
+          ...(replaceExisting ? [{}] : []),
+        ],
+      },
+      {
+        $set: {
+          status: 'expired',
+          // If replaced by a new membership, clear the old membership's seatId so the seat belongs cleanly to the new membership
+          seatId: undefined,
+        },
+      },
     );
 
     const membership = await Membership.create({
@@ -136,8 +184,8 @@ export async function createMembership(req: Request, res: Response, next: NextFu
       shiftId: shiftId || undefined,
       seatId: seatId || undefined,
       seatType: plan.seatType,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
+      startDate,
+      endDate,
       status: 'active',
       feePaise: finalFee,
       originalFeePaise: originalFee,
@@ -160,6 +208,8 @@ export async function createMembership(req: Request, res: Response, next: NextFu
         tenantId,
         membershipId: membership._id,
         studentId,
+        studentName: student.name,
+        membershipNumber: student.membershipNumber,
         receiptNumber,
         amountPaise: initialPaymentPaise,
         paymentMethod: parsed.data.paymentMethod || 'cash',
@@ -361,6 +411,13 @@ export async function listMembershipsWithFilters(req: Request, res: Response, ne
     const query: Record<string, unknown> = { tenantId };
 
     if (filter === 'expired') {
+      // Exclude students who already have an active membership so renewed students don't appear in expired tab
+      const activeStudentIds = await Membership.distinct('studentId', {
+        tenantId,
+        status: 'active',
+        endDate: { $gte: startOfToday },
+      });
+      query['studentId'] = { $nin: activeStudentIds };
       query['status'] = 'expired';
     } else if (filter === 'expiring_3') {
       const threeDaysLater = new Date(startOfToday.getTime() + 3 * 24 * 60 * 60 * 1000);

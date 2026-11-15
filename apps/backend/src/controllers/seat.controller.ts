@@ -1,7 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { Seat } from '../models/Seat';
+import { Tenant } from '../models/Tenant';
 import { Membership } from '../models/Membership';
+import { withTransaction } from '../utils/transaction';
+import { ensureTenantSeatCountInitialized } from '../services/seatQuota.service';
 import type { SeatDTO, SeatStudentInfo } from '@atlas/shared';
 
 const bulkCreateSeatsSchema = z.object({
@@ -49,11 +52,11 @@ export async function listSeats(req: Request, res: Response, next: NextFunction)
       .collation({ locale: 'en', numericOrdering: true })
       .sort({ seatNumber: 1 });
 
-    // Fetch active memberships for this tenant to provide live occupancy & student details
-    // Any membership with status 'active' and an assigned seat occupies that seat until vacated/left/cancelled
-    const activeMemberships = await Membership.find({
+    // Fetch active or expired (not yet vacated/left) memberships for this tenant to provide live occupancy & student details
+    // A student keeps their desk until they are explicitly marked as left or their desk is vacated
+    const occupyingMemberships = await Membership.find({
       tenantId,
-      status: 'active',
+      status: { $in: ['active', 'expired'] },
       seatId: { $ne: null },
     })
       .populate('studentId', 'name mobile photoUrl membershipNumber')
@@ -61,8 +64,8 @@ export async function listSeats(req: Request, res: Response, next: NextFunction)
       .populate('shiftId', 'name');
 
     // Group memberships by seatId
-    const membershipsBySeatId = new Map<string, typeof activeMemberships>();
-    for (const m of activeMemberships) {
+    const membershipsBySeatId = new Map<string, typeof occupyingMemberships>();
+    for (const m of occupyingMemberships) {
       if (!m.seatId) continue;
       const sId = m.seatId.toString();
       const list = membershipsBySeatId.get(sId) || [];
@@ -255,36 +258,121 @@ export async function bulkCreateSeats(req: Request, res: Response, next: NextFun
     }
 
     const { prefix, startNumber, endNumber, section } = parsed.data;
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.user!.tenantId!;
 
-    const seatDocs = [];
-    for (let i = startNumber; i <= endNumber; i++) {
-      seatDocs.push({
-        tenantId,
-        seatNumber: `${prefix}${i}`,
-        section,
-        status: 'available' as const,
-      });
-    }
+    const requestedCount = endNumber - startNumber + 1;
 
-    // Insert with ordered: false to skip duplicates if any exist
-    try {
-      const inserted = await Seat.insertMany(seatDocs, { ordered: false });
-      res.status(201).json({ createdCount: inserted.length, seats: inserted });
-    } catch (err: unknown) {
-      // If bulk write error (e.g. some duplicate keys), handle gracefully
-      if (err && typeof err === 'object' && 'insertedDocs' in err) {
-        const partial = err as { insertedDocs: unknown[] };
-        res.status(201).json({
-          createdCount: partial.insertedDocs.length,
-          seats: partial.insertedDocs,
-          note: 'Some seats were skipped as duplicates',
-        });
-        return;
+    let insertedDocs: any[] = [];
+    let duplicateNote: string | undefined;
+
+    await withTransaction(async (session) => {
+      // 1. Fetch current tenant and ensure seat counter is initialized
+      const tenantQuery = Tenant.findById(tenantId);
+      if (session) tenantQuery.session(session);
+      const tenant = await tenantQuery;
+
+      if (!tenant) {
+        const err: any = new Error('Tenant not found');
+        err.status = 404;
+        throw err;
       }
-      throw err;
+
+      // Ensure counter is initialized from Seat collection if missing
+      const currentSeatCount = await ensureTenantSeatCountInitialized(tenantId, session);
+      const maxSeats = typeof tenant.maxSeats === 'number' ? tenant.maxSeats : 100;
+
+      // Check if requested seats would exceed maxSeats quota
+      if (currentSeatCount + requestedCount > maxSeats) {
+        const err: any = new Error(
+          `Cannot create ${requestedCount} seat(s). Limit is ${maxSeats} seats, and your library already has ${currentSeatCount} seat(s).`,
+        );
+        err.status = 403;
+        err.currentSeatCount = currentSeatCount;
+        err.maxSeats = maxSeats;
+        throw err;
+      }
+
+      // Concurrency protection: atomic check & lock using currentSeatCount in Tenant document
+      const lockOptions = session ? { session } : {};
+      const lockedTenant = await Tenant.findOneAndUpdate(
+        {
+          _id: tenantId,
+          $expr: {
+            $lte: [{ $add: ['$currentSeatCount', requestedCount] }, '$maxSeats'],
+          },
+        },
+        {
+          $inc: { currentSeatCount: requestedCount },
+        },
+        { new: true, ...lockOptions },
+      );
+
+      if (!lockedTenant) {
+        const err: any = new Error(
+          `Cannot create ${requestedCount} seat(s). Limit is ${maxSeats} seats, and your library already has ${currentSeatCount} seat(s).`,
+        );
+        err.status = 403;
+        err.currentSeatCount = currentSeatCount;
+        err.maxSeats = maxSeats;
+        throw err;
+      }
+
+      // 2. Prepare documents for insertion
+      const seatDocs = [];
+      for (let i = startNumber; i <= endNumber; i++) {
+        seatDocs.push({
+          tenantId,
+          seatNumber: `${prefix}${i}`,
+          section,
+          status: 'available' as const,
+        });
+      }
+
+      const insertOptions: any = { ordered: false };
+      if (session) insertOptions.session = session;
+
+      try {
+        insertedDocs = (await Seat.insertMany(seatDocs, insertOptions)) as any;
+        if (insertedDocs.length < requestedCount) {
+          // Adjust for any duplicates skipped
+          const skippedCount = requestedCount - insertedDocs.length;
+          await Tenant.updateOne({ _id: tenantId }, { $inc: { currentSeatCount: -skippedCount } }, lockOptions);
+        }
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'insertedDocs' in err) {
+          const partial = err as { insertedDocs: unknown[] };
+          insertedDocs = partial.insertedDocs as any[];
+          duplicateNote = 'Some seats were skipped as duplicates';
+          const skippedCount = requestedCount - insertedDocs.length;
+          await Tenant.updateOne({ _id: tenantId }, { $inc: { currentSeatCount: -skippedCount } }, lockOptions);
+        } else {
+          // Revert currentSeatCount increment on fatal error if not in transaction
+          if (!session) {
+            await Tenant.updateOne({ _id: tenantId }, { $inc: { currentSeatCount: -requestedCount } });
+          }
+          throw err;
+        }
+      }
+    });
+
+    res.status(201).json({
+      createdCount: insertedDocs.length,
+      seats: insertedDocs,
+      ...(duplicateNote ? { note: duplicateNote } : {}),
+    });
+  } catch (err: any) {
+    if (err.status === 403) {
+      res.status(403).json({
+        error: err.message,
+        currentSeatCount: err.currentSeatCount,
+        maxSeats: err.maxSeats,
+      });
+      return;
     }
-  } catch (err) {
+    if (err.status === 404) {
+      res.status(404).json({ error: err.message });
+      return;
+    }
     next(err);
   }
 }
@@ -298,24 +386,112 @@ export async function createSingleSeat(req: Request, res: Response, next: NextFu
     }
 
     const { seatNumber, section } = parsed.data;
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.user!.tenantId!;
 
-    // Check duplicate seatNumber within tenant
-    const existing = await Seat.findOne({ tenantId, seatNumber });
-    if (existing) {
-      res.status(409).json({ error: `Desk '${seatNumber}' already exists in your library` });
-      return;
-    }
+    let createdSeat: any;
 
-    const seat = await Seat.create({
-      tenantId,
-      seatNumber,
-      section,
-      status: 'available',
+    await withTransaction(async (session) => {
+      // 1. Fetch current tenant and ensure seat counter is initialized
+      const tenantQuery = Tenant.findById(tenantId);
+      if (session) tenantQuery.session(session);
+      const tenant = await tenantQuery;
+
+      if (!tenant) {
+        const err: any = new Error('Tenant not found');
+        err.status = 404;
+        throw err;
+      }
+
+      // Ensure counter is initialized from Seat collection if missing
+      const currentSeatCount = await ensureTenantSeatCountInitialized(tenantId, session);
+      const maxSeats = typeof tenant.maxSeats === 'number' ? tenant.maxSeats : 100;
+
+      if (currentSeatCount + 1 > maxSeats) {
+        const err: any = new Error(
+          `Cannot create seat. Limit is ${maxSeats} seats, and your library already has ${currentSeatCount} seat(s).`,
+        );
+        err.status = 403;
+        err.currentSeatCount = currentSeatCount;
+        err.maxSeats = maxSeats;
+        throw err;
+      }
+
+      // Check duplicate seatNumber within tenant
+      const existingQuery = Seat.findOne({ tenantId, seatNumber });
+      if (session) existingQuery.session(session);
+      const existing = await existingQuery;
+
+      if (existing) {
+        const err: any = new Error(`Desk '${seatNumber}' already exists in your library`);
+        err.status = 409;
+        throw err;
+      }
+
+      // Concurrency protection: atomic check & lock using currentSeatCount in Tenant document
+      const lockOptions = session ? { session } : {};
+      const lockedTenant = await Tenant.findOneAndUpdate(
+        {
+          _id: tenantId,
+          $expr: {
+            $lte: [{ $add: ['$currentSeatCount', 1] }, '$maxSeats'],
+          },
+        },
+        {
+          $inc: { currentSeatCount: 1 },
+        },
+        { new: true, ...lockOptions },
+      );
+
+      if (!lockedTenant) {
+        const err: any = new Error(
+          `Cannot create seat. Limit is ${maxSeats} seats, and your library already has ${currentSeatCount} seat(s).`,
+        );
+        err.status = 403;
+        err.currentSeatCount = currentSeatCount;
+        err.maxSeats = maxSeats;
+        throw err;
+      }
+
+      try {
+        const createOptions = session ? { session } : {};
+        const [seat] = await Seat.create(
+          [
+            {
+              tenantId,
+              seatNumber,
+              section,
+              status: 'available',
+            },
+          ],
+          createOptions,
+        );
+        createdSeat = seat;
+      } catch (insertErr) {
+        if (!session) {
+          await Tenant.updateOne({ _id: tenantId }, { $inc: { currentSeatCount: -1 } });
+        }
+        throw insertErr;
+      }
     });
 
-    res.status(201).json({ seat });
-  } catch (err) {
+    res.status(201).json({ seat: createdSeat });
+  } catch (err: any) {
+    if (err.status === 403) {
+      res.status(403).json({
+        error: err.message,
+        currentSeatCount: err.currentSeatCount,
+        maxSeats: err.maxSeats,
+      });
+      return;
+    }
+    if (err.status === 409) {
+      res.status(409).json({ error: err.message });
+      return;
+    }
+    if (err.status === 404) {
+      res.status(404).json({ error: err.message });
+      return;
+    }
     next(err);
   }
 }
@@ -366,31 +542,67 @@ export async function updateSeat(req: Request, res: Response, next: NextFunction
 export async function deleteSeat(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.user!.tenantId!;
 
-    // Prevent deletion if seat has active student membership
-    const active = await Membership.findOne({
-      tenantId,
-      seatId: id,
-      status: 'active',
-      endDate: { $gte: new Date() },
+    let deletedSeat: any;
+
+    await withTransaction(async (session) => {
+      // Ensure counter is initialized if missing
+      await ensureTenantSeatCountInitialized(tenantId, session);
+
+      // Prevent deletion if seat has active student membership
+      const membershipQuery = Membership.findOne({
+        tenantId,
+        seatId: id,
+        status: 'active',
+        endDate: { $gte: new Date() },
+      });
+      if (session) membershipQuery.session(session);
+      const active = await membershipQuery;
+
+      if (active) {
+        const err: any = new Error(
+          'Cannot delete desk because a student currently has an active membership assigned to it. Vacate or relocate the student first.',
+        );
+        err.status = 400;
+        throw err;
+      }
+
+      const deleteOptions = session ? { session } : {};
+      const seat = await Seat.findOneAndDelete({ _id: id, tenantId }, deleteOptions);
+      if (!seat) {
+        const err: any = new Error('Seat not found');
+        err.status = 404;
+        throw err;
+      }
+      deletedSeat = seat;
+
+      // Decrement tenant's currentSeatCount counter atomically inside transaction
+      await Tenant.updateOne(
+        { _id: tenantId },
+        [
+          {
+            $set: {
+              currentSeatCount: {
+                $max: [0, { $subtract: [{ $ifNull: ['$currentSeatCount', 1] }, 1] }],
+              },
+            },
+          },
+        ],
+        deleteOptions,
+      );
     });
 
-    if (active) {
-      res.status(400).json({
-        error: 'Cannot delete desk because a student currently has an active membership assigned to it. Vacate or relocate the student first.',
-      });
+    res.status(200).json({ message: `Desk '${deletedSeat.seatNumber}' deleted successfully` });
+  } catch (err: any) {
+    if (err.status === 400) {
+      res.status(400).json({ error: err.message });
       return;
     }
-
-    const seat = await Seat.findOneAndDelete({ _id: id, tenantId });
-    if (!seat) {
-      res.status(404).json({ error: 'Seat not found' });
+    if (err.status === 404) {
+      res.status(404).json({ error: err.message });
       return;
     }
-
-    res.status(200).json({ message: `Desk '${seat.seatNumber}' deleted successfully` });
-  } catch (err) {
     next(err);
   }
 }
@@ -398,38 +610,74 @@ export async function deleteSeat(req: Request, res: Response, next: NextFunction
 export async function deleteSeatsBySection(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { section } = req.query as { section?: string };
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.user!.tenantId!;
 
     if (!section || section.trim() === '' || section === 'all') {
       res.status(400).json({ error: 'A valid section name is required to delete' });
       return;
     }
 
-    // Find all seats in this section
-    const seats = await Seat.find({ tenantId, section });
-    const seatIds = seats.map(s => s._id);
+    let deletedCount = 0;
 
-    // Check if any seat in this section has an active membership
-    const active = await Membership.findOne({
-      tenantId,
-      seatId: { $in: seatIds },
-      status: 'active',
-      endDate: { $gte: new Date() },
+    await withTransaction(async (session) => {
+      // Ensure counter is initialized if missing
+      await ensureTenantSeatCountInitialized(tenantId, session);
+
+      // Find all seats in this section
+      const seatQuery = Seat.find({ tenantId, section });
+      if (session) seatQuery.session(session);
+      const seats = await seatQuery;
+      const seatIds = seats.map((s) => s._id);
+
+      // Check if any seat in this section has an active membership
+      const membershipQuery = Membership.findOne({
+        tenantId,
+        seatId: { $in: seatIds },
+        status: 'active',
+        endDate: { $gte: new Date() },
+      });
+      if (session) membershipQuery.session(session);
+      const active = await membershipQuery;
+
+      if (active) {
+        const err: any = new Error(
+          `Cannot delete section '${section}' because one or more desks currently have active student memberships. Vacate or relocate them first.`,
+        );
+        err.status = 400;
+        throw err;
+      }
+
+      const deleteOptions = session ? { session } : {};
+      const result = await Seat.deleteMany({ tenantId, section }, deleteOptions);
+      deletedCount = result.deletedCount;
+
+      // Decrement tenant's currentSeatCount counter by deleted count atomically inside transaction
+      if (result.deletedCount > 0) {
+        await Tenant.updateOne(
+          { _id: tenantId },
+          [
+            {
+              $set: {
+                currentSeatCount: {
+                  $max: [0, { $subtract: [{ $ifNull: ['$currentSeatCount', 0] }, result.deletedCount] }],
+                },
+              },
+            },
+          ],
+          deleteOptions,
+        );
+      }
     });
 
-    if (active) {
-      res.status(400).json({
-        error: `Cannot delete section '${section}' because one or more desks currently have active student memberships. Vacate or relocate them first.`,
-      });
+    res.status(200).json({
+      message: `Successfully deleted ${deletedCount} desks from section '${section}'`,
+      deletedCount,
+    });
+  } catch (err: any) {
+    if (err.status === 400) {
+      res.status(400).json({ error: err.message });
       return;
     }
-
-    const result = await Seat.deleteMany({ tenantId, section });
-    res.status(200).json({
-      message: `Successfully deleted ${result.deletedCount} desks from section '${section}'`,
-      deletedCount: result.deletedCount,
-    });
-  } catch (err) {
     next(err);
   }
 }

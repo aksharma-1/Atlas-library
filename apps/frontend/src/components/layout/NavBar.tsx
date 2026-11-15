@@ -12,8 +12,16 @@ export function NavBar() {
     <header className="flex h-14 sm:h-16 items-center justify-between border-b px-3.5 sm:px-6 glass-panel z-20 transition-colors">
       {/* Brand / Library name */}
       <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-        <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center !text-white shadow-md shadow-indigo-500/20 shrink-0">
-          <BookOpen className="h-4.5 w-4.5 sm:h-5 sm:w-5 !text-white text-white" />
+        <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center !text-white shadow-md shadow-indigo-500/20 shrink-0 overflow-hidden">
+          {user?.logoUrl ? (
+            <img
+              src={user.logoUrl}
+              alt={user.tenantName || 'Library Logo'}
+              className="h-full w-full object-cover rounded-xl"
+            />
+          ) : (
+            <BookOpen className="h-4.5 w-4.5 sm:h-5 sm:w-5 !text-white text-white" />
+          )}
         </div>
         <div className="min-w-0">
           <p className="text-xs sm:text-sm font-bold leading-tight truncate" style={{ color: 'var(--text-main)' }}>

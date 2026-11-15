@@ -4,6 +4,7 @@ export interface IStudent extends Document {
   _id: Types.ObjectId;
   tenantId: Types.ObjectId;
   name: string;
+  gender?: 'male' | 'female' | 'other';
   mobile: string;
   email?: string;
   membershipNumber: string;
@@ -25,6 +26,10 @@ const studentSchema = new Schema<IStudent>(
       type: String,
       required: true,
       trim: true,
+    },
+    gender: {
+      type: String,
+      enum: ['male', 'female', 'other'],
     },
     mobile: {
       type: String,

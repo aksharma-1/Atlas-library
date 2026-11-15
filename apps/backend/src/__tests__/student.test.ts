@@ -59,6 +59,7 @@ describe('Student Registration & Profile', () => {
       .set('Cookie', authCookie)
       .send({
         name: 'Rahul Sharma',
+        gender: 'male',
         mobile: '9876543210',
         email: 'rahul@example.com',
         address: 'Vijay Nagar, Indore',
@@ -66,6 +67,7 @@ describe('Student Registration & Profile', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.student.name).toBe('Rahul Sharma');
+    expect(res.body.student.gender).toBe('male');
     expect(res.body.student.membershipNumber).toMatch(/^MEM-/);
 
     const studentId = res.body.student._id;
@@ -75,6 +77,18 @@ describe('Student Registration & Profile', () => {
 
     expect(profileRes.status).toBe(200);
     expect(profileRes.body.student.name).toBe('Rahul Sharma');
+    expect(profileRes.body.student.gender).toBe('male');
+
+    // Test updating gender for existing student
+    const updateRes = await request(app)
+      .put(`/api/v1/students/${studentId}`)
+      .set('Cookie', authCookie)
+      .send({
+        gender: 'female',
+      });
+
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.student.gender).toBe('female');
   });
 });
 

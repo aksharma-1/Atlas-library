@@ -79,6 +79,8 @@ export async function loginUser(
     subscriptionExpiresAt: tenant.subscriptionExpiresAt ? tenant.subscriptionExpiresAt.toISOString() : undefined,
     maxSeats: tenant.maxSeats || 100,
     isActive: tenant.isActive,
+    logoUrl: tenant.logoUrl,
+    whatsappReminderTemplate: tenant.whatsappReminderTemplate,
   };
 
   const token = jwt.sign(payload, env.JWT_SECRET, {

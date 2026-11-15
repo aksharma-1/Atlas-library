@@ -31,6 +31,7 @@ export function useCreateStudent() {
   return useMutation({
     mutationFn: async (payload: {
       name: string;
+      gender?: 'male' | 'female' | 'other';
       mobile: string;
       email?: string;
       address?: string;
@@ -44,6 +45,7 @@ export function useCreateStudent() {
       discountPaise?: number;
       discountReason?: string;
       customFeePaise?: number;
+      replaceExisting?: boolean;
       initialPaymentAmountPaise?: number;
       paymentMethod?: 'cash' | 'upi' | 'card' | 'bank_transfer';
       paymentDate?: string;
@@ -79,6 +81,7 @@ export function useCreateMembership() {
       discountPaise?: number;
       discountReason?: string;
       customFeePaise?: number;
+      replaceExisting?: boolean;
       initialPaymentAmountPaise?: number;
       paymentMethod?: 'cash' | 'upi' | 'card' | 'bank_transfer';
       paymentDate?: string;
@@ -123,9 +126,17 @@ export function useRecordPayment() {
     },
     onSuccess: (data) => {
       toast.success(`Payment of ₹${(data.payment.amountPaise / 100).toFixed(0)} recorded successfully!`);
+      const studentId = typeof data.updatedMembership?.studentId === 'string'
+        ? data.updatedMembership.studentId
+        : (data.updatedMembership?.studentId as unknown as { _id?: string })?._id;
+      if (studentId) {
+        queryClient.invalidateQueries({ queryKey: ['students', studentId] });
+      }
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['seats'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
+      queryClient.invalidateQueries({ queryKey: ['revenueStats'] });
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
       toast.error(err?.response?.data?.error || 'Failed to record payment');
@@ -158,6 +169,7 @@ export function useUpdateStudent() {
     mutationFn: async ({ id, ...payload }: {
       id: string;
       name?: string;
+      gender?: 'male' | 'female' | 'other';
       mobile?: string;
       email?: string;
       address?: string;

@@ -42,16 +42,25 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
       Shift.countDocuments({ tenantId: tenantObjectId, isActive: true }),
       Student.countDocuments({ tenantId: tenantObjectId }),
       Membership.find({ tenantId: tenantObjectId, status: 'active' }).select('feePaise paidPaise'),
-      // Fetch distinct seats that currently have an active membership
+      // Fetch distinct seats that currently have an active or unvacated expired membership
       Membership.find({
         tenantId: tenantObjectId,
-        status: 'active',
+        status: { $in: ['active', 'expired'] },
         seatId: { $ne: null },
       }).select('seatId'),
-      Membership.countDocuments({
-        tenantId: tenantObjectId,
-        status: 'expired',
-      }),
+      // Expired count excluding students who have already renewed with an active membership
+      (async () => {
+        const activeStudentIds = await Membership.distinct('studentId', {
+          tenantId: tenantObjectId,
+          status: 'active',
+          endDate: { $gte: startOfToday },
+        });
+        return Membership.countDocuments({
+          tenantId: tenantObjectId,
+          status: 'expired',
+          studentId: { $nin: activeStudentIds },
+        });
+      })(),
       Membership.countDocuments({
         tenantId: tenantObjectId,
         status: 'active',
@@ -249,7 +258,11 @@ export async function getRevenueStats(req: Request, res: Response, next: NextFun
       Payment.find({ tenantId: tenantObjectId })
         .sort({ paymentDate: -1, createdAt: -1 })
         .limit(15)
-        .populate<{ studentId: { name: string; membershipNumber?: string } }>('studentId', 'name membershipNumber'),
+        .populate<{ studentId: { name: string; membershipNumber?: string } }>('studentId', 'name membershipNumber')
+        .populate<{ membershipId: { studentId?: { name: string; membershipNumber?: string } } }>({
+          path: 'membershipId',
+          populate: { path: 'studentId', select: 'name membershipNumber' },
+        }),
       // Active dues calculation
       Membership.find({ tenantId: tenantObjectId, status: 'active' }).select('feePaise paidPaise'),
     ]);
@@ -314,17 +327,41 @@ export async function getRevenueStats(req: Request, res: Response, next: NextFun
       };
     });
 
-    const recentTransactions = recentPayments.map((p) => ({
-      _id: p._id.toString(),
-      receiptNumber: p.receiptNumber,
-      studentName: p.studentId?.name || 'Unknown Student',
-      membershipNumber: p.studentId?.membershipNumber || '—',
-      amountPaise: p.amountPaise,
-      paymentMethod: p.paymentMethod,
-      transactionRef: p.transactionRef,
-      notes: p.notes,
-      createdAt: p.createdAt.toISOString(),
-    }));
+    const recentTransactions = recentPayments.map((p: any) => {
+      const studentObj = p.studentId;
+      const memStudentObj = p.membershipId?.studentId;
+
+      const rawName =
+        studentObj?.name ||
+        p.studentName ||
+        memStudentObj?.name ||
+        null;
+
+      const rawRoll =
+        studentObj?.membershipNumber ||
+        p.membershipNumber ||
+        memStudentObj?.membershipNumber ||
+        null;
+
+      const isStudentDeleted = !studentObj && !memStudentObj;
+
+      let studentName = rawName || 'Deleted Student';
+      if (rawName && isStudentDeleted) {
+        studentName = `${rawName} (Deleted)`;
+      }
+
+      return {
+        _id: p._id.toString(),
+        receiptNumber: p.receiptNumber,
+        studentName,
+        membershipNumber: rawRoll || '—',
+        amountPaise: p.amountPaise,
+        paymentMethod: p.paymentMethod,
+        transactionRef: p.transactionRef,
+        notes: p.notes,
+        createdAt: p.createdAt.toISOString(),
+      };
+    });
 
     const responseData: RevenueStatsDTO = {
       totalRevenuePaise,

@@ -39,7 +39,7 @@ export function Modal({
 
       {/* Dialog box / Mobile Bottom Sheet */}
       <div
-        className={`relative w-full ${maxWidthClass} rounded-t-3xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-2xl transition-all z-10 max-h-[92vh] overflow-y-auto text-slate-900 dark:text-slate-100`}
+        className={`relative w-full ${maxWidthClass} rounded-t-3xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-2xl transition-all z-10 max-h-[92vh] overflow-y-auto overflow-x-hidden text-slate-900 dark:text-slate-100`}
       >
         <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-5">
           <div className="flex items-center gap-3">

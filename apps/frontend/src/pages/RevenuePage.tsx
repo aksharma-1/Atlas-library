@@ -304,8 +304,19 @@ export function RevenuePage() {
                       {tx.receiptNumber}
                     </td>
                     <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">
-                      {tx.studentName}
-                      {tx.membershipNumber && (
+                      {tx.studentName.includes('(Deleted)') ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-500 dark:text-slate-400 line-through">
+                            {tx.studentName.replace(' (Deleted)', '')}
+                          </span>
+                          <span className="rounded px-1.5 py-0.2 text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                            Deleted
+                          </span>
+                        </div>
+                      ) : (
+                        tx.studentName
+                      )}
+                      {tx.membershipNumber && tx.membershipNumber !== '—' && (
                         <span className="ml-1.5 text-[10px] text-slate-400 font-mono font-normal">
                           ({tx.membershipNumber})
                         </span>

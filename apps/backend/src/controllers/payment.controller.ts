@@ -58,6 +58,9 @@ export async function recordPayment(req: Request, res: Response, next: NextFunct
       return;
     }
 
+    // Fetch student to snapshot their name and roll number permanently on the payment
+    const student = await (await import('../models/Student')).Student.findOne({ _id: membership.studentId, tenantId });
+
     // Atomically generate collision-proof receipt number (e.g. REC-2026-0001)
     const receiptNumber = await getNextReceiptNumber(tenantId);
 
@@ -65,6 +68,8 @@ export async function recordPayment(req: Request, res: Response, next: NextFunct
       tenantId,
       membershipId: membership._id,
       studentId: membership.studentId,
+      studentName: student?.name,
+      membershipNumber: student?.membershipNumber,
       receiptNumber,
       amountPaise,
       paymentMethod,
@@ -110,7 +115,14 @@ export async function getReceipt(req: Request, res: Response, next: NextFunction
 
     const payment = await Payment.findOne({ _id: id, tenantId })
       .populate('studentId', 'name mobile membershipNumber address')
-      .populate('membershipId');
+      .populate({
+        path: 'membershipId',
+        populate: [
+          { path: 'planId', select: 'name feePaise durationDays seatType' },
+          { path: 'shiftId', select: 'name startTime endTime' },
+          { path: 'seatId', select: 'seatNumber' },
+        ],
+      });
 
     if (!payment) {
       res.status(404).json({ error: 'Payment receipt not found' });

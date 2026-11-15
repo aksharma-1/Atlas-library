@@ -5,6 +5,7 @@ import { Modal } from './ui/Modal';
 import { Printer, ShieldCheck, MapPin, Phone, Calendar, Clock, BookOpen, Share2, Download } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import toast from 'react-hot-toast';
+import { useAuth } from '../hooks/useAuth';
 
 export interface PrintableCardProps {
   isOpen: boolean;
@@ -12,9 +13,19 @@ export interface PrintableCardProps {
   student: StudentDTO;
   membership?: MembershipDTO;
   tenantName?: string;
+  logoUrl?: string;
 }
 
-export function PrintableCard({ isOpen, onClose, student, membership, tenantName = 'StudySpace Library' }: PrintableCardProps) {
+export function PrintableCard({
+  isOpen,
+  onClose,
+  student,
+  membership,
+  tenantName = 'StudySpace Library',
+  logoUrl: propLogoUrl,
+}: PrintableCardProps) {
+  const { user } = useAuth();
+  const effectiveLogoUrl = propLogoUrl || user?.logoUrl;
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handlePrint = () => {
@@ -138,8 +149,18 @@ export function PrintableCard({ isOpen, onClose, student, membership, tenantName
           >
             {/* Header Banner */}
             <div className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-700 px-5 py-3 flex items-center justify-between text-white shadow-sm">
-              <div className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-indigo-100" />
+              <div className="flex items-center gap-2.5">
+                {effectiveLogoUrl ? (
+                  <div className="h-8 w-8 rounded-lg overflow-hidden bg-white/20 p-0.5 shrink-0 border border-white/30 flex items-center justify-center">
+                    <img
+                      src={effectiveLogoUrl}
+                      alt={tenantName}
+                      className="h-full w-full object-cover rounded-md"
+                    />
+                  </div>
+                ) : (
+                  <BookOpen className="h-5 w-5 text-indigo-100" />
+                )}
                 <div>
                   <h3 className="text-sm font-black tracking-wider uppercase leading-none drop-shadow-sm">
                     {tenantName}
@@ -255,11 +276,11 @@ export function PrintableCard({ isOpen, onClose, student, membership, tenantName
         </div>
 
         {/* Modal Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
           <p className="text-xs text-slate-500 dark:text-slate-400 text-center sm:text-left">
             Save as image, share on WhatsApp or print physical card.
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-2">
+          <div className="flex items-center justify-center sm:justify-end gap-2 flex-wrap sm:flex-nowrap">
             <button
               type="button"
               onClick={handleDownloadImage}
@@ -274,7 +295,7 @@ export function PrintableCard({ isOpen, onClose, student, membership, tenantName
               type="button"
               onClick={handleShareWhatsApp}
               disabled={isGenerating}
-              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3.5 py-2 text-xs font-semibold !text-white shadow-sm transition disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3.5 py-2 text-xs font-semibold !text-white shadow-sm transition disabled:opacity-50 whitespace-nowrap"
               title="Send to student's WhatsApp"
             >
               <Share2 className="h-3.5 w-3.5" />
@@ -283,7 +304,7 @@ export function PrintableCard({ isOpen, onClose, student, membership, tenantName
             <button
               type="button"
               onClick={handlePrint}
-              className="flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-xs font-semibold !text-white shadow-sm transition"
+              className="flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-xs font-semibold !text-white shadow-sm transition whitespace-nowrap"
             >
               <Printer className="h-3.5 w-3.5" />
               <span>Print</span>

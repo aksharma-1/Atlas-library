@@ -31,8 +31,12 @@ export interface ITenant extends Document {
   lastPaymentSubmittedAt?: Date;
   /** Max seat inventory capacity allowed */
   maxSeats: number;
+  /** Denormalized current total seats configured in library */
+  currentSeatCount?: number;
   /** Custom WhatsApp reminder template with variables */
   whatsappReminderTemplate?: string;
+  /** Library Logo URL hosted on Cloudinary or external storage */
+  logoUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -74,6 +78,10 @@ const tenantSchema = new Schema<ITenant>(
       type: String,
       trim: true,
     },
+    logoUrl: {
+      type: String,
+      trim: true,
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -104,6 +112,12 @@ const tenantSchema = new Schema<ITenant>(
     maxSeats: {
       type: Number,
       default: 100,
+    },
+    currentSeatCount: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
     },
   },
   {

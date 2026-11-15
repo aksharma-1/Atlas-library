@@ -306,6 +306,7 @@ export function SeatsPage() {
         seatId: assignStudentModal._id,
         startDate: assignStartDate,
         endDate: assignEndDate,
+        replaceExisting: true,
       },
       {
         onSuccess: () => {

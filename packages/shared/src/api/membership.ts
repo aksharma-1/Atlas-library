@@ -6,6 +6,7 @@ export interface StudentDTO {
   _id: string;
   tenantId: string;
   name: string;
+  gender?: 'male' | 'female' | 'other';
   mobile: string;
   email?: string;
   membershipNumber: string;
@@ -54,8 +55,10 @@ export type PaymentMethod = 'cash' | 'upi' | 'card' | 'bank_transfer';
 export interface PaymentDTO {
   _id: string;
   tenantId: string;
-  membershipId: string;
+  membershipId: string | MembershipDTO;
   studentId: string;
+  studentName?: string;
+  membershipNumber?: string;
   receiptNumber: string;
   amountPaise: number;
   paymentMethod: PaymentMethod;

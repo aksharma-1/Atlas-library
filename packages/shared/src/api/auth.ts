@@ -37,6 +37,7 @@ export interface AuthUser {
   maxSeats?: number;
   isActive?: boolean;
   whatsappReminderTemplate?: string;
+  logoUrl?: string;
 }
 
 /** Payload for updating user & library profile */
@@ -46,6 +47,7 @@ export interface UpdateProfileRequest {
   city?: string;
   address?: string;
   libraryName?: string;
+  logoUrl?: string;
   currentPassword?: string;
   newPassword?: string;
   whatsappReminderTemplate?: string;
@@ -68,6 +70,7 @@ export interface UserProfileDTO {
     phone?: string;
     city?: string;
     address?: string;
+    logoUrl?: string;
     whatsappReminderTemplate?: string;
     subscriptionTier?: string;
     subscriptionStatus?: SubscriptionStatus;

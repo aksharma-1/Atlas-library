@@ -2,6 +2,8 @@ import { env } from './config/env';
 import { connectDB, disconnectDB } from './db/connect';
 import { createApp } from './app';
 import { syncExpiredMemberships } from './services/membershipSync.service';
+import { syncExpiredSaasSubscriptions } from './services/saasExpirySync.service';
+import { initializeMissingTenantSeatCounts } from './services/seatQuota.service';
 
 /**
  * Application entry point.
@@ -9,15 +11,28 @@ import { syncExpiredMemberships } from './services/membershipSync.service';
  * Startup sequence:
  *   1. Env vars are validated synchronously when env.ts is imported.
  *   2. MongoDB connection is established.
- *   3. Express app is created and the HTTP server starts.
- *   4. Graceful shutdown handlers are registered.
+ *   3. Missing seat counters are safely initialized.
+ *   4. Expired SaaS tenant subscriptions are reconciled to 'past_due'.
+ *   5. Express app is created and the HTTP server starts.
+ *   6. Graceful shutdown handlers are registered.
  */
 async function main(): Promise<void> {
   // Connect to MongoDB before accepting requests
   await connectDB();
 
+  // Safely initialize missing seat counters for existing tenants before serving requests
+  await initializeMissingTenantSeatCounts();
+
+  // Reconcile any expired SaaS tenant subscriptions before serving requests
+  await syncExpiredSaasSubscriptions();
+
   // Run initial sync of expired memberships across all tenants on boot
   syncExpiredMemberships().catch((err) => console.error('Initial expiry sync error:', err));
+
+  // Periodic hourly sync of expired SaaS tenant subscriptions
+  setInterval(() => {
+    syncExpiredSaasSubscriptions().catch((err) => console.error('Periodic SaaS expiry sync error:', err));
+  }, 60 * 60 * 1000);
 
   // Periodic hourly sync of expired memberships
   setInterval(() => {

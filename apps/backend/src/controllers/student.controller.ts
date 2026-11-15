@@ -6,9 +6,11 @@ import { Payment } from '../models/Payment';
 import { Plan } from '../models/Plan';
 import { Seat } from '../models/Seat';
 import { getNextReceiptNumber } from '../models/Counter';
+import { normalizeDateBoundaries } from '../utils/date';
 
 const registerStudentSchema = z.object({
   name: z.string().min(1, 'Name is required').trim(),
+  gender: z.enum(['male', 'female', 'other']).optional(),
   mobile: z.string().min(10, 'Valid mobile number is required').trim(),
   email: z.string().email().optional().or(z.literal('')),
   membershipNumber: z.string().optional(),
@@ -115,6 +117,7 @@ export async function createStudent(req: Request, res: Response, next: NextFunct
     const student = await Student.create({
       tenantId,
       name: parsed.data.name,
+      gender: parsed.data.gender,
       mobile: parsed.data.mobile,
       email: parsed.data.email || undefined,
       membershipNumber,
@@ -151,10 +154,9 @@ export async function createStudent(req: Request, res: Response, next: NextFunct
         }
 
         const now = new Date();
-        const start = parsed.data.startDate ? new Date(parsed.data.startDate) : now;
-        const end = parsed.data.endDate
-          ? new Date(parsed.data.endDate)
-          : new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const rawStart = parsed.data.startDate || now;
+        const rawEnd = parsed.data.endDate || new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const { startDate: start, endDate: end } = normalizeDateBoundaries(rawStart, rawEnd);
 
         // Determine final fee with discount / custom fee negotiation
         const originalFee = plan.feePaise;
@@ -202,6 +204,8 @@ export async function createStudent(req: Request, res: Response, next: NextFunct
             tenantId,
             membershipId: createdMembership._id,
             studentId: student._id,
+            studentName: student.name,
+            membershipNumber: student.membershipNumber,
             receiptNumber,
             amountPaise: initialPaymentPaise,
             paymentMethod: parsed.data.paymentMethod || 'cash',
@@ -245,7 +249,11 @@ export async function getStudentProfile(req: Request, res: Response, next: NextF
       Payment.find({ studentId: id, tenantId }).sort({ createdAt: -1 }),
     ]);
 
-    const rawActiveMembership = memberships.find((m) => m.status === 'active');
+    // Priority 1: explicitly active membership
+    // Priority 2: latest membership that is not left or cancelled (e.g. expired or grace period)
+    const rawActiveMembership =
+      memberships.find((m) => m.status === 'active') ||
+      memberships.find((m) => m.status !== 'left' && m.status !== 'cancelled');
     
     // Flatten populated fields (seatNumber, planName, shiftName, shift hours) onto activeMembership for reliable client display
     let activeMembership: Record<string, unknown> | undefined = undefined;
@@ -278,6 +286,7 @@ export async function getStudentProfile(req: Request, res: Response, next: NextF
 
 const updateStudentSchema = z.object({
   name: z.string().min(1, 'Name is required').trim().optional(),
+  gender: z.enum(['male', 'female', 'other']).optional(),
   mobile: z.string().min(10, 'Valid mobile number is required').trim().optional(),
   email: z.string().email().optional().or(z.literal('')),
   membershipNumber: z.string().optional(),
@@ -349,6 +358,18 @@ export async function deleteStudent(req: Request, res: Response, next: NextFunct
       m.status = 'cancelled';
       await m.save();
     }
+
+    // Backfill any historical payment records for this student with their name & membership number
+    // before deleting the student document, ensuring revenue ledger permanently retains their identity.
+    await Payment.updateMany(
+      { studentId: id, tenantId },
+      {
+        $set: {
+          studentName: student.name,
+          membershipNumber: student.membershipNumber,
+        },
+      },
+    );
 
     // Delete student
     await Student.deleteOne({ _id: id, tenantId });

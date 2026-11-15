@@ -10,6 +10,7 @@ import {
   resetPassword,
   getProfile,
   updateProfile,
+  uploadLogo,
 } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/authenticate';
 import { authLimiter, passwordResetLimiter } from '../middleware/rateLimiter';
@@ -39,6 +40,9 @@ authRouter.get('/profile', authenticate, getProfile);
 
 /** PUT  /api/v1/auth/profile — protected update user profile */
 authRouter.put('/profile', authenticate, updateProfile);
+
+/** POST /api/v1/auth/upload-logo — protected upload library logo */
+authRouter.post('/upload-logo', authenticate, uploadLogo);
 
 /** POST /api/v1/auth/configure-library — protected onboarding step 2 */
 authRouter.post('/configure-library', authenticate, configureLibrary);

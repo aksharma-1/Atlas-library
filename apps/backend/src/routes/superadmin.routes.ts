@@ -4,6 +4,8 @@ import {
   requireSuperAdmin,
   listAllTenants,
   approveTenantSubscription,
+  rejectTenantSubscription,
+  getTenantSaasPayments,
   toggleTenantStatus,
   resetTenantPasswordByAdmin,
 } from '../controllers/superadmin.controller';
@@ -22,6 +24,8 @@ superadminRouter.use(authenticate, requireSuperAdmin);
 
 superadminRouter.get('/tenants', listAllTenants);
 superadminRouter.post('/tenants/:id/approve', approveTenantSubscription);
+superadminRouter.post('/tenants/:id/reject', rejectTenantSubscription);
+superadminRouter.get('/tenants/:id/payments', getTenantSaasPayments);
 superadminRouter.post('/tenants/:id/toggle-status', toggleTenantStatus);
 superadminRouter.post('/tenants/:id/reset-password', resetTenantPasswordByAdmin);
 

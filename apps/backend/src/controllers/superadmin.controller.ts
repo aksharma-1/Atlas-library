@@ -4,6 +4,8 @@ import { User } from '../models/User';
 import { Seat } from '../models/Seat';
 import { Student } from '../models/Student';
 import { SaasPlan } from '../models/SaasPlan';
+import { SaasPayment } from '../models/SaasPayment';
+import { withTransaction } from '../utils/transaction';
 
 /**
  * Middleware: requireSuperAdmin
@@ -76,6 +78,7 @@ export async function approveTenantSubscription(req: Request, res: Response, nex
     }
 
     // Extend from existing expiration if active, or from today if expired/new
+    const startDate = new Date();
     const baseDate = tenant.subscriptionExpiresAt && tenant.subscriptionExpiresAt > new Date()
       ? new Date(tenant.subscriptionExpiresAt)
       : new Date();
@@ -85,23 +88,77 @@ export async function approveTenantSubscription(req: Request, res: Response, nex
     tenant.subscriptionStatus = 'active';
     tenant.onboardingStep = 'completed';
     tenant.subscriptionExpiresAt = baseDate;
-    await tenant.save();
 
-    // Ensure initial desks exist
-    const existingSeats = await Seat.countDocuments({ tenantId: tenant._id });
-    if (existingSeats === 0) {
-      const initialDeskCount = Math.min(tenant.maxSeats, 30);
-      const seatsToCreate = [];
-      for (let i = 1; i <= initialDeskCount; i++) {
-        seatsToCreate.push({
-          tenantId: tenant._id,
-          seatNumber: `A-${String(i).padStart(2, '0')}`,
-          section: 'Main Study Hall',
-          status: 'available',
-        });
+    // Use MongoDB transaction to ensure Tenant update and SaasPayment update succeed atomically
+    await withTransaction(async (session) => {
+      const saveOptions = session ? { session } : {};
+      await tenant.save(saveOptions);
+
+      // Reconcile and update the corresponding SaasPayment record (if any pending)
+      const paymentQuery = SaasPayment.findOne({
+        tenantId: tenant._id,
+        status: 'pending',
+      }).sort({ submittedAt: -1 });
+      if (session) paymentQuery.session(session);
+      const latestPayment = await paymentQuery;
+
+      if (latestPayment) {
+        latestPayment.status = 'approved';
+        latestPayment.decidedAt = new Date();
+        latestPayment.decidedBy = req.user?.userId ? (req.user.userId as any) : undefined;
+        latestPayment.validityStartDate = startDate;
+        latestPayment.validityEndDate = baseDate;
+        await latestPayment.save(saveOptions);
+      } else if (tenant.lastUtrRef) {
+        // Create explicit approved audit entry even if payment was submitted earlier
+        await SaasPayment.create(
+          [
+            {
+              tenantId: tenant._id,
+              saasPlanId: saasPlan?._id,
+              planCode: tenant.subscriptionTier,
+              planName: saasPlan?.name || tenant.subscriptionTier,
+              amountPaise: (saasPlan?.monthlyPrice || 999) * 100,
+              billingCycle: parseInt(days, 10) >= 360 ? 'yearly' : 'monthly',
+              utr: tenant.lastUtrRef,
+              status: 'approved',
+              submittedAt: tenant.lastPaymentSubmittedAt || new Date(),
+              decidedAt: new Date(),
+              decidedBy: req.user?.userId ? (req.user.userId as any) : undefined,
+              validityStartDate: startDate,
+              validityEndDate: baseDate,
+            },
+          ],
+          saveOptions,
+        );
       }
-      await Seat.insertMany(seatsToCreate);
-    }
+
+      // Ensure initial desks exist
+      const seatCountQuery = Seat.countDocuments({ tenantId: tenant._id });
+      if (session) seatCountQuery.session(session);
+      const existingSeats = await seatCountQuery;
+
+      if (existingSeats === 0) {
+        const initialDeskCount = Math.min(tenant.maxSeats, 30);
+        const seatsToCreate = [];
+        for (let i = 1; i <= initialDeskCount; i++) {
+          seatsToCreate.push({
+            tenantId: tenant._id,
+            seatNumber: `A-${String(i).padStart(2, '0')}`,
+            section: 'Main Study Hall',
+            status: 'available',
+          });
+        }
+        await Seat.insertMany(seatsToCreate, saveOptions);
+
+        // Synchronize tenant's currentSeatCount with seeded desks
+        await Tenant.updateOne(
+          { _id: tenant._id },
+          { $set: { currentSeatCount: seatsToCreate.length } },
+          saveOptions,
+        );
+      }
+    });
 
     res.status(200).json({
       message: `Successfully approved & activated subscription for "${tenant.name}" for ${days} days!`,
@@ -185,3 +242,74 @@ export async function resetTenantPasswordByAdmin(req: Request, res: Response, ne
     next(err);
   }
 }
+
+/**
+ * POST /api/v1/superadmin/tenants/:id/reject-subscription
+ * Super-admin rejects an invalid/uncredited UPI payment reference with a reason.
+ */
+export async function rejectTenantSubscription(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const { reason = 'Invalid or unverified UPI transaction reference' } = req.body;
+
+    const tenant = await Tenant.findById(id);
+    if (!tenant) {
+      res.status(404).json({ error: 'Tenant not found' });
+      return;
+    }
+
+    const now = new Date();
+    const isStillValid =
+      tenant.subscriptionExpiresAt && tenant.subscriptionExpiresAt > now;
+
+    // If tenant still has a valid future expiration date, reject the pending renewal
+    // without deactivating their current subscription (retain 'active').
+    // If tenant has no valid subscription (already past_due or pending_payment), keep them blocked as 'pending_payment'.
+    tenant.subscriptionStatus = isStillValid ? 'active' : 'pending_payment';
+
+    // Use MongoDB transaction to ensure Tenant and SaasPayment updates succeed atomically
+    await withTransaction(async (session) => {
+      const saveOptions = session ? { session } : {};
+      await tenant.save(saveOptions);
+
+      // Mark the pending SaasPayment record as rejected
+      const paymentQuery = SaasPayment.findOne({
+        tenantId: tenant._id,
+        status: 'pending',
+      }).sort({ submittedAt: -1 });
+      if (session) paymentQuery.session(session);
+      const latestPayment = await paymentQuery;
+
+      if (latestPayment) {
+        latestPayment.status = 'rejected';
+        latestPayment.decidedAt = new Date();
+        latestPayment.decidedBy = req.user?.userId ? (req.user.userId as any) : undefined;
+        latestPayment.rejectionReason = String(reason).trim();
+        await latestPayment.save(saveOptions);
+      }
+    });
+
+    res.status(200).json({
+      message: `Subscription payment for "${tenant.name}" was rejected.`,
+      tenant,
+      rejectionReason: reason,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/v1/superadmin/tenants/:id/payments
+ * Fetches the permanent SaaS payment history audit trail for a specific tenant.
+ */
+export async function getTenantSaasPayments(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const payments = await SaasPayment.find({ tenantId: id }).sort({ submittedAt: -1 }).lean();
+    res.status(200).json({ payments });
+  } catch (err) {
+    next(err);
+  }
+}
+

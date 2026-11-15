@@ -48,6 +48,25 @@ export interface UpdateSaasPlanRequest {
   sortOrder?: number;
 }
 
+export interface SaasPaymentDTO {
+  _id: string;
+  tenantId: string;
+  saasPlanId?: string;
+  planCode: string;
+  planName: string;
+  amountPaise: number;
+  billingCycle: 'monthly' | 'yearly';
+  utr: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: string;
+  decidedAt?: string;
+  decidedBy?: string;
+  rejectionReason?: string;
+  validityStartDate?: string;
+  validityEndDate?: string;
+  createdAt: string;
+}
+
 export interface UpdatePlatformConfigRequest {
   yearlyDiscountPercent?: number;
   upiId?: string;

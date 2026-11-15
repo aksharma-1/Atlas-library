@@ -34,7 +34,7 @@ export async function requireActiveTenant(
   }
 
   try {
-    const tenant = await Tenant.findById(user.tenantId).select('isActive subscriptionStatus');
+    const tenant = await Tenant.findById(user.tenantId).select('isActive subscriptionStatus subscriptionExpiresAt');
     if (!tenant) {
       res.status(404).json({ error: 'Library not found' });
       return;
@@ -44,6 +44,28 @@ export async function requireActiveTenant(
       res.status(403).json({
         error: 'Your library account has been suspended by the platform administrator. Please contact support.',
         code: 'TENANT_SUSPENDED',
+      });
+      return;
+    }
+
+    const now = new Date();
+
+    // Check if subscription has expired based on expiration date
+    if (tenant.subscriptionExpiresAt && tenant.subscriptionExpiresAt < now) {
+      // Inline transition to 'past_due' if currently marked 'active'
+      if (tenant.subscriptionStatus === 'active') {
+        await Tenant.updateOne(
+          { _id: tenant._id, subscriptionStatus: 'active' },
+          { $set: { subscriptionStatus: 'past_due' } },
+        );
+        tenant.subscriptionStatus = 'past_due';
+      }
+
+      res.status(402).json({
+        error: 'Your library subscription has expired. Please renew your subscription to continue accessing StudyOS.',
+        code: 'SUBSCRIPTION_EXPIRED',
+        status: tenant.subscriptionStatus,
+        subscriptionExpiresAt: tenant.subscriptionExpiresAt.toISOString(),
       });
       return;
     }

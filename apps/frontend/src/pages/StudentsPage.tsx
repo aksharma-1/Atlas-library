@@ -55,6 +55,7 @@ export function StudentsPage() {
 
   // Form states for Create
   const [name, setName] = useState('');
+  const [gender, setGender] = useState<'male' | 'female' | 'other' | ''>('');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
@@ -83,6 +84,7 @@ export function StudentsPage() {
   // Edit Student state
   const [editingStudent, setEditingStudent] = useState<StudentDTO | null>(null);
   const [editName, setEditName] = useState('');
+  const [editGender, setEditGender] = useState<'male' | 'female' | 'other' | ''>('');
   const [editMobile, setEditMobile] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editAddress, setEditAddress] = useState('');
@@ -249,6 +251,7 @@ export function StudentsPage() {
     createStudent.mutate(
       {
         name,
+        gender: gender || undefined,
         mobile,
         email: email || undefined,
         address: address || undefined,
@@ -284,6 +287,7 @@ export function StudentsPage() {
         onSuccess: () => {
           setShowRegisterModal(false);
           setName('');
+          setGender('');
           setMobile('');
           setEmail('');
           setAddress('');
@@ -308,6 +312,7 @@ export function StudentsPage() {
   const handleStartEdit = (s: StudentDTO) => {
     setEditingStudent(s);
     setEditName(s.name);
+    setEditGender(s.gender || '');
     setEditMobile(s.mobile);
     setEditEmail(s.email || '');
     setEditAddress(s.address || '');
@@ -323,6 +328,7 @@ export function StudentsPage() {
       {
         id: editingStudent._id,
         name: editName,
+        gender: editGender || undefined,
         mobile: editMobile,
         email: editEmail,
         address: editAddress,
@@ -582,9 +588,25 @@ export function StudentsPage() {
                           </div>
                         )}
                         <div>
-                          <p className="font-semibold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                            {s.name}
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-semibold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                              {s.name}
+                            </p>
+                            {s.gender && (
+                              <span
+                                className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
+                                  s.gender === 'female'
+                                    ? 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border border-pink-500/20'
+                                    : s.gender === 'male'
+                                    ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'
+                                    : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+                                }`}
+                                title={`Gender: ${s.gender}`}
+                              >
+                                {s.gender === 'female' ? '♀ Female' : s.gender === 'male' ? '♂ Male' : '⚧ Other'}
+                              </span>
+                            )}
+                          </div>
                           {s.email && <p className="text-xs text-slate-400">{s.email}</p>}
                         </div>
                       </td>
@@ -1084,6 +1106,32 @@ export function StudentsPage() {
             </div>
 
             <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Gender (Optional)
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: 'male', label: '👨 Male' },
+                  { value: 'female', label: '👩 Female' },
+                  { value: 'other', label: '⚧ Other' },
+                ].map((g) => (
+                  <button
+                    key={g.value}
+                    type="button"
+                    onClick={() => setEditGender(editGender === g.value ? '' : (g.value as any))}
+                    className={`rounded-xl py-2 px-3 text-xs font-semibold border transition text-center ${
+                      editGender === g.value
+                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email</label>
               <input
                 type="email"
@@ -1183,6 +1231,32 @@ export function StudentsPage() {
                     required
                   />
                 </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Gender (Optional)
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: 'male', label: '👨 Male' },
+                  { value: 'female', label: '👩 Female' },
+                  { value: 'other', label: '⚧ Other' },
+                ].map((g) => (
+                  <button
+                    key={g.value}
+                    type="button"
+                    onClick={() => setGender(gender === g.value ? '' : (g.value as any))}
+                    className={`rounded-xl py-2 px-3 text-xs font-semibold border transition text-center ${
+                      gender === g.value
+                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {g.label}
+                  </button>
+                ))}
               </div>
             </div>
 
