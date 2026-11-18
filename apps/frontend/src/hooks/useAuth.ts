@@ -34,6 +34,7 @@ export function useAuth() {
     queryKey: ME_KEY,
     queryFn: fetchMe,
     retry: false,
+    refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000, // 5 min — re-fetch only when stale
   });
 

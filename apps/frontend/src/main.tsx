@@ -9,17 +9,15 @@ import App from './App.tsx';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Don't retry on 401 — the user simply isn't logged in
-      retry: (failureCount, error: unknown) => {
-        if (
-          error instanceof Error &&
-          'status' in error &&
-          (error as { status: number }).status === 401
-        ) {
+      // Don't retry on 401 / 403 or Axios errors with status 401/403 — the user simply isn't logged in
+      retry: (failureCount, error: any) => {
+        const status = error?.response?.status ?? error?.status;
+        if (status === 401 || status === 403) {
           return false;
         }
         return failureCount < 2;
       },
+      refetchOnWindowFocus: false, // Don't refetch on tab focus to avoid spamming /me
     },
   },
 });
