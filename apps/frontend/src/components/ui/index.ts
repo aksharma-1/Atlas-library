@@ -10,3 +10,4 @@ export { PrintableCard } from '../PrintableCard';
 export type { PrintableCardProps } from '../PrintableCard';
 export { PrintableReceipt } from '../PrintableReceipt';
 export type { PrintableReceiptProps } from '../PrintableReceipt';
+export { Skeleton, StatCardSkeleton, TableSkeleton, SeatGridSkeleton, PageHeaderSkeleton } from './Skeleton';

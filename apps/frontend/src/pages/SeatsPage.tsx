@@ -14,7 +14,7 @@ import {
 import { useStudents, useCreateMembership, useVacateSeat } from '../hooks/useStudents';
 import { useAuth } from '../hooks/useAuth';
 import type { SeatDTO, SeatStatus } from '@atlas/shared';
-import { CustomSelect, Modal, ConfirmModal } from '../components/ui';
+import { CustomSelect, Modal, ConfirmModal, SeatGridSkeleton } from '../components/ui';
 import {
   Layers,
   Clock,
@@ -591,9 +591,11 @@ export function SeatsPage() {
       {/* Seating Grid */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 min-h-[420px] shadow-sm">
         {isLoading ? (
-          <div className="flex h-56 flex-col items-center justify-center text-slate-400 text-sm gap-2">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-            <span>Loading seating matrix…</span>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80">
+              <span className="text-xs font-semibold text-slate-400">Loading library layout & student allocations…</span>
+            </div>
+            <SeatGridSkeleton count={30} />
           </div>
         ) : displayedSeats.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-56 space-y-3 text-center">

@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { PrintableCard } from '../components/PrintableCard';
 import { PrintableReceipt } from '../components/PrintableReceipt';
 import type { PaymentDTO } from '@atlas/shared';
-import { CustomSelect, Modal, ConfirmModal, Switch } from '../components/ui';
+import { CustomSelect, Modal, ConfirmModal, Switch, Skeleton } from '../components/ui';
 import { UserCheck, CreditCard, Gift, UserCog, Bell, ArrowLeft, Trash2, Clock, Calendar, Armchair, IndianRupee } from 'lucide-react';
 import {
   DateRangeDurationSelector,
@@ -119,9 +119,49 @@ export function StudentProfilePage() {
 
   if (isLoading || !profile) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center text-slate-400 text-sm gap-2">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-        <span>Loading student profile…</span>
+      <div className="space-y-6 max-w-5xl mx-auto animate-pulse">
+        {/* Back button & top bar skeleton */}
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-28 rounded-xl" />
+        </div>
+
+        {/* Hero Card Skeleton */}
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 space-y-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+            <Skeleton className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl shrink-0" />
+            <div className="space-y-2.5 flex-1 w-full text-center sm:text-left">
+              <Skeleton className="h-7 w-48 mx-auto sm:mx-0" />
+              <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-28" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-28 rounded-xl" />
+              <Skeleton className="h-9 w-24 rounded-xl" />
+            </div>
+          </div>
+        </div>
+
+        {/* Active Membership Card Skeleton */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 space-y-4">
+          <Skeleton className="h-5 w-40" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-20 rounded-xl" />
+          </div>
+        </div>
+
+        {/* Ledger Skeleton */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 space-y-4">
+          <Skeleton className="h-5 w-36" />
+          <div className="space-y-3">
+            <Skeleton className="h-10 w-full rounded-xl" />
+            <Skeleton className="h-10 w-full rounded-xl" />
+          </div>
+        </div>
       </div>
     );
   }

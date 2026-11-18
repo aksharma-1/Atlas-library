@@ -16,7 +16,7 @@ import {
   Layers,
   TrendingUp,
 } from 'lucide-react';
-import { Card, StatCard, Badge, Button } from '../components/ui';
+import { Card, StatCard, Badge, Button, StatCardSkeleton, Skeleton } from '../components/ui';
 
 export function DashboardPage() {
   const { user } = useAuth();
@@ -63,47 +63,56 @@ export function DashboardPage() {
       </div>
 
       {/* Row 1: High-level operational stats */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <Link to="/students">
-          <StatCard
-            title="Total Students"
-            value={isLoading ? '…' : (stats?.totalStudents ?? 0)}
-            subtitle="Active members enrolled"
-            icon={<Users className="h-5 w-5" />}
-            accentColor="brand"
-          />
-        </Link>
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <Link to="/students">
+            <StatCard
+              title="Total Students"
+              value={stats?.totalStudents ?? 0}
+              subtitle="Active members enrolled"
+              icon={<Users className="h-5 w-5" />}
+              accentColor="brand"
+            />
+          </Link>
 
-        <Link to="/seats">
-          <StatCard
-            title="Occupied Desks"
-            value={isLoading ? '…' : (stats?.occupiedSeats ?? 0)}
-            subtitle={`${stats?.availableSeats ?? 0} desks vacant & ready`}
-            icon={<Armchair className="h-5 w-5" />}
-            accentColor="emerald"
-          />
-        </Link>
+          <Link to="/seats">
+            <StatCard
+              title="Occupied Desks"
+              value={stats?.occupiedSeats ?? 0}
+              subtitle={`${stats?.availableSeats ?? 0} desks vacant & ready`}
+              icon={<Armchair className="h-5 w-5" />}
+              accentColor="emerald"
+            />
+          </Link>
 
-        <Link to="/revenue">
-          <StatCard
-            title="Dues Outstanding"
-            value={isLoading ? '…' : `₹${((stats?.duesOutstandingPaise ?? 0) / 100).toFixed(0)}`}
-            subtitle={`${stats?.dueMembersCount ?? 0} pending • ₹${(((stats?.todayRevenuePaise ?? 0) / 100).toFixed(0))} collected today`}
-            icon={<IndianRupee className="h-5 w-5" />}
-            accentColor="amber"
-          />
-        </Link>
+          <Link to="/revenue">
+            <StatCard
+              title="Dues Outstanding"
+              value={`₹${((stats?.duesOutstandingPaise ?? 0) / 100).toFixed(0)}`}
+              subtitle={`${stats?.dueMembersCount ?? 0} pending • ₹${(((stats?.todayRevenuePaise ?? 0) / 100).toFixed(0))} collected today`}
+              icon={<IndianRupee className="h-5 w-5" />}
+              accentColor="amber"
+            />
+          </Link>
 
-        <Link to="/plans">
-          <StatCard
-            title="Active Plans"
-            value={isLoading ? '…' : (stats?.totalPlans ?? 0)}
-            subtitle="Shift & fee pricing structures"
-            icon={<CalendarCheck className="h-5 w-5" />}
-            accentColor="indigo"
-          />
-        </Link>
-      </div>
+          <Link to="/plans">
+            <StatCard
+              title="Active Plans"
+              value={stats?.totalPlans ?? 0}
+              subtitle="Shift & fee pricing structures"
+              icon={<CalendarCheck className="h-5 w-5" />}
+              accentColor="indigo"
+            />
+          </Link>
+        </div>
+      )}
 
       {/* Row 2: Urgent Expiry & Attention Cards */}
       <div className="space-y-3">
@@ -115,61 +124,81 @@ export function DashboardPage() {
           <span className="text-xs text-slate-500">Automated WhatsApp Reminders enabled</span>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Link to="/students?tab=expiring_3">
-            <Card hoverEffect className="border-amber-500/30 bg-amber-500/5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Badge variant="warning">Action Needed</Badge>
-                  <p className="mt-3 text-3xl font-black text-amber-400">
-                    {isLoading ? '…' : (stats?.expiringIn3DaysCount ?? 0)}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-300 font-semibold">Expiring in 1-3 Days</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Send urgent renewal reminder</p>
+        {isLoading ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl glass-card p-5 border border-slate-200 dark:border-slate-800 animate-pulse space-y-3">
+              <Skeleton className="h-5 w-20 rounded-md" />
+              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-3.5 w-32" />
+            </div>
+            <div className="rounded-2xl glass-card p-5 border border-slate-200 dark:border-slate-800 animate-pulse space-y-3">
+              <Skeleton className="h-5 w-20 rounded-md" />
+              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-3.5 w-32" />
+            </div>
+            <div className="rounded-2xl glass-card p-5 border border-slate-200 dark:border-slate-800 animate-pulse space-y-3">
+              <Skeleton className="h-5 w-20 rounded-md" />
+              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-3.5 w-32" />
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Link to="/students?tab=expiring_3">
+              <Card hoverEffect className="border-amber-500/30 bg-amber-500/5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Badge variant="warning">Action Needed</Badge>
+                    <p className="mt-3 text-3xl font-black text-amber-400">
+                      {stats?.expiringIn3DaysCount ?? 0}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-300 font-semibold">Expiring in 1-3 Days</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Send urgent renewal reminder</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
                 </div>
-                <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  <AlertTriangle className="h-5 w-5" />
-                </div>
-              </div>
-            </Card>
-          </Link>
+              </Card>
+            </Link>
 
-          <Link to="/students?tab=expiring_7">
-            <Card hoverEffect className="border-blue-500/30 bg-blue-500/5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Badge variant="brand">This Week</Badge>
-                  <p className="mt-3 text-3xl font-black text-blue-400">
-                    {isLoading ? '…' : (stats?.expiringIn7DaysCount ?? 0)}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-300 font-semibold">Expiring in 7 Days</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Upcoming cycle renewals</p>
+            <Link to="/students?tab=expiring_7">
+              <Card hoverEffect className="border-blue-500/30 bg-blue-500/5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Badge variant="brand">This Week</Badge>
+                    <p className="mt-3 text-3xl font-black text-blue-400">
+                      {stats?.expiringIn7DaysCount ?? 0}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-300 font-semibold">Expiring in 7 Days</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Upcoming cycle renewals</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                    <CalendarDays className="h-5 w-5" />
+                  </div>
                 </div>
-                <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                  <CalendarDays className="h-5 w-5" />
-                </div>
-              </div>
-            </Card>
-          </Link>
+              </Card>
+            </Link>
 
-          <Link to="/students?tab=expired">
-            <Card hoverEffect className="border-rose-500/30 bg-rose-500/5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Badge variant="danger">Expired</Badge>
-                  <p className="mt-3 text-3xl font-black text-rose-400">
-                    {isLoading ? '…' : (stats?.expiredCount ?? 0)}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-300 font-semibold">Expired Memberships</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Past validity / vacate seat</p>
+            <Link to="/students?tab=expired">
+              <Card hoverEffect className="border-rose-500/30 bg-rose-500/5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Badge variant="danger">Expired</Badge>
+                    <p className="mt-3 text-3xl font-black text-rose-400">
+                      {stats?.expiredCount ?? 0}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-300 font-semibold">Expired Memberships</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Past validity / vacate seat</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                    <Clock className="h-5 w-5" />
+                  </div>
                 </div>
-                <div className="p-3 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                  <Clock className="h-5 w-5" />
-                </div>
-              </div>
-            </Card>
-          </Link>
-        </div>
+              </Card>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Row 3: Seating & Quick Actions Grid */}

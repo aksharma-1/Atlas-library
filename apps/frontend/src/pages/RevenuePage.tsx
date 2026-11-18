@@ -8,7 +8,7 @@ import {
   AlertCircle,
   Sparkles,
 } from 'lucide-react';
-import { StatCard, Badge, CustomSelect, Pagination } from '../components/ui';
+import { StatCard, Badge, CustomSelect, Pagination, StatCardSkeleton, Skeleton, TableSkeleton } from '../components/ui';
 import { formatDateTime } from '../utils/date';
 
 export function RevenuePage() {
@@ -85,36 +85,45 @@ export function RevenuePage() {
       </div>
 
       {/* KPI Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <StatCard
-          title="Today's Collection"
-          value={isLoading ? '…' : `₹${((stats?.todayRevenuePaise || 0) / 100).toLocaleString('en-IN')}`}
-          icon={<IndianRupee className="h-5 w-5" />}
-          subtitle="Live collections today"
-          accentColor="emerald"
-        />
-        <StatCard
-          title="This Month"
-          value={isLoading ? '…' : `₹${((stats?.thisMonthRevenuePaise || 0) / 100).toLocaleString('en-IN')}`}
-          icon={<Calendar className="h-5 w-5" />}
-          subtitle={`Last Month: ₹${((stats?.lastMonthRevenuePaise || 0) / 100).toLocaleString('en-IN')}`}
-          accentColor="indigo"
-        />
-        <StatCard
-          title="Lifetime Collected"
-          value={isLoading ? '…' : `₹${((stats?.totalRevenuePaise || 0) / 100).toLocaleString('en-IN')}`}
-          icon={<TrendingUp className="h-5 w-5" />}
-          subtitle={`${stats?.totalTransactionsCount || 0} receipts issued`}
-          accentColor="brand"
-        />
-        <StatCard
-          title="Outstanding Dues"
-          value={isLoading ? '…' : `₹${((stats?.duesOutstandingPaise || 0) / 100).toLocaleString('en-IN')}`}
-          icon={<AlertCircle className="h-5 w-5" />}
-          subtitle={`${stats?.dueStudentsCount || 0} members pending`}
-          accentColor="amber"
-        />
-      </div>
+      {isLoading ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard
+            title="Today's Collection"
+            value={`₹${((stats?.todayRevenuePaise || 0) / 100).toLocaleString('en-IN')}`}
+            icon={<IndianRupee className="h-5 w-5" />}
+            subtitle="Live collections today"
+            accentColor="emerald"
+          />
+          <StatCard
+            title="This Month"
+            value={`₹${((stats?.thisMonthRevenuePaise || 0) / 100).toLocaleString('en-IN')}`}
+            icon={<Calendar className="h-5 w-5" />}
+            subtitle={`Last Month: ₹${((stats?.lastMonthRevenuePaise || 0) / 100).toLocaleString('en-IN')}`}
+            accentColor="indigo"
+          />
+          <StatCard
+            title="Lifetime Collected"
+            value={`₹${((stats?.totalRevenuePaise || 0) / 100).toLocaleString('en-IN')}`}
+            icon={<TrendingUp className="h-5 w-5" />}
+            subtitle={`${stats?.totalTransactionsCount || 0} receipts issued`}
+            accentColor="brand"
+          />
+          <StatCard
+            title="Outstanding Dues"
+            value={`₹${((stats?.duesOutstandingPaise || 0) / 100).toLocaleString('en-IN')}`}
+            icon={<AlertCircle className="h-5 w-5" />}
+            subtitle={`${stats?.dueStudentsCount || 0} members pending`}
+            accentColor="amber"
+          />
+        </div>
+      )}
 
       {/* Daily Trends & Payment Breakdown Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
@@ -133,8 +142,12 @@ export function RevenuePage() {
           </div>
 
           {isLoading ? (
-            <div className="h-52 flex items-center justify-center text-xs text-slate-400">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent mx-auto mb-2" />
+            <div className="h-52 flex items-center justify-center p-4">
+              <div className="w-full flex items-end gap-2 h-40 animate-pulse">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].map((i) => (
+                  <Skeleton key={i} className="flex-1 rounded-t-md" style={{ height: `${(i % 5 + 2) * 18}%` } as any} />
+                ))}
+              </div>
             </div>
           ) : !stats?.dailyTrends || stats.dailyTrends.length === 0 ? (
             <div className="h-52 flex items-center justify-center text-xs text-slate-400">
@@ -287,8 +300,8 @@ export function RevenuePage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400">
-                    Loading transactions…
+                  <td colSpan={6} className="p-0">
+                    <TableSkeleton rows={5} cols={6} />
                   </td>
                 </tr>
               ) : paginatedTransactions.length === 0 ? (

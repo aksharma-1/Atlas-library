@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useShifts, useCreateShift, useUpdateShift, useDeleteShift, usePlans, useCreatePlan, useUpdatePlan, useDeletePlan } from '../hooks/useLibrary';
 import { formatTime12H } from '../utils/time';
 import type { ShiftDTO, PlanDTO } from '@atlas/shared';
-import { CustomSelect, Modal, ConfirmModal } from '../components/ui';
+import { CustomSelect, Modal, ConfirmModal, Skeleton } from '../components/ui';
 import { Clock, CalendarClock } from 'lucide-react';
 
 export function PlansPage() {
@@ -238,7 +238,16 @@ export function PlansPage() {
           <div className="space-y-2">
             <h3 className="text-xs font-semibold text-slate-400">Configured Shifts ({shifts.length})</h3>
             {shiftsLoading ? (
-              <p className="text-xs text-slate-500">Loading shifts…</p>
+              <div className="space-y-2 animate-pulse">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded border border-surface-700 bg-surface-700/40">
+                    <div className="space-y-1.5 flex-1">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-36" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : shifts.length === 0 ? (
               <p className="text-xs text-slate-500">No shifts created yet. Add one above.</p>
             ) : (
@@ -352,7 +361,16 @@ export function PlansPage() {
           <div className="space-y-2">
             <h3 className="text-xs font-semibold text-slate-400">Configured Plans ({plans.length})</h3>
             {plansLoading ? (
-              <p className="text-xs text-slate-500">Loading plans…</p>
+              <div className="space-y-2 animate-pulse">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded border border-surface-700 bg-surface-700/40">
+                    <div className="space-y-1.5 flex-1">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-44" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : plans.length === 0 ? (
               <p className="text-xs text-slate-500">No plans configured yet. Add one above.</p>
             ) : (

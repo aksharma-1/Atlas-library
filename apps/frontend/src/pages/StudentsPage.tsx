@@ -12,7 +12,7 @@ import {
 import { usePlans, useSeats, useShifts } from '../hooks/useLibrary';
 import { useAuth } from '../hooks/useAuth';
 import type { StudentDTO } from '@atlas/shared';
-import { Modal, ConfirmModal, CustomSelect, Pagination, Switch } from '../components/ui';
+import { Modal, ConfirmModal, CustomSelect, Pagination, Switch, TableSkeleton, Skeleton } from '../components/ui';
 import { Bell, UserCheck, UserPlus, Search, Edit2, Trash2, MessageSquare, Armchair, IndianRupee, ChevronDown, ChevronUp, User, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { formatDate } from '../utils/date';
 import { renderWhatsAppReminder, openWhatsAppChat } from '../utils/whatsapp';
@@ -489,9 +489,16 @@ export function StudentsPage() {
           {/* Mobile Card List (< md) */}
           <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800/60">
             {studentsLoading ? (
-              <div className="py-12 text-center text-slate-400 text-sm">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent mx-auto mb-2" />
-                Loading students directory…
+              <div className="p-4 space-y-4 animate-pulse">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="h-11 w-11 rounded-full shrink-0" />
+                    <div className="space-y-1.5 flex-1">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : paginatedStudents.length === 0 ? (
               <div className="py-12 text-center text-slate-400 text-sm px-4">
@@ -611,9 +618,8 @@ export function StudentsPage() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                 {studentsLoading ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400 text-sm">
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent mx-auto mb-2" />
-                      Loading students directory…
+                    <td colSpan={6} className="p-0">
+                      <TableSkeleton rows={6} cols={6} />
                     </td>
                   </tr>
                 ) : paginatedStudents.length === 0 ? (
@@ -746,9 +752,16 @@ export function StudentsPage() {
           {/* Mobile Filtered Cards (< md) */}
           <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800/60">
             {membershipsLoading ? (
-              <div className="py-12 text-center text-slate-400 text-sm">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent mx-auto mb-2" />
-                Loading records…
+              <div className="p-4 space-y-4 animate-pulse">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+                    <div className="space-y-1.5 flex-1">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : paginatedFilteredMemberships.length === 0 ? (
               <div className="py-12 text-center text-slate-400 text-sm px-4">
@@ -929,9 +942,8 @@ export function StudentsPage() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                 {membershipsLoading ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400 text-sm">
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent mx-auto mb-2" />
-                      Loading records…
+                    <td colSpan={6} className="p-0">
+                      <TableSkeleton rows={6} cols={6} />
                     </td>
                   </tr>
                 ) : paginatedFilteredMemberships.length === 0 ? (
