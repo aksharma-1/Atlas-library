@@ -452,7 +452,25 @@ export async function listMembershipsWithFilters(req: Request, res: Response, ne
       .sort({ endDate: 1 });
 
     // Filter out orphaned memberships where student document no longer exists
-    const validMemberships = memberships.filter((m) => m.studentId != null);
+    let validMemberships = memberships.filter((m) => m.studentId != null);
+
+    // If viewing expired memberships, deduplicate so each student only appears once (their latest expired membership)
+    if (filter === 'expired') {
+      const seenStudents = new Set<string>();
+      // Sort desc by endDate first to pick the latest expired cycle for each student
+      const sortedByLatest = [...validMemberships].sort(
+        (a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime(),
+      );
+      const uniqueExpired: typeof validMemberships = [];
+      for (const m of sortedByLatest) {
+        const studentIdStr = (m.studentId as any)?._id?.toString() || m.studentId?.toString();
+        if (studentIdStr && !seenStudents.has(studentIdStr)) {
+          seenStudents.add(studentIdStr);
+          uniqueExpired.push(m);
+        }
+      }
+      validMemberships = uniqueExpired;
+    }
 
     res.status(200).json({ memberships: validMemberships });
   } catch (err) {

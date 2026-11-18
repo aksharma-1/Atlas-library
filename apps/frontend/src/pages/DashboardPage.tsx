@@ -185,18 +185,18 @@ export function DashboardPage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-center">
-              <p className="text-2xl font-black text-emerald-400">{stats?.availableSeats ?? 0}</p>
-              <p className="text-xs font-medium text-slate-300 mt-1">Available</p>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-2.5 sm:p-4 text-center">
+              <p className="text-xl sm:text-2xl font-black text-emerald-400">{stats?.availableSeats ?? 0}</p>
+              <p className="text-[11px] sm:text-xs font-medium text-slate-300 mt-0.5 sm:mt-1 truncate">Available</p>
             </div>
-            <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/10 p-4 text-center">
-              <p className="text-2xl font-black text-indigo-400">{stats?.occupiedSeats ?? 0}</p>
-              <p className="text-xs font-medium text-slate-300 mt-1">Occupied</p>
+            <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/10 p-2.5 sm:p-4 text-center">
+              <p className="text-xl sm:text-2xl font-black text-indigo-400">{stats?.occupiedSeats ?? 0}</p>
+              <p className="text-[11px] sm:text-xs font-medium text-slate-300 mt-0.5 sm:mt-1 truncate">Occupied</p>
             </div>
-            <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 text-center">
-              <p className="text-2xl font-black text-amber-400">{stats?.maintenanceSeats ?? 0}</p>
-              <p className="text-xs font-medium text-slate-300 mt-1">Maintenance</p>
+            <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-2.5 sm:p-4 text-center">
+              <p className="text-xl sm:text-2xl font-black text-amber-400">{stats?.maintenanceSeats ?? 0}</p>
+              <p className="text-[11px] sm:text-xs font-medium text-slate-300 mt-0.5 sm:mt-1 truncate">Maintenance</p>
             </div>
           </div>
         </Card>

@@ -48,18 +48,19 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
         status: { $in: ['active', 'expired'] },
         seatId: { $ne: null },
       }).select('seatId'),
-      // Expired count excluding students who have already renewed with an active membership
+      // Expired count (unique students whose latest membership is expired and who have no active membership)
       (async () => {
         const activeStudentIds = await Membership.distinct('studentId', {
           tenantId: tenantObjectId,
           status: 'active',
           endDate: { $gte: startOfToday },
         });
-        return Membership.countDocuments({
+        const expiredStudentIds = await Membership.distinct('studentId', {
           tenantId: tenantObjectId,
           status: 'expired',
           studentId: { $nin: activeStudentIds },
         });
+        return expiredStudentIds.length;
       })(),
       Membership.countDocuments({
         tenantId: tenantObjectId,

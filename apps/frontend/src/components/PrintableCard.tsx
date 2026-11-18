@@ -178,20 +178,20 @@ export function PrintableCard({
             </div>
 
             {/* Card Body */}
-            <div className="p-5 space-y-4">
-              <div className="flex items-start gap-4">
+            <div className="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4">
+              <div className="flex items-start gap-3 sm:gap-4">
                 {/* Photo / Avatar */}
                 <div className="shrink-0">
                   {student.photoUrl ? (
                     <img
                       src={student.photoUrl}
                       alt={student.name}
-                      className="h-24 w-24 rounded-xl object-cover border-2 border-indigo-400/80 shadow-md bg-slate-100 dark:bg-slate-800"
+                      className="h-20 w-20 sm:h-24 sm:w-24 rounded-xl object-cover border-2 border-indigo-400/80 shadow-md bg-slate-100 dark:bg-slate-800"
                     />
                   ) : (
-                    <div className="h-24 w-24 rounded-xl bg-slate-100 dark:bg-slate-800/90 border-2 border-indigo-300 dark:border-indigo-500/40 flex flex-col items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-2xl shadow-inner">
+                    <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-xl bg-slate-100 dark:bg-slate-800/90 border-2 border-indigo-300 dark:border-indigo-500/40 flex flex-col items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xl sm:text-2xl shadow-inner">
                       <span>{student.name.slice(0, 2).toUpperCase()}</span>
-                      <span className="text-[8px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mt-1 font-normal">
+                      <span className="text-[8px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 font-normal">
                         Student
                       </span>
                     </div>
@@ -199,37 +199,37 @@ export function PrintableCard({
                 </div>
 
                 {/* Details Column */}
-                <div className="space-y-1.5 flex-1 min-w-0">
-                  <h4 className="text-base font-bold text-slate-900 dark:text-white tracking-wide truncate">
+                <div className="space-y-1 sm:space-y-1.5 flex-1 min-w-0">
+                  <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-wide truncate">
                     {student.name}
                   </h4>
 
-                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                  <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-600 dark:text-slate-300">
                     <Phone className="h-3 w-3 text-indigo-500 dark:text-indigo-400 shrink-0" />
-                    <span className="font-mono">{student.mobile}</span>
+                    <span className="font-mono truncate">{student.mobile}</span>
                   </div>
 
                   {student.address && (
-                    <div className="flex items-start gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                    <div className="flex items-start gap-1.5 text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400">
                       <MapPin className="h-3 w-3 text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" />
                       <span className="truncate">{student.address}</span>
                     </div>
                   )}
 
-                  <div className="pt-1 flex items-center gap-2">
-                    <span className="rounded-md bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold px-2 py-0.5 capitalize">
-                      ● Active Member
+                  <div className="pt-0.5 sm:pt-1 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <span className="rounded-md bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 capitalize shrink-0">
+                      ● Active
                     </span>
-                    <span className="rounded-md bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold px-2 py-0.5">
+                    <span className="rounded-md bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 shrink-0">
                       {isReserved ? 'Reserved' : 'General'}
                     </span>
                   </div>
                 </div>
 
                 {/* Digital Verification QR Code */}
-                <div className="shrink-0 flex flex-col items-center justify-center bg-white p-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                  <QRCodeSVG value={qrData} size={64} level="M" />
-                  <span className="text-[7px] text-slate-800 font-mono font-bold mt-1 uppercase tracking-tighter">
+                <div className="shrink-0 flex flex-col items-center justify-center bg-white p-1.5 sm:p-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                  <QRCodeSVG value={qrData} size={54} className="sm:w-16 sm:h-16" level="M" />
+                  <span className="text-[7px] text-slate-800 font-mono font-bold mt-0.5 uppercase tracking-tighter">
                     Verified
                   </span>
                 </div>
