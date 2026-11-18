@@ -88,7 +88,8 @@ export async function listSeats(req: Request, res: Response, next: NextFunction)
 
         const duePaise = Math.max(0, (m.feePaise || 0) - (m.paidPaise || 0));
         const diffMs = new Date(m.endDate).getTime() - now.getTime();
-        const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+        // Negative days indicate overdue / expired days after 0
+        const daysRemaining = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
         const studentInfo: SeatStudentInfo = {
           membershipId: m._id.toString(),

@@ -38,8 +38,8 @@ describe('LoginPage', () => {
 
   it('renders email and password fields', () => {
     renderWithProviders(<LoginPage />);
-    expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^email address$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
   });
 
   it('renders the submit button', () => {

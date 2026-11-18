@@ -375,6 +375,9 @@ export function SeatsPage() {
       if (seat.occupant?.hasDues) {
         return 'border-rose-500/50 bg-rose-500/10 text-rose-300 hover:border-rose-400 dark:bg-rose-950/20';
       }
+      if (seat.occupant && seat.occupant.daysRemaining < 0) {
+        return 'border-rose-600/60 bg-rose-600/15 text-rose-300 hover:border-rose-500 dark:bg-rose-950/30';
+      }
       if (seat.occupant && seat.occupant.daysRemaining <= 3) {
         return 'border-orange-500/50 bg-orange-500/10 text-orange-300 hover:border-orange-400 dark:bg-orange-950/20';
       }
@@ -658,12 +661,12 @@ export function SeatsPage() {
                       seat.occupant.hasDues ? (
                         <div className="flex flex-col items-center">
                           <span className="text-rose-600 dark:text-rose-400 font-extrabold">Due</span>
-                          <span className="text-[8px] text-slate-500 dark:text-slate-400 opacity-90 font-medium">
+                          <span className={`text-[8px] opacity-90 font-medium ${seat.occupant.daysRemaining < 0 ? 'text-rose-500 font-bold' : 'text-slate-500 dark:text-slate-400'}`}>
                             {seat.occupant.daysRemaining}d left
                           </span>
                         </div>
                       ) : (
-                        <span className="opacity-80 text-slate-600 dark:text-slate-300">
+                        <span className={`font-semibold ${seat.occupant.daysRemaining < 0 ? 'text-rose-600 dark:text-rose-400 font-bold' : 'opacity-80 text-slate-600 dark:text-slate-300'}`}>
                           {seat.occupant.daysRemaining}d left
                         </span>
                       )
@@ -796,10 +799,16 @@ export function SeatsPage() {
                     <span className="text-slate-400 block text-[10px] uppercase">Days Remaining</span>
                     <span
                       className={`font-bold ${
-                        selectedSeat.occupant.daysRemaining <= 3 ? 'text-orange-400' : 'text-emerald-400'
+                        selectedSeat.occupant.daysRemaining < 0
+                          ? 'text-rose-400 font-extrabold'
+                          : selectedSeat.occupant.daysRemaining <= 3
+                          ? 'text-orange-400'
+                          : 'text-emerald-400'
                       }`}
                     >
-                      {selectedSeat.occupant.daysRemaining} days left
+                      {selectedSeat.occupant.daysRemaining < 0
+                        ? `${selectedSeat.occupant.daysRemaining} days (Overdue)`
+                        : `${selectedSeat.occupant.daysRemaining} days left`}
                     </span>
                   </div>
                   <div>
@@ -901,7 +910,15 @@ export function SeatsPage() {
                         <div className="text-[11px] text-slate-400">Shift: {so.shiftName}</div>
                       </div>
                       <div className="text-right">
-                        <span className="text-[11px] text-emerald-400 font-medium">
+                        <span
+                          className={`text-[11px] font-medium ${
+                            so.student.daysRemaining < 0
+                              ? 'text-rose-400 font-bold'
+                              : so.student.daysRemaining <= 3
+                              ? 'text-orange-400'
+                              : 'text-emerald-400'
+                          }`}
+                        >
                           {so.student.daysRemaining}d left
                         </span>
                         <div className="text-[10px] text-slate-400">

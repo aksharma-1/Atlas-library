@@ -418,17 +418,19 @@ export async function login(
  * Clears the auth cookie.
  */
 export function logout(_req: Request, res: Response): void {
-  const isProd = env.NODE_ENV === 'production';
+  const isSecure = env.NODE_ENV === 'production' || isHttpsTunnel;
   const clearOpts = {
     httpOnly: true,
-    sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
-    secure: isProd,
+    sameSite: (isSecure ? 'none' : 'lax') as 'none' | 'lax',
+    secure: isSecure,
     path: '/',
-    partitioned: isProd,
+    partitioned: isSecure,
   };
 
   res.clearCookie(AUTH_COOKIE, clearOpts);
-  // Also clear without partitioned/sameSite just in case of legacy browser context
+  // Also clear standard variations to ensure complete removal across all browsers and tunnel setups
+  res.clearCookie(AUTH_COOKIE, { path: '/', httpOnly: true, sameSite: 'none', secure: true });
+  res.clearCookie(AUTH_COOKIE, { path: '/', httpOnly: true, sameSite: 'lax', secure: false });
   res.clearCookie(AUTH_COOKIE, { path: '/' });
   res.status(200).json({ message: 'Logged out successfully' });
 }

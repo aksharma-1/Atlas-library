@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalProps {
   isOpen: boolean;
@@ -8,6 +9,7 @@ interface ModalProps {
   icon?: React.ReactNode;
   children: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  centered?: boolean;
 }
 
 export function Modal({
@@ -18,6 +20,7 @@ export function Modal({
   icon,
   children,
   maxWidth = 'md',
+  centered = false,
 }: ModalProps) {
   if (!isOpen) return null;
 
@@ -29,8 +32,14 @@ export function Modal({
     '2xl': 'max-w-2xl',
   }[maxWidth];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  const modalContent = (
+    <div
+      className={`fixed inset-0 z-[9999] flex justify-center ${
+        centered
+          ? 'items-center p-4'
+          : 'items-end sm:items-center p-0 sm:p-4'
+      }`}
+    >
       {/* Backdrop */}
       <div
         onClick={onClose}
@@ -39,7 +48,9 @@ export function Modal({
 
       {/* Dialog box / Mobile Bottom Sheet */}
       <div
-        className={`relative w-full ${maxWidthClass} rounded-t-3xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-2xl transition-all z-10 max-h-[92vh] overflow-y-auto overflow-x-hidden text-slate-900 dark:text-slate-100`}
+        className={`relative w-full ${maxWidthClass} ${
+          centered ? 'rounded-2xl my-auto' : 'rounded-t-3xl sm:rounded-2xl sm:my-auto'
+        } bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-2xl transition-all z-10 max-h-[92vh] overflow-y-auto overflow-x-hidden text-slate-900 dark:text-slate-100`}
       >
         <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-5">
           <div className="flex items-center gap-3">
@@ -65,4 +76,6 @@ export function Modal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

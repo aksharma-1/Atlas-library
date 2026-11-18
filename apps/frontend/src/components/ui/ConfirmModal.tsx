@@ -11,6 +11,7 @@ export interface ConfirmModalProps {
   cancelLabel?: string;
   variant?: 'danger' | 'warning' | 'info';
   isLoading?: boolean;
+  centered?: boolean;
 }
 
 export function ConfirmModal({
@@ -23,6 +24,7 @@ export function ConfirmModal({
   cancelLabel = 'Cancel',
   variant = 'danger',
   isLoading = false,
+  centered = true,
 }: ConfirmModalProps) {
   const getIcon = () => {
     switch (variant) {
@@ -55,6 +57,7 @@ export function ConfirmModal({
       title={title}
       icon={getIcon()}
       maxWidth="sm"
+      centered={centered}
     >
       <div className="space-y-4">
         <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
