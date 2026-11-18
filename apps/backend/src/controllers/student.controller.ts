@@ -76,6 +76,11 @@ export async function listStudents(req: Request, res: Response, next: NextFuncti
       return {
         ...s,
         currentSeat: activeM?.seatId?.seatNumber || null,
+        seatId: activeM?.seatId?._id?.toString() || (activeM?.seatId ? activeM.seatId.toString() : null),
+        planId: activeM?.planId?._id?.toString() || (activeM?.planId ? activeM.planId.toString() : null),
+        shiftId: activeM?.shiftId?._id?.toString() || (activeM?.shiftId ? activeM.shiftId.toString() : null),
+        startDate: activeM?.startDate ? activeM.startDate.toISOString() : null,
+        endDate: activeM?.endDate ? activeM.endDate.toISOString() : null,
         seatType: activeM?.seatType || null,
         membershipStatus: activeM?.status || null,
         hasSeat: Boolean(activeM?.seatId),
@@ -292,6 +297,15 @@ const updateStudentSchema = z.object({
   membershipNumber: z.string().optional(),
   address: z.string().optional(),
   photoUrl: z.string().optional(),
+  // Optional active membership updates (plan, shift, seat, dates)
+  planId: z.string().optional(),
+  shiftId: z.string().optional(),
+  seatId: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  discountPaise: z.number().int().min(0).optional(),
+  discountReason: z.string().optional(),
+  customFeePaise: z.number().int().min(0).optional(),
 });
 
 export async function updateStudent(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -320,15 +334,167 @@ export async function updateStudent(req: Request, res: Response, next: NextFunct
       }
     }
 
+    const {
+      planId,
+      shiftId,
+      seatId,
+      startDate: rawStartDate,
+      endDate: rawEndDate,
+      discountPaise,
+      discountReason,
+      customFeePaise,
+      ...studentPersonalFields
+    } = parsed.data;
+
     const student = await Student.findOneAndUpdate(
       { _id: id, tenantId },
-      { $set: parsed.data },
+      { $set: studentPersonalFields },
       { new: true, runValidators: true },
     );
 
     if (!student) {
       res.status(404).json({ error: 'Student not found' });
       return;
+    }
+
+    // If membership fields are provided (planId, seatId, dates, etc.), update or create active membership
+    if (planId) {
+      const plan = await Plan.findOne({ _id: planId, tenantId });
+      if (!plan) {
+        res.status(404).json({ error: 'Selected plan not found' });
+        return;
+      }
+
+      // Find current active membership for this student
+      const activeMembership = await Membership.findOne({
+        tenantId,
+        studentId: id,
+        status: { $in: ['active', 'expired'] },
+      }).sort({ createdAt: -1 });
+
+      const today = new Date();
+      const defaultStart = activeMembership?.startDate || today;
+      const defaultEnd = activeMembership?.endDate || new Date(defaultStart.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      const startDateVal = rawStartDate ? new Date(rawStartDate) : defaultStart;
+      const endDateVal = rawEndDate ? new Date(rawEndDate) : defaultEnd;
+      const { startDate, endDate } = normalizeDateBoundaries(startDateVal, endDateVal);
+
+      // Check seat if reserved
+      if (plan.seatType === 'reserved') {
+        if (!seatId) {
+          res.status(400).json({ error: 'A reserved plan requires an assigned desk' });
+          return;
+        }
+
+        const seat = await Seat.findOne({ _id: seatId, tenantId });
+        if (!seat) {
+          res.status(404).json({ error: 'Desk not found' });
+          return;
+        }
+        if (seat.status === 'maintenance' || seat.status === 'blocked') {
+          res.status(400).json({ error: `Seat ${seat.seatNumber} is currently under maintenance or blocked` });
+          return;
+        }
+
+        // Check for seat conflict with other students
+        const shiftCondition: Record<string, unknown> = {};
+        if (shiftId) {
+          shiftCondition['$or'] = [
+            { shiftId: shiftId },
+            { shiftId: null },
+            { shiftId: { $exists: false } },
+          ];
+        }
+
+        const conflict = await Membership.findOne({
+          tenantId,
+          seatId,
+          studentId: { $ne: id },
+          status: { $in: ['active', 'expired'] },
+          startDate: { $lte: endDate },
+          endDate: { $gte: startDate },
+          ...shiftCondition,
+        });
+
+        if (conflict) {
+          res.status(409).json({
+            error: `Seat ${seat.seatNumber} is already reserved for another student during this period`,
+          });
+          return;
+        }
+      }
+
+      // Calculate fee
+      const originalFee = plan.feePaise;
+      let finalFee = originalFee;
+      let appliedDiscount = 0;
+
+      if (typeof customFeePaise === 'number' && customFeePaise >= 0) {
+        finalFee = customFeePaise;
+        appliedDiscount = Math.max(0, originalFee - customFeePaise);
+      } else if (typeof discountPaise === 'number' && discountPaise > 0) {
+        appliedDiscount = Math.min(discountPaise, originalFee);
+        finalFee = Math.max(0, originalFee - appliedDiscount);
+      }
+
+      if (activeMembership) {
+        // Free previous seat if seat changed
+        if (activeMembership.seatId && activeMembership.seatId.toString() !== seatId) {
+          const othersOnOldSeat = await Membership.countDocuments({
+            tenantId,
+            seatId: activeMembership.seatId,
+            _id: { $ne: activeMembership._id },
+            status: 'active',
+            endDate: { $gte: new Date() },
+          });
+          if (othersOnOldSeat === 0) {
+            await Seat.findByIdAndUpdate(activeMembership.seatId, { status: 'available' });
+          }
+        }
+
+        activeMembership.planId = plan._id;
+        activeMembership.shiftId = shiftId ? (shiftId as any) : undefined;
+        activeMembership.seatId = plan.seatType === 'reserved' && seatId ? (seatId as any) : undefined;
+        activeMembership.seatType = plan.seatType;
+        activeMembership.startDate = startDate;
+        activeMembership.endDate = endDate;
+        if (discountPaise !== undefined || customFeePaise !== undefined) {
+          activeMembership.feePaise = finalFee;
+          activeMembership.originalFeePaise = originalFee;
+          activeMembership.discountPaise = appliedDiscount;
+          if (discountReason !== undefined) activeMembership.discountReason = discountReason;
+        }
+        activeMembership.status = endDate >= new Date() ? 'active' : 'expired';
+        await activeMembership.save();
+
+        if (plan.seatType === 'reserved' && seatId) {
+          await Seat.findByIdAndUpdate(seatId, { status: 'occupied' });
+        }
+      } else {
+        // Create new membership if none existed
+        await Membership.create({
+          tenantId,
+          studentId: id,
+          planId: plan._id,
+          shiftId: shiftId || undefined,
+          seatId: plan.seatType === 'reserved' ? seatId : undefined,
+          seatType: plan.seatType,
+          startDate,
+          endDate,
+          status: 'active',
+          originalFeePaise: originalFee,
+          discountPaise: appliedDiscount,
+          discountReason,
+          feePaise: finalFee,
+          paidPaise: 0,
+          paymentStatus: 'pending',
+        });
+
+        if (plan.seatType === 'reserved' && seatId) {
+          await Seat.findByIdAndUpdate(seatId, { status: 'occupied' });
+        }
+      }
     }
 
     res.status(200).json({ student });

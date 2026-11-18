@@ -175,14 +175,25 @@ export function useUpdateStudent() {
       address?: string;
       membershipNumber?: string;
       photoUrl?: string;
+      planId?: string;
+      shiftId?: string;
+      seatId?: string;
+      startDate?: string;
+      endDate?: string;
+      discountPaise?: number;
+      discountReason?: string;
+      customFeePaise?: number;
     }) => {
       const { data } = await apiClient.put<{ student: StudentDTO }>(`/students/${id}`, payload);
       return data.student;
     },
     onSuccess: (_, vars) => {
-      toast.success(`Student profile updated`);
+      toast.success(`Student profile & details updated`);
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['students', vars.id] });
+      queryClient.invalidateQueries({ queryKey: ['seats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['filteredMemberships'] });
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
       toast.error(err?.response?.data?.error || 'Failed to update student profile');

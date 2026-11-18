@@ -13,6 +13,11 @@ export interface StudentDTO {
   address?: string;
   photoUrl?: string;
   currentSeat?: string | null;
+  seatId?: string | null;
+  planId?: string | null;
+  shiftId?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
   seatType?: 'reserved' | 'non-reserved' | null;
   membershipStatus?: string | null;
   hasSeat?: boolean;

@@ -9,6 +9,7 @@ import {
   useLogout,
   usePublicSaasPlans,
 } from '../hooks/useAuth';
+import { ConfirmModal } from '../components/ui';
 
 export function OnboardingPage() {
   const { user, isLoading } = useAuth();
@@ -28,6 +29,7 @@ export function OnboardingPage() {
   // Step 3 Subscription
   const [selectedTier, setSelectedTier] = useState<string>('growth');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [utrNumber, setUtrNumber] = useState('');
   const [utrError, setUtrError] = useState<string | null>(null);
 
@@ -119,13 +121,29 @@ export function OnboardingPage() {
               {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-500" />}
             </button>
             <button
-              onClick={() => logout.mutate()}
-              className="text-xs text-slate-400 hover:text-white border border-surface-700 px-3 py-1.5 rounded-lg"
+              onClick={() => setShowLogoutConfirm(true)}
+              className="text-xs text-slate-400 hover:text-white border border-surface-700 px-3 py-1.5 rounded-lg cursor-pointer"
             >
               Logout
             </button>
           </div>
         </div>
+
+        {/* Logout Confirmation Modal */}
+        <ConfirmModal
+          isOpen={showLogoutConfirm}
+          onClose={() => setShowLogoutConfirm(false)}
+          onConfirm={() => {
+            setShowLogoutConfirm(false);
+            logout.mutate();
+          }}
+          title="Sign Out"
+          description="Are you sure you want to sign out?"
+          confirmLabel="Sign Out"
+          cancelLabel="Cancel"
+          variant="danger"
+          isLoading={logout.isPending}
+        />
 
         {/* ── Pending Verification Banner ── */}
         {isPendingApproval ? (

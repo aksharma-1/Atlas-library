@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForgotPassword, useResetPassword } from '../hooks/useAuth';
+import { Eye, EyeOff } from 'lucide-react';
 
 const requestSchema = z.object({
   email: z.string().email('Enter a valid email address').trim().toLowerCase(),
@@ -30,6 +31,8 @@ export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register: registerRequest,
@@ -155,12 +158,22 @@ export function ForgotPasswordPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">New Password</label>
-                <input
-                  type="password"
-                  {...registerReset('newPassword')}
-                  placeholder="••••••••"
-                  className="w-full rounded-lg border border-surface-600 bg-surface-700 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-brand-500"
-                />
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    {...registerReset('newPassword')}
+                    placeholder="••••••••"
+                    className="w-full rounded-lg border border-surface-600 bg-surface-700 pl-4 pr-10 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-brand-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-200 focus:outline-none transition-colors"
+                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 {resetErrors.newPassword && (
                   <p className="text-xs text-red-400 mt-1">{resetErrors.newPassword.message}</p>
                 )}
@@ -168,12 +181,22 @@ export function ForgotPasswordPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">Confirm New Password</label>
-                <input
-                  type="password"
-                  {...registerReset('confirmPassword')}
-                  placeholder="••••••••"
-                  className="w-full rounded-lg border border-surface-600 bg-surface-700 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-brand-500"
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    {...registerReset('confirmPassword')}
+                    placeholder="••••••••"
+                    className="w-full rounded-lg border border-surface-600 bg-surface-700 pl-4 pr-10 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-brand-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-200 focus:outline-none transition-colors"
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 {resetErrors.confirmPassword && (
                   <p className="text-xs text-red-400 mt-1">{resetErrors.confirmPassword.message}</p>
                 )}

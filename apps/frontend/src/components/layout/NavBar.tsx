@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { useAuth, useLogout } from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
 import { Moon, Sun, Shield, LogOut, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { ConfirmModal } from '../ui';
 
 export function NavBar() {
   const { user } = useAuth();
   const logout = useLogout();
   const { theme, toggleTheme } = useTheme();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   return (
     <header className="flex h-14 sm:h-16 items-center justify-between border-b px-3.5 sm:px-6 glass-panel z-20 transition-colors">
@@ -81,7 +84,7 @@ export function NavBar() {
 
           {/* Logout */}
           <button
-            onClick={() => logout.mutate()}
+            onClick={() => setShowLogoutConfirm(true)}
             disabled={logout.isPending}
             title="Log out"
             className="rounded-xl p-2 border transition glass-card hover:bg-rose-500/10 hover:border-rose-500/30 text-slate-400 hover:text-rose-400 cursor-pointer disabled:opacity-50"
@@ -90,6 +93,22 @@ export function NavBar() {
           </button>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={() => {
+          setShowLogoutConfirm(false);
+          logout.mutate();
+        }}
+        title="Sign Out"
+        description="Are you sure you want to sign out of your account?"
+        confirmLabel="Sign Out"
+        cancelLabel="Stay Logged In"
+        variant="danger"
+        isLoading={logout.isPending}
+      />
     </header>
   );
 }

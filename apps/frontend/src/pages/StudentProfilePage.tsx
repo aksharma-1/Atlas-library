@@ -241,6 +241,11 @@ export function StudentProfilePage() {
         address: editAddress.trim() || undefined,
         membershipNumber: editMembershipNumber.trim() || undefined,
         photoUrl: editPhotoUrl.trim() || undefined,
+        planId: selectedPlanId || undefined,
+        shiftId: selectedShiftId || undefined,
+        seatId: chosenPlan?.seatType === 'reserved' && selectedSeatId ? selectedSeatId : undefined,
+        startDate: selectedPlanId ? startDate : undefined,
+        endDate: selectedPlanId ? endDate : undefined,
       },
       {
         onSuccess: () => {
@@ -314,11 +319,30 @@ export function StudentProfilePage() {
                 setEditAddress(student.address || '');
                 setEditMembershipNumber(student.membershipNumber);
                 setEditPhotoUrl(student.photoUrl || '');
+                const planIdVal = typeof activeMembership?.planId === 'object' && activeMembership?.planId !== null
+                  ? (activeMembership.planId as any)._id
+                  : activeMembership?.planId || '';
+                const shiftIdVal = typeof activeMembership?.shiftId === 'object' && activeMembership?.shiftId !== null
+                  ? (activeMembership.shiftId as any)._id
+                  : activeMembership?.shiftId || '';
+                const seatIdVal = typeof activeMembership?.seatId === 'object' && activeMembership?.seatId !== null
+                  ? (activeMembership.seatId as any)._id
+                  : activeMembership?.seatId || '';
+                setSelectedPlanId(planIdVal);
+                setSelectedShiftId(shiftIdVal);
+                setSelectedSeatId(seatIdVal);
+                setDurationOption('30d');
+                if (activeMembership?.startDate) {
+                  setStartDate(activeMembership.startDate.split('T')[0]);
+                }
+                if (activeMembership?.endDate) {
+                  setEndDate(activeMembership.endDate.split('T')[0]);
+                }
                 setShowEditStudentModal(true);
               }}
               className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs transition text-center justify-center"
             >
-              ✏️ Edit Member
+              ✏️ Edit Member & Desk
             </button>
             <button
               onClick={() => setShowCardModal(true)}
@@ -1045,100 +1069,180 @@ export function StudentProfilePage() {
       <Modal
         isOpen={showEditStudentModal}
         onClose={() => setShowEditStudentModal(false)}
-        title="Edit Student Profile"
-        subtitle={`Update details for ${student.name}`}
+        title="Edit Student Profile & Plan Allocation"
+        subtitle={`Update details and desk allocation for ${student.name}`}
         icon={<UserCog className="h-5 w-5 text-indigo-500" />}
-        maxWidth="md"
+        maxWidth="lg"
       >
         <form onSubmit={handleSaveStudentEdit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Full Name *</label>
-            <input
-              type="text"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
-              required
-            />
-          </div>
+          {/* Basic Information */}
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-4 space-y-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              <UserCog className="h-3.5 w-3.5 text-indigo-500" />
+              <span>Basic Information</span>
+            </div>
 
-          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mobile *</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Full Name *</label>
               <input
-                type="tel"
-                value={editMobile}
-                onChange={(e) => setEditMobile(e.target.value)}
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
                 required
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mobile *</label>
+                <input
+                  type="tel"
+                  value={editMobile}
+                  onChange={(e) => setEditMobile(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Membership ID</label>
+                <input
+                  type="text"
+                  value={editMembershipNumber}
+                  onChange={(e) => setEditMembershipNumber(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Membership ID</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Gender (Optional)
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: 'male', label: '👨 Male' },
+                  { value: 'female', label: '👩 Female' },
+                  { value: 'other', label: '⚧ Other' },
+                ].map((g) => (
+                  <button
+                    key={g.value}
+                    type="button"
+                    onClick={() => setEditGender(editGender === g.value ? '' : (g.value as any))}
+                    className={`rounded-xl py-2 px-3 text-xs font-semibold border transition text-center ${
+                      editGender === g.value
+                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Address / City</label>
+                <input
+                  type="text"
+                  value={editAddress}
+                  onChange={(e) => setEditAddress(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Photo URL (Optional)</label>
               <input
-                type="text"
-                value={editMembershipNumber}
-                onChange={(e) => setEditMembershipNumber(e.target.value)}
+                type="url"
+                value={editPhotoUrl}
+                onChange={(e) => setEditPhotoUrl(e.target.value)}
+                placeholder="https://..."
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Gender (Optional)
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { value: 'male', label: '👨 Male' },
-                { value: 'female', label: '👩 Female' },
-                { value: 'other', label: '⚧ Other' },
-              ].map((g) => (
-                <button
-                  key={g.value}
-                  type="button"
-                  onClick={() => setEditGender(editGender === g.value ? '' : (g.value as any))}
-                  className={`rounded-xl py-2 px-3 text-xs font-semibold border transition text-center ${
-                    editGender === g.value
-                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs'
-                      : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  {g.label}
-                </button>
-              ))}
+          {/* Plan, Shift & Desk Allocation */}
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-4 space-y-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              <Armchair className="h-3.5 w-3.5 text-indigo-500" />
+              <span>Plan & Desk Allocation</span>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email</label>
-            <input
-              type="email"
-              value={editEmail}
-              onChange={(e) => setEditEmail(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
-            />
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <CustomSelect
+                  label="Select Plan"
+                  value={selectedPlanId}
+                  onChange={(val) => setSelectedPlanId(val)}
+                  options={[
+                    { value: '', label: '-- No Membership / None --' },
+                    ...plans.map((p) => ({
+                      value: p._id,
+                      label: `${p.name} (${p.seatType}) — ₹${(p.feePaise / 100).toFixed(0)}`,
+                    })),
+                  ]}
+                />
+              </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Address / City</label>
-            <input
-              type="text"
-              value={editAddress}
-              onChange={(e) => setEditAddress(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
-            />
-          </div>
+              <div>
+                <CustomSelect
+                  label="Select Shift"
+                  value={selectedShiftId}
+                  onChange={(val) => setSelectedShiftId(val)}
+                  options={[
+                    { value: '', label: 'General / Full Day' },
+                    ...shifts.map((sh) => ({
+                      value: sh._id,
+                      label: `${sh.name} (${sh.startTime} - ${sh.endTime})`,
+                    })),
+                  ]}
+                />
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Photo URL (Optional)</label>
-            <input
-              type="url"
-              value={editPhotoUrl}
-              onChange={(e) => setEditPhotoUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
-            />
+            {chosenPlan?.seatType === 'reserved' && (
+              <div>
+                <CustomSelect
+                  label="Assign Reserved Desk *"
+                  value={selectedSeatId}
+                  onChange={(val) => setSelectedSeatId(val)}
+                  options={[
+                    { value: '', label: `-- Choose an Available Desk (${availableSeats.length} vacant) --` },
+                    ...availableSeats.map((s) => ({
+                      value: s._id,
+                      label: `Desk #${s.seatNumber} (${s.section || 'Hall'})${s.seatNumber === activeMembership?.seatNumber ? ' — Currently Assigned' : ''}`,
+                    })),
+                  ]}
+                  required
+                />
+              </div>
+            )}
+
+            {selectedPlanId && (
+              <DateRangeDurationSelector
+                startDate={startDate}
+                endDate={endDate}
+                onChangeStartDate={setStartDate}
+                onChangeEndDate={setEndDate}
+                durationOption={durationOption}
+                onChangeDurationOption={setDurationOption}
+                label="Membership Validity & Duration"
+              />
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">

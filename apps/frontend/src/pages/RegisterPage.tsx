@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, Navigate } from 'react-router-dom';
 import { useRegister, useAuth } from '../hooks/useAuth';
+import { Eye, EyeOff } from 'lucide-react';
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Your full name is required').trim(),
@@ -20,6 +21,7 @@ export function RegisterPage() {
   const { isAuthenticated, user, isLoading } = useAuth();
   const registerMutation = useRegister();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -135,12 +137,22 @@ export function RegisterPage() {
 
             <div>
               <label className="block text-xs font-medium text-slate-300">Choose Password *</label>
-              <input
-                type="password"
-                {...register('password')}
-                placeholder="At least 6 characters"
-                className="mt-1 w-full rounded-lg border border-surface-600 bg-surface-700 px-3 py-2 text-sm text-white placeholder-slate-400 outline-none focus:border-brand-500"
-              />
+              <div className="relative mt-1">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  {...register('password')}
+                  placeholder="At least 6 characters"
+                  className="w-full rounded-lg border border-surface-600 bg-surface-700 pl-3 pr-10 py-2 text-sm text-white placeholder-slate-400 outline-none focus:border-brand-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-200 focus:outline-none transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {errors.password && (
                 <p className="mt-1 text-xs text-red-400">{errors.password.message}</p>
               )}

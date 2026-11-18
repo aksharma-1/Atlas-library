@@ -15,12 +15,13 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { Moon, Sun, LogOut, Sparkles, ShieldCheck, Search, Building2, User, Phone, MapPin, Users } from 'lucide-react';
 import type { SaasPlanDTO } from '@atlas/shared';
-import { CustomSelect, Modal } from '../components/ui';
+import { CustomSelect, Modal, ConfirmModal } from '../components/ui';
 
 export function SuperAdminPage() {
   const { user } = useAuth();
   const logout = useLogout();
   const { theme, toggleTheme } = useTheme();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { data: tenants = [], isLoading: isTenantsLoading } = useSuperAdminTenants();
   const { data: saasData, isLoading: isPlansLoading } = useSuperAdminSaasPlans();
 
@@ -315,7 +316,7 @@ export function SuperAdminPage() {
 
           {/* Superadmin Logout Button */}
           <button
-            onClick={() => logout.mutate()}
+            onClick={() => setShowLogoutConfirm(true)}
             disabled={logout.isPending}
             title="Log out of Super Admin"
             className="rounded-xl p-2.5 border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition cursor-pointer flex items-center gap-1.5 text-xs font-bold disabled:opacity-50"
@@ -325,6 +326,22 @@ export function SuperAdminPage() {
           </button>
         </div>
       </div>
+
+      {/* Super Admin Logout Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={() => {
+          setShowLogoutConfirm(false);
+          logout.mutate();
+        }}
+        title="Sign Out of Super Admin"
+        description="Are you sure you want to end your Super Admin session?"
+        confirmLabel="Sign Out"
+        cancelLabel="Cancel"
+        variant="danger"
+        isLoading={logout.isPending}
+      />
 
       {/* ───────────────────────────────────────────────────────────── */}
       {/* TAB 1: LIBRARIES SUPERVISION */}

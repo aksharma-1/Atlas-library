@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, Navigate } from 'react-router-dom';
 import { useLogin, useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
-import { BookOpen, Moon, Sun, ArrowRight, Lock, Mail } from 'lucide-react';
+import { BookOpen, Moon, Sun, ArrowRight, Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../components/ui';
 
 const loginSchema = z.object({
@@ -18,6 +19,7 @@ export function LoginPage() {
   const { isAuthenticated, user, isLoading } = useAuth();
   const login = useLogin();
   const { theme, toggleTheme } = useTheme();
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -137,12 +139,24 @@ export function LoginPage() {
                 </div>
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   {...register('password')}
-                  className="w-full rounded-xl glass-input pl-10 pr-4 py-2.5 text-sm outline-none"
+                  className="w-full rounded-xl glass-input pl-10 pr-10 py-2.5 text-sm outline-none"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-200 focus:outline-none transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
               {errors.password && (
                 <p role="alert" className="mt-1 text-xs text-rose-400">
