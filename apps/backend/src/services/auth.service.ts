@@ -79,7 +79,8 @@ export async function loginUser(
     subscriptionExpiresAt: tenant.subscriptionExpiresAt ? tenant.subscriptionExpiresAt.toISOString() : undefined,
     maxSeats: tenant.maxSeats || 100,
     isActive: tenant.isActive,
-    logoUrl: tenant.logoUrl,
+    // Store only hosted URLs in JWT; base64 data URIs must never be put in JWT or cookies as they exceed header size limits
+    logoUrl: tenant.logoUrl && !tenant.logoUrl.startsWith('data:') ? tenant.logoUrl : undefined,
     whatsappReminderTemplate: tenant.whatsappReminderTemplate,
   };
 
