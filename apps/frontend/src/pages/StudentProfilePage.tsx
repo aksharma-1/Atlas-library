@@ -646,6 +646,89 @@ export function StudentProfilePage() {
         )}
       </div>
 
+      {/* ── All Membership History Cycles & Renewals ── */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 space-y-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Membership & Renewal History ({profile.membershipHistory?.length || 0})
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Complete historical record of all plan subscriptions, desk allocations, and validity periods for {student.name}.
+            </p>
+          </div>
+        </div>
+
+        {(!profile.membershipHistory || profile.membershipHistory.length === 0) ? (
+          <p className="text-xs text-slate-400 py-4 text-center">No past membership cycles found.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+              <thead className="bg-slate-50 dark:bg-slate-800/60 font-semibold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th className="px-4 py-2.5">Plan / Shift</th>
+                  <th className="px-4 py-2.5">Desk</th>
+                  <th className="px-4 py-2.5">Validity Dates</th>
+                  <th className="px-4 py-2.5">Fee / Paid</th>
+                  <th className="px-4 py-2.5">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                {profile.membershipHistory.map((m: any) => {
+                  const planName = m.planId?.name || m.planName || 'General Plan';
+                  const shiftName = m.shiftId?.name || m.shiftName || 'Full Day';
+                  const seatNo = m.seatId?.seatNumber || m.seatNumber || (m.seatType === 'reserved' ? 'Desk' : 'Floating');
+                  const due = Math.max(0, (m.feePaise || 0) - (m.paidPaise || 0));
+
+                  return (
+                    <tr key={m._id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition">
+                      <td className="px-4 py-3">
+                        <p className="font-bold text-slate-900 dark:text-white">{planName}</p>
+                        <p className="text-[11px] text-slate-400">{shiftName}</p>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">
+                        {seatNo}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-300">
+                        {formatDate(m.startDate)} – {formatDate(m.endDate)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="font-mono font-bold text-slate-900 dark:text-white">
+                          ₹{((m.paidPaise || 0) / 100).toFixed(0)}
+                        </span>
+                        <span className="text-slate-400 text-[11px] ml-1">
+                          / ₹{((m.feePaise || 0) / 100).toFixed(0)}
+                        </span>
+                        {due > 0 && (
+                          <span className="block text-[10px] text-rose-500 font-semibold">
+                            ₹{(due / 100).toFixed(0)} due
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                            m.status === 'active'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                              : m.status === 'expired'
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                              : m.status === 'left'
+                              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/30'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                          }`}
+                        >
+                          {m.status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* ── Assign Membership Modal ── */}
       <Modal
         isOpen={showAssignModal}
