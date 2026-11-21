@@ -33,7 +33,7 @@ export function Switch({
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${
+      className={`group relative inline-flex shrink-0 cursor-pointer rounded-full transition-all duration-200 ease-in-out active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] dark:focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${
         isSm ? 'h-5 w-9' : 'h-6 w-11'
       } ${
         checked ? colorClasses : 'bg-slate-300 dark:bg-slate-700'
@@ -41,7 +41,7 @@ export function Switch({
     >
       <span
         aria-hidden="true"
-        className={`pointer-events-none inline-block transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+        className={`pointer-events-none inline-block transform rounded-full bg-white shadow-md ring-0 transition-transform duration-250 ease-out ${
           isSm ? 'h-4 w-4' : 'h-5 w-5'
         } ${
           isSm
@@ -50,7 +50,7 @@ export function Switch({
               : 'translate-x-0.5'
             : checked
             ? 'translate-x-5'
-            : 'translate-x-0.5'
+              : 'translate-x-0.5'
         } mt-0.5`}
       />
     </button>

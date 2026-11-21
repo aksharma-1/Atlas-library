@@ -12,7 +12,7 @@ export function NavBar() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   return (
-    <header className="flex h-14 sm:h-16 items-center justify-between border-b px-3.5 sm:px-6 glass-panel z-20 transition-colors">
+    <header className="flex min-h-[3.5rem] sm:min-h-[4rem] items-center justify-between border-b px-3 sm:px-6 glass-panel z-20 transition-colors pt-[env(safe-area-inset-top,0px)]">
       {/* Brand / Library name */}
       <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
         <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-tr from-[#1E3A8A] to-[#2563EB] flex items-center justify-center !text-white shadow-md shadow-blue-950/20 shrink-0 overflow-hidden">

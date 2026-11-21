@@ -12,7 +12,7 @@ export function AppShell({ children }: Props) {
       <NavBar />
       <div className="flex flex-1 overflow-hidden relative">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 md:p-8 pb-20 md:pb-8 transition-colors duration-200">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 md:p-8 pb-28 md:pb-8 transition-colors duration-200">
           {children}
         </main>
       </div>

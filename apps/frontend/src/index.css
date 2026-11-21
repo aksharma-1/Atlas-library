@@ -222,6 +222,120 @@ body, div, header, nav, aside, main, button, input, select, textarea {
   animation: pulseGlow 6s ease-in-out infinite;
 }
 
+/* ── UI Animation Keyframes & Transitions ───────────────────────────────── */
+@keyframes modalBackdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes bottomSheetSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dropdownSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dropdownSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes checkmarkPop {
+  0% {
+    transform: scale(0);
+  }
+  65% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-modal-backdrop {
+  animation: modalBackdropFadeIn 0.22s ease-out forwards;
+}
+
+.animate-modal-content {
+  animation: modalZoomIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-bottom-sheet {
+  animation: bottomSheetSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-dropdown-down {
+  animation: dropdownSlideDown 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-dropdown-up {
+  animation: dropdownSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-check-pop {
+  animation: checkmarkPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ── Custom Inset Modal Scrollbar (never clips outer rounded corners) ────── */
+.custom-modal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-medium) transparent;
+}
+
+.custom-modal-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-modal-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 6px 0;
+}
+
+.custom-modal-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: 9999px;
+}
+
+.custom-modal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
 /* ── Semantic System Classes ─────────────────────────────────────────────── */
 .app-canvas {
   background-color: var(--bg-canvas);
@@ -463,4 +577,38 @@ input[type="checkbox"],
 input[type="radio"],
 .cursor-pointer {
   cursor: pointer !important;
+}
+
+/* ── Mobile PWA & Touch Ergonomics ─────────────────────────────────────────── */
+html,
+body {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Safe area padding utilities for notched iPhones and modern Android gesture navigation */
+.safe-area-pt {
+  padding-top: max(env(safe-area-inset-top, 0px), 0.5rem);
+}
+
+.safe-area-pb {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.5rem);
+}
+
+/* Hide scrollbars on horizontal chip carousels for clean mobile swipe */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Prevent auto-zooming on focus in iOS mobile Safari (requires 16px minimum) */
+@media screen and (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }

@@ -12,7 +12,7 @@ import {
 import { usePlans, useSeats, useShifts } from '../hooks/useLibrary';
 import { useAuth } from '../hooks/useAuth';
 import type { StudentDTO } from '@atlas/shared';
-import { Modal, ConfirmModal, CustomSelect, Pagination, Switch, TableSkeleton, Skeleton } from '../components/ui';
+import { Modal, ConfirmModal, CustomSelect, Pagination, Switch, TableSkeleton, Skeleton, DatePicker } from '../components/ui';
 import { Bell, UserCheck, UserPlus, Search, Edit2, Trash2, MessageSquare, Armchair, IndianRupee, ChevronDown, ChevronUp, User, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { formatDate } from '../utils/date';
 import { renderWhatsAppReminder, openWhatsAppChat } from '../utils/whatsapp';
@@ -450,12 +450,12 @@ export function StudentsPage() {
       </div>
 
       {/* Tabs navigation */}
-      <div className="flex flex-wrap gap-2 border-b border-[var(--border-subtle)] pb-3">
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-3 border-b border-[var(--border-subtle)] touch-pan-x">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => handleSelectTab(tab.id)}
-            className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition select-none cursor-pointer ${
+            className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition shrink-0 select-none cursor-pointer ${
               activeTab === tab.id
                 ? 'bg-[#1E3A8A] dark:bg-blue-600 !text-white shadow-md shadow-blue-950/25'
                 : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border-subtle)] hover:bg-[#EEF2FF] hover:text-[#1E3A8A] dark:hover:bg-[var(--bg-surface-hover)] dark:hover:text-white'
@@ -544,11 +544,24 @@ export function StudentsPage() {
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {s.mobile && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const text = `Hello ${s.name}, greeting from ${user?.tenantName || 'AbhyasRoom Library'}!`;
+                          openWhatsAppChat(s.mobile, text);
+                        }}
+                        title="Chat on WhatsApp"
+                        className="p-2 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-950/40 transition shadow-xs cursor-pointer"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleStartEdit(s)}
                       title="Edit Student"
-                      className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 shadow-xs"
+                      className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 shadow-xs cursor-pointer"
                     >
                       <Edit2 className="h-4 w-4" />
                     </button>
@@ -556,7 +569,7 @@ export function StudentsPage() {
                       type="button"
                       onClick={() => handleDelete(s._id, s.name)}
                       title="Delete Student"
-                      className="p-2 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 shadow-xs"
+                      className="p-2 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 shadow-xs cursor-pointer"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -1636,7 +1649,7 @@ export function StudentsPage() {
 
               {collectPaymentOnRegister && (
                 <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800 animate-fade-in">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -1661,46 +1674,43 @@ export function StudentsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Payment / Collection Date
-                      </label>
-                      <input
-                        type="date"
+                      <DatePicker
+                        label="Payment Date"
                         value={regPaymentDate}
-                        onChange={(e) => setRegPaymentDate(e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:bg-white dark:focus:bg-slate-950 focus:ring-2 focus:ring-emerald-500 outline-none transition"
+                        onChange={setRegPaymentDate}
+                        size="sm"
                       />
                     </div>
 
-                    <div>
+                    <div className={regPaymentMethod === 'upi' ? '' : 'sm:col-span-2'}>
                       <CustomSelect
                         label="Payment Mode"
                         value={regPaymentMethod}
                         onChange={(val) => setRegPaymentMethod(val as any)}
                         options={[
-                          { value: 'upi', label: 'UPI (GPay / PhonePe / Paytm)', description: 'Fast QR & online transfer' },
                           { value: 'cash', label: 'Cash in Hand', description: 'Direct physical cash' },
+                          { value: 'upi', label: 'UPI (GPay / PhonePe / Paytm)', description: 'Fast QR & online transfer' },
                           { value: 'card', label: 'Debit / Credit Card', description: 'POS card swipe' },
                           { value: 'bank_transfer', label: 'Bank Transfer / NEFT', description: 'IMPS/RTGS bank deposit' },
                         ]}
                       />
                     </div>
-                  </div>
 
-                  {regPaymentMethod === 'upi' && (
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        UPI Transaction Ref / UTR (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={regPaymentRef}
-                        onChange={(e) => setRegPaymentRef(e.target.value)}
-                        placeholder="e.g. 412389102847"
-                        className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white font-mono"
-                      />
-                    </div>
-                  )}
+                    {regPaymentMethod === 'upi' && (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                          UPI Ref / UTR (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={regPaymentRef}
+                          onChange={(e) => setRegPaymentRef(e.target.value)}
+                          placeholder="e.g. 412389102847"
+                          className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

@@ -25,33 +25,54 @@ export function Button({
 
   const variantStyles = {
     primary:
-      'bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] !text-white shadow-md shadow-blue-950/25 border border-transparent hover:shadow-blue-950/40 active:scale-[0.98]',
+      'bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] !text-white shadow-md shadow-blue-950/25 border border-transparent hover:shadow-lg hover:shadow-blue-950/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]',
     accent:
-      'bg-[var(--brand-accent)] hover:bg-[var(--brand-accent-hover)] !text-slate-950 font-black shadow-md shadow-amber-500/25 border border-transparent active:scale-[0.98]',
+      'bg-[var(--brand-accent)] hover:bg-[var(--brand-accent-hover)] !text-slate-950 font-black shadow-md shadow-amber-500/25 border border-transparent hover:shadow-lg hover:shadow-amber-500/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]',
     secondary:
-      'bg-[var(--bg-surface-subtle)] hover:bg-[var(--bg-surface-hover)] text-[var(--text-primary)] border border-[var(--border-subtle)] shadow-xs',
+      'bg-[var(--bg-surface-subtle)] hover:bg-[var(--bg-surface-hover)] text-[var(--text-primary)] border border-[var(--border-subtle)] shadow-xs hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]',
     outline:
-      'bg-transparent hover:bg-[var(--bg-surface-subtle)] text-[var(--text-primary)] border border-[var(--border-medium)] hover:border-[var(--border-focus)]',
+      'bg-transparent hover:bg-[var(--bg-surface-subtle)] text-[var(--text-primary)] border border-[var(--border-medium)] hover:border-[var(--border-focus)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]',
     danger:
-      'bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 hover:border-rose-500/50',
+      'bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 hover:border-rose-500/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]',
     ghost:
-      'bg-transparent hover:bg-[var(--bg-surface-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+      'bg-transparent hover:bg-[var(--bg-surface-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] active:scale-[0.97]',
     glass:
-      'glass-panel hover:bg-white/10 text-[var(--text-primary)] border-[var(--border-subtle)] shadow-xs',
+      'glass-panel hover:bg-white/10 text-[var(--text-primary)] border-[var(--border-subtle)] shadow-xs hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]',
   }[variant];
 
   return (
     <button
       disabled={disabled || isLoading}
-      className={`inline-flex items-center justify-center transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${sizeStyles} ${variantStyles} ${className}`}
+      className={`group relative inline-flex items-center justify-center transition-all duration-150 ease-out disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${sizeStyles} ${variantStyles} ${className}`}
       {...props}
     >
       {isLoading ? (
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent shrink-0" />
+        <svg
+          className="animate-spin h-4 w-4 shrink-0 -ml-0.5 mr-1.5"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="3.5"
+          />
+          <path
+            className="opacity-85"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          />
+        </svg>
       ) : (
-        icon && <span className="shrink-0">{icon}</span>
+        icon && <span className="shrink-0 transition-transform duration-150 group-hover:scale-105">{icon}</span>
       )}
-      {children}
+      <span className={`transition-opacity duration-150 ${isLoading ? 'opacity-85' : 'opacity-100'}`}>
+        {children}
+      </span>
     </button>
   );
 }

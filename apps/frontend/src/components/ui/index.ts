@@ -17,4 +17,6 @@ export type { PrintableReceiptProps } from '../PrintableReceipt';
 export { Skeleton, StatCardSkeleton, TableSkeleton, SeatGridSkeleton, PageHeaderSkeleton } from './Skeleton';
 export { Logo } from './Logo';
 export type { LogoProps } from './Logo';
+export { DatePicker } from './DatePicker';
+export type { DatePickerProps } from './DatePicker';
 

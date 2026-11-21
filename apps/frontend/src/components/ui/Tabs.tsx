@@ -35,9 +35,9 @@ export function Tabs<T extends string = string>({
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`inline-flex items-center gap-2 rounded-xl font-bold whitespace-nowrap transition-all duration-150 select-none cursor-pointer ${paddingClass} ${
+            className={`inline-flex items-center gap-2 rounded-xl font-bold whitespace-nowrap transition-all duration-200 ease-out select-none cursor-pointer active:scale-[0.97] ${paddingClass} ${
               isActive
-                ? 'bg-[var(--brand-primary)] !text-white shadow-md shadow-blue-950/20'
+                ? 'bg-[var(--brand-primary)] !text-white shadow-md shadow-blue-950/25 scale-[1.02]'
                 : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
             }`}
           >

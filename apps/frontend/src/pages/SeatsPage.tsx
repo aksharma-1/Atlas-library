@@ -460,7 +460,7 @@ export function SeatsPage() {
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-4 shadow-sm">
         {/* Row 1: Shift Chips */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0 touch-pan-x">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5 shrink-0 mr-1">
               <Clock className="h-3.5 w-3.5" /> Shift:
             </span>
@@ -505,7 +505,7 @@ export function SeatsPage() {
 
         {/* Row 2: Section / Hall Filters & Legend */}
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0 touch-pan-x">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0 mr-1 flex items-center gap-1">
               <Filter className="h-3.5 w-3.5" /> Hall/Section:
             </span>
@@ -635,7 +635,7 @@ export function SeatsPage() {
                 <button
                   key={seat._id}
                   onClick={() => setSelectedSeat(seat)}
-                  className={`group relative flex flex-col items-center justify-between p-3 rounded-xl border text-center transition-all duration-150 cursor-pointer select-none hover:shadow-md hover:scale-[1.03] ${getSeatCardClasses(
+                  className={`group relative flex flex-col items-center justify-between p-2.5 sm:p-3 min-h-[58px] sm:min-h-[64px] rounded-xl border text-center transition-all duration-150 cursor-pointer select-none hover:shadow-md hover:scale-[1.03] active:scale-[0.97] ${getSeatCardClasses(
                     seat,
                   )}`}
                 >

@@ -167,8 +167,8 @@ export function CustomSelect({
         </span>
 
         <ChevronDown
-          className={`h-4 w-4 text-slate-400 transition-transform duration-200 shrink-0 ${
-            isOpen ? 'rotate-180 text-indigo-500' : ''
+          className={`h-4 w-4 text-slate-400 transition-transform duration-300 ease-out shrink-0 ${
+            isOpen ? 'rotate-180 text-[#1E3A8A] dark:text-blue-400' : 'rotate-0'
           }`}
         />
       </button>
@@ -179,10 +179,12 @@ export function CustomSelect({
           style={{
             maxHeight: `${dropdownMaxHeight}px`,
             boxShadow:
-              '0 12px 30px -4px rgba(0, 0, 0, 0.15), 0 8px 12px -6px rgba(0, 0, 0, 0.1)',
+              '0 16px 36px -4px rgba(0, 0, 0, 0.18), 0 10px 16px -6px rgba(0, 0, 0, 0.12)',
           }}
-          className={`absolute z-50 w-full rounded-2xl border bg-white dark:bg-slate-900 p-1.5 shadow-2xl border-slate-200 dark:border-slate-800 overflow-y-auto animate-in fade-in zoom-in-95 duration-100 ${
-            openUpward ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+          className={`absolute z-50 w-full rounded-2xl border bg-white dark:bg-slate-900 p-1.5 shadow-2xl border-slate-200 dark:border-slate-800 overflow-y-auto ${
+            openUpward
+              ? 'bottom-full mb-1.5 animate-dropdown-up origin-bottom'
+              : 'top-full mt-1.5 animate-dropdown-down origin-top'
           }`}
         >
           {/* Optional Search Bar inside dropdown */}
@@ -196,13 +198,13 @@ export function CustomSelect({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={searchPlaceholder}
-                  className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 outline-none focus:border-[#1E3A8A] dark:focus:border-blue-500 focus:ring-1 focus:ring-[#1E3A8A] dark:focus:ring-blue-500 transition-all duration-150"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -227,11 +229,11 @@ export function CustomSelect({
                       onChange(option.value);
                       setIsOpen(false);
                     }}
-                    className={`flex items-center justify-between px-3 py-2 text-xs rounded-xl cursor-pointer transition-colors duration-100 ${
+                    className={`flex items-center justify-between px-3 py-2 text-xs rounded-xl cursor-pointer transition-all duration-150 ease-out active:scale-[0.99] ${
                       option.disabled
                         ? 'opacity-40 cursor-not-allowed text-slate-400'
                         : isSelected
-                        ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold'
+                        ? 'bg-[#EEF2FF] dark:bg-blue-950/60 text-[#1E3A8A] dark:text-blue-300 font-bold'
                         : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
@@ -253,7 +255,7 @@ export function CustomSelect({
                     </div>
 
                     {isSelected && (
-                      <Check className="h-4 w-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                      <Check className="h-4 w-4 text-[#1E3A8A] dark:text-blue-400 shrink-0 animate-check-pop" />
                     )}
                   </div>
                 );

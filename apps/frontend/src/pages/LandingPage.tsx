@@ -68,16 +68,14 @@ export function LandingPage() {
       ],
     },
     pro: {
-      maxDesks: 250,
+      maxDesks: 500,
       description: 'Built for high-volume commercial study centers & reading halls.',
       features: [
-        'Up to 250 Desks tracking',
-        'Multi-shift & 24/7 Full-day coverage',
-        'Instant Desk Conflict Prevention',
-        'WhatsApp Automated One-Click Alerts',
-        'Overdue Fees & Partial Collection tracker',
-        'Student ID Card Generator with QR verification',
-        'Gift Days & Membership Extension credits',
+        'Up to 500 Desks tracking',
+        'Multiple Study Hall Sections',
+        'All Standard & Growth Features',
+        'Dedicated Support & Assistance',
+        'Free Future Platform Updates',
       ],
     },
     enterprise: {
@@ -112,16 +110,48 @@ export function LandingPage() {
       features: DEFAULT_PLAN_CONFIG.growth.features,
     },
     {
-      code: 'enterprise',
-      name: 'Enterprise Hub',
-      monthlyPrice: 1999,
+      code: 'pro',
+      name: 'Enterprise / Hub',
+      monthlyPrice: 1499,
       maxDesks: 500,
-      description: DEFAULT_PLAN_CONFIG.enterprise.description,
-      features: DEFAULT_PLAN_CONFIG.enterprise.features,
+      description: DEFAULT_PLAN_CONFIG.pro.description,
+      features: DEFAULT_PLAN_CONFIG.pro.features,
     },
   ];
 
-  const yearlyDiscount = plansData?.config?.yearlyDiscountPercent ?? 20;
+  const yearlyDiscount = plansData?.config?.yearlyDiscountPercent ?? 15;
+
+  const calculateLandingPlanPrice = (baseMonthlyPrice: number) => {
+    const monthlyPrice = Number(baseMonthlyPrice) || 0;
+    if (billingCycle === 'yearly') {
+      const yearlyBase = monthlyPrice * 12;
+      const totalYearlyDiscounted = Math.round(yearlyBase * (1 - yearlyDiscount / 100));
+      const effectiveMonthly = Math.round(totalYearlyDiscounted / 12);
+      const savings = yearlyBase - totalYearlyDiscounted;
+      return {
+        amount: totalYearlyDiscounted,
+        display: `₹${totalYearlyDiscounted.toLocaleString('en-IN')}`,
+        period: '/ year',
+        strikethrough: `₹${yearlyBase.toLocaleString('en-IN')}`,
+        effectiveMonthly,
+        effectiveMonthlyText: `Just ₹${effectiveMonthly.toLocaleString('en-IN')} / month`,
+        savings,
+        savingsBadge: `Save ₹${savings.toLocaleString('en-IN')} (${yearlyDiscount}% off)`,
+        billedText: `Billed annually as ₹${totalYearlyDiscounted.toLocaleString('en-IN')}/year`,
+      };
+    }
+    return {
+      amount: monthlyPrice,
+      display: `₹${monthlyPrice.toLocaleString('en-IN')}`,
+      period: '/ month',
+      strikethrough: null,
+      effectiveMonthly: monthlyPrice,
+      effectiveMonthlyText: null,
+      savings: null,
+      savingsBadge: null,
+      billedText: 'Billed monthly • Cancel anytime',
+    };
+  };
 
   const faqs = [
     {
@@ -809,7 +839,13 @@ export function LandingPage() {
               }`}
             >
               <span>Annual Billing</span>
-              <span className="text-[10px] bg-amber-500/20 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-full font-black border border-amber-500/30">
+              <span
+                className={`text-[10px] px-1.5 py-0.5 rounded-full font-black border transition-colors ${
+                  billingCycle === 'yearly'
+                    ? 'bg-[#F59E0B] text-slate-950 border-amber-300 shadow-xs'
+                    : 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                }`}
+              >
                 Save {yearlyDiscount}%
               </span>
             </button>
@@ -824,10 +860,7 @@ export function LandingPage() {
 
             const isGrowth = p.isPopular || planKey === 'growth' || planKey === 'pro';
             const baseMonthly = p.monthlyPrice ?? 999;
-            const price =
-              billingCycle === 'yearly'
-                ? Math.round(baseMonthly * (1 - yearlyDiscount / 100))
-                : baseMonthly;
+            const priceInfo = calculateLandingPlanPrice(baseMonthly);
 
             const planFeatures = (Array.isArray(p.features) && p.features.length > 0)
               ? p.features
@@ -871,15 +904,39 @@ export function LandingPage() {
                   <h3 className="text-xl font-black text-slate-900 dark:text-white">{p.name}</h3>
                   <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 min-h-[36px] font-normal leading-relaxed">{planDesc}</p>
 
-                  <div className="mt-6 flex items-baseline gap-1.5">
-                    <span className="text-4xl font-black text-slate-900 dark:text-white">₹{price}</span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">/ month</span>
+                  <div className="mt-6">
+                    <div className="flex items-baseline gap-2">
+                      {billingCycle === 'yearly' && priceInfo.strikethrough && (
+                        <span className="text-xl font-bold text-slate-400 dark:text-slate-500 line-through">
+                          {priceInfo.strikethrough}
+                        </span>
+                      )}
+                      <span className="text-4xl font-black text-slate-900 dark:text-white">
+                        {priceInfo.display}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">
+                        {priceInfo.period}
+                      </span>
+                    </div>
+
+                    <div className="mt-2 min-h-[42px] flex flex-col justify-center">
+                      {billingCycle === 'yearly' ? (
+                        <>
+                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            {priceInfo.effectiveMonthlyText} <span className="text-slate-500 font-normal">(billed annually)</span>
+                          </p>
+                          <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 mt-0.5">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span>{priceInfo.savingsBadge}</span>
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                          {priceInfo.billedText}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  {billingCycle === 'yearly' && (
-                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 font-semibold">
-                      Billed annually (Save {yearlyDiscount}%)
-                    </p>
-                  )}
 
                   <div className="mt-6 pt-6 border-t space-y-3" style={{ borderColor: 'var(--border-subtle)' }}>
                     <div className="flex items-center gap-2 text-xs font-bold text-indigo-700 dark:text-indigo-300">

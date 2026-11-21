@@ -1,4 +1,5 @@
 import { Calendar, Sparkles } from 'lucide-react';
+import { DatePicker } from './ui/DatePicker';
 
 export type DurationOption = '30d' | '60d' | '90d' | 'custom';
 
@@ -143,35 +144,26 @@ export function DateRangeDurationSelector({
         </button>
       </div>
 
-      {/* Date Pickers */}
-      <div className="grid grid-cols-2 gap-3 pt-1">
-        <div>
-          <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-            Start Date
-          </label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => handleStartDateChange(e.target.value)}
-            className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white [color-scheme:light] dark:[color-scheme:dark] focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-            End Date (Auto-filled)
-          </label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => {
-              onChangeDurationOption('custom');
-              onChangeEndDate(e.target.value);
-            }}
-            className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white [color-scheme:light] dark:[color-scheme:dark] focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            required
-          />
-        </div>
+      {/* Custom Date Pickers */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+        <DatePicker
+          label="Start Date"
+          value={startDate}
+          onChange={handleStartDateChange}
+          size="sm"
+          required
+        />
+        <DatePicker
+          label="End Date (Auto-filled)"
+          value={endDate}
+          onChange={(newEnd) => {
+            onChangeDurationOption('custom');
+            onChangeEndDate(newEnd);
+          }}
+          minDate={startDate}
+          size="sm"
+          required
+        />
       </div>
 
       {/* Helper preview text */}

@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { PrintableCard } from '../components/PrintableCard';
 import { PrintableReceipt } from '../components/PrintableReceipt';
 import type { PaymentDTO } from '@atlas/shared';
-import { CustomSelect, Modal, ConfirmModal, Switch, Skeleton } from '../components/ui';
+import { CustomSelect, Modal, ConfirmModal, Switch, Skeleton, DatePicker } from '../components/ui';
 import { UserCheck, CreditCard, Gift, UserCog, Bell, ArrowLeft, Trash2, Clock, Calendar, Armchair, IndianRupee } from 'lucide-react';
 import {
   DateRangeDurationSelector,
@@ -906,10 +906,10 @@ export function StudentProfilePage() {
 
               {collectPaymentOnRenewal && (
                 <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                           Amount Paid (₹) *
                         </label>
                         <span className="text-[10px] text-slate-400">
@@ -923,23 +923,20 @@ export function StudentProfilePage() {
                         value={renewalPaymentAmountRupees}
                         onChange={(e) => setRenewalPaymentAmountRupees(e.target.value)}
                         placeholder={finalPayableFeeRupees.toString()}
-                        className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white font-mono"
+                        className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-xs text-slate-900 dark:text-white font-mono"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Payment / Collection Date
-                      </label>
-                      <input
-                        type="date"
+                      <DatePicker
+                        label="Payment Date"
                         value={renewalPaymentDate}
-                        onChange={(e) => setRenewalPaymentDate(e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white font-mono"
+                        onChange={setRenewalPaymentDate}
+                        size="sm"
                       />
                     </div>
 
-                    <div>
+                    <div className={renewalPaymentMethod === 'cash' ? 'sm:col-span-2' : ''}>
                       <CustomSelect
                         label="Payment Mode"
                         value={renewalPaymentMethod}
@@ -952,22 +949,22 @@ export function StudentProfilePage() {
                         ]}
                       />
                     </div>
-                  </div>
 
-                  {renewalPaymentMethod !== 'cash' && (
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Transaction Ref / UTR / Note (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={renewalPaymentRef}
-                        onChange={(e) => setRenewalPaymentRef(e.target.value)}
-                        placeholder="e.g. UPI Ref #412389102847"
-                        className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-white font-mono"
-                      />
-                    </div>
-                  )}
+                    {renewalPaymentMethod !== 'cash' && (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                          Transaction Ref / Note (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={renewalPaymentRef}
+                          onChange={(e) => setRenewalPaymentRef(e.target.value)}
+                          placeholder="e.g. UPI Ref #412389102847"
+                          className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-xs text-slate-900 dark:text-white font-mono"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -1034,14 +1031,10 @@ export function StudentProfilePage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Payment Date *
-              </label>
-              <input
-                type="date"
+              <DatePicker
+                label="Payment Date"
                 value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white font-mono"
+                onChange={setPaymentDate}
                 required
               />
             </div>
