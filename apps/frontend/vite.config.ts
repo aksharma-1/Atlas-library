@@ -10,11 +10,11 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'favicon2.png', 'pwa-192x192.png', 'pwa-512x512.png'],
+      includeAssets: ['favicon.ico', 'favicon.svg', 'favicon-32x32.png', 'favicon-16x16.png', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'abhyasroom-logo.png'],
       manifest: {
-        name: 'StudySpace OS — Smart Library Cloud Platform',
-        short_name: 'StudySpace',
-        description: 'Multi-tenant library and study hall management cloud platform',
+        name: 'AbhyasRoom — Smart Library Cloud Platform',
+        short_name: 'AbhyasRoom',
+        description: 'Multi-tenant library and study hall management cloud platform - abhyasroom.in',
         theme_color: '#0b0f19',
         background_color: '#0b0f19',
         display: 'standalone',

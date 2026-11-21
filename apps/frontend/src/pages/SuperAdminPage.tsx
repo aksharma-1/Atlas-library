@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   useSuperAdminTenants,
   useApproveTenantSubscription,
@@ -75,6 +75,26 @@ export function SuperAdminPage() {
 
   // Sync config when loaded
   const currentDiscount = saasData?.config?.yearlyDiscountPercent ?? 20;
+
+  useEffect(() => {
+    if (saasData?.config) {
+      if (saasData.config.yearlyDiscountPercent !== undefined) {
+        setYearlyDiscount(String(saasData.config.yearlyDiscountPercent));
+      }
+      if (saasData.config.upiId) {
+        setConfigUpiId(saasData.config.upiId);
+      }
+      if (saasData.config.upiName) {
+        setConfigUpiName(saasData.config.upiName);
+      }
+      if (saasData.config.trialDurationDays !== undefined) {
+        setTrialDurationDays(String(saasData.config.trialDurationDays));
+      }
+      if (saasData.config.trialMaxSeats !== undefined) {
+        setTrialMaxSeats(String(saasData.config.trialMaxSeats));
+      }
+    }
+  }, [saasData?.config]);
 
   if (user?.role !== 'superadmin') {
     return (
@@ -268,28 +288,31 @@ export function SuperAdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-900 text-slate-100 p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
+    <div
+      className="min-h-screen p-6 md:p-10 space-y-8 max-w-7xl mx-auto transition-colors duration-200"
+      style={{ backgroundColor: 'var(--bg-canvas)', color: 'var(--text-primary)' }}
+    >
       {/* Platform Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-surface-700 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
         <div>
           <div className="flex items-center gap-3">
             <span className="text-3xl">🛡️</span>
-            <h1 className="text-2xl font-black text-white">StudySpace OS — Super Admin</h1>
-            <span className="bg-brand-600/30 text-brand-300 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-brand-500/40">
-              Platform Master Panel
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white">AbhyasRoom — Super Admin</h1>
+            <span className="bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold px-2.5 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800">
+              abhyasroom.in Master Panel
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
             Supervise all library registrations, customize subscription plans, and configure yearly discounts.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex rounded-xl bg-surface-800 p-1 border border-surface-700">
+          <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
             <button
               onClick={() => setMainTab('libraries')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                mainTab === 'libraries' ? 'bg-brand-600 !text-white shadow' : 'text-slate-400 hover:text-white'
+                mainTab === 'libraries' ? 'bg-[#1E3A8A] dark:bg-blue-600 !text-white shadow' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <span>🏛️</span> Libraries ({tenants.length})
@@ -297,7 +320,7 @@ export function SuperAdminPage() {
             <button
               onClick={() => setMainTab('plans')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                mainTab === 'plans' ? 'bg-brand-600 !text-white shadow' : 'text-slate-400 hover:text-white'
+                mainTab === 'plans' ? 'bg-[#1E3A8A] dark:bg-blue-600 !text-white shadow' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <span>💳</span> SaaS Plans ({plans.length})
@@ -312,7 +335,7 @@ export function SuperAdminPage() {
                 setTrialMaxSeats(String(saasData?.config?.trialMaxSeats ?? 50));
               }}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                mainTab === 'settings' ? 'bg-brand-600 !text-white shadow' : 'text-slate-400 hover:text-white'
+                mainTab === 'settings' ? 'bg-[#1E3A8A] dark:bg-blue-600 !text-white shadow' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <span>⚙️</span> Settings & UPI
@@ -323,12 +346,12 @@ export function SuperAdminPage() {
           <button
             onClick={toggleTheme}
             title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-            className="rounded-xl p-2.5 border transition glass-card text-slate-300 hover:text-white cursor-pointer"
+            className="rounded-xl p-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition cursor-pointer shadow-xs"
           >
             {theme === 'dark' ? (
               <Sun className="h-4 w-4 text-amber-400" />
             ) : (
-              <Moon className="h-4 w-4 text-indigo-400" />
+              <Moon className="h-4 w-4 text-indigo-500" />
             )}
           </button>
 
@@ -337,7 +360,7 @@ export function SuperAdminPage() {
             onClick={() => setShowLogoutConfirm(true)}
             disabled={logout.isPending}
             title="Log out of Super Admin"
-            className="rounded-xl p-2.5 border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition cursor-pointer flex items-center gap-1.5 text-xs font-bold disabled:opacity-50"
+            className="rounded-xl p-2.5 border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 transition cursor-pointer flex items-center gap-1.5 text-xs font-bold disabled:opacity-50"
           >
             <LogOut className="h-4 w-4" />
             <span className="hidden sm:inline">Logout</span>
@@ -792,7 +815,7 @@ export function SuperAdminPage() {
                   type="text"
                   value={configUpiId}
                   onChange={(e) => setConfigUpiId(e.target.value)}
-                  placeholder="e.g. 9876543210@paytm or studyspace@upi"
+                  placeholder="e.g. 9876543210@paytm or abhyasroom@upi"
                   className="mt-1 w-full rounded-lg border border-surface-600 bg-surface-700 px-3 py-2 text-sm font-mono text-white placeholder-slate-500 focus:border-brand-500"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
@@ -806,7 +829,7 @@ export function SuperAdminPage() {
                   type="text"
                   value={configUpiName}
                   onChange={(e) => setConfigUpiName(e.target.value)}
-                  placeholder="e.g. StudySpace OS Platform"
+                  placeholder="e.g. AbhyasRoom Platform"
                   className="mt-1 w-full rounded-lg border border-surface-600 bg-surface-700 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-brand-500"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
@@ -953,7 +976,7 @@ export function SuperAdminPage() {
               <button
                 type="submit"
                 disabled={createPlan.isPending || updatePlan.isPending}
-                className="rounded-xl bg-indigo-600 px-5 py-2 text-xs font-bold !text-white shadow hover:bg-indigo-500 disabled:opacity-50"
+                className="rounded-xl bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 px-5 py-2 text-xs font-bold !text-white shadow disabled:opacity-50 cursor-pointer"
               >
                 {createPlan.isPending || updatePlan.isPending
                   ? 'Saving…'
@@ -1260,7 +1283,7 @@ export function SuperAdminPage() {
                         },
                       );
                     }}
-                    className="bg-indigo-600 hover:bg-indigo-500 !text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow disabled:opacity-50"
+                    className="bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 !text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow disabled:opacity-50 cursor-pointer"
                   >
                     {resetPasswordMutation.isPending ? 'Updating…' : 'Save Direct Password'}
                   </button>

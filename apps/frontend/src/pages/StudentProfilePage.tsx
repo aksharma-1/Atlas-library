@@ -395,7 +395,7 @@ export function StudentProfilePage() {
                 const text = renderWhatsAppReminder(user?.whatsappReminderTemplate, {
                   studentName: student.name,
                   seatNumber: (activeMembership?.seatId as any)?.seatNumber || activeMembership?.seatNumber || 'Seat',
-                  libraryName: user?.tenantName || 'StudySpace Library',
+                  libraryName: user?.tenantName || 'AbhyasRoom Library',
                   phone: user?.phone || '',
                 });
                 setReminderMessageText(text);
@@ -429,7 +429,7 @@ export function StudentProfilePage() {
                 }
                 setShowAssignModal(true);
               }}
-              className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 shadow-xs transition text-center justify-center"
+              className="rounded-xl bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 px-3 py-2 text-xs font-bold !text-white shadow-xs transition text-center justify-center cursor-pointer"
             >
               {activeMembership ? '↻ Renew Plan' : '+ Assign Plan'}
             </button>
@@ -447,7 +447,7 @@ export function StudentProfilePage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowGiftDaysModal(true)}
-                className="rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-2.5 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:!text-white transition"
+                className="rounded-lg bg-amber-100 dark:bg-amber-500/20 border border-amber-300 dark:border-amber-500/40 px-2.5 py-1 text-xs font-bold text-amber-900 dark:text-amber-300 hover:bg-[#F59E0B] hover:!text-slate-950 transition cursor-pointer"
               >
                 🎁 Add Gift Days
               </button>
@@ -990,7 +990,7 @@ export function StudentProfilePage() {
             <button
               type="submit"
               disabled={createMembership.isPending}
-              className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 disabled:opacity-50 shadow-sm"
+              className="rounded-xl bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 px-4 py-2 text-xs font-bold !text-white disabled:opacity-50 shadow-sm cursor-pointer"
             >
               {createMembership.isPending ? 'Saving…' : 'Confirm Assignment'}
             </button>
@@ -1095,7 +1095,7 @@ export function StudentProfilePage() {
             <button
               type="submit"
               disabled={recordPayment.isPending || parseFloat(paymentAmountRupees || '0') > duesRemainingPaise / 100 || parseFloat(paymentAmountRupees || '0') <= 0}
-              className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 disabled:opacity-50 shadow-sm"
+              className="rounded-xl bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 px-4 py-2 text-xs font-bold !text-white disabled:opacity-50 shadow-sm cursor-pointer"
             >
               {recordPayment.isPending ? 'Processing…' : 'Record & Generate Receipt'}
             </button>
@@ -1180,7 +1180,7 @@ export function StudentProfilePage() {
             <button
               type="submit"
               disabled={addGiftDays.isPending}
-              className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 disabled:opacity-50 shadow-sm"
+              className="rounded-xl bg-[#F59E0B] hover:bg-[#D97706] px-4 py-2 text-xs font-black !text-slate-950 shadow-sm disabled:opacity-50 cursor-pointer"
             >
               {addGiftDays.isPending ? 'Extending…' : 'Add Days'}
             </button>
@@ -1379,7 +1379,7 @@ export function StudentProfilePage() {
             <button
               type="submit"
               disabled={updateStudent.isPending}
-              className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 disabled:opacity-50 shadow-sm"
+              className="rounded-xl bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 px-4 py-2 text-xs font-bold !text-white disabled:opacity-50 shadow-sm cursor-pointer"
             >
               {updateStudent.isPending ? 'Saving…' : 'Save Changes'}
             </button>
@@ -1408,7 +1408,7 @@ export function StudentProfilePage() {
                   const text = renderWhatsAppReminder(user?.whatsappReminderTemplate, {
                     studentName: student.name,
                     seatNumber: (activeMembership?.seatId as any)?.seatNumber || activeMembership?.seatNumber || 'Seat',
-                    libraryName: user?.tenantName || 'StudySpace Library',
+                    libraryName: user?.tenantName || 'AbhyasRoom Library',
                     phone: user?.phone || '',
                   });
                   setReminderMessageText(text);

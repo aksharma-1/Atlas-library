@@ -165,62 +165,87 @@ export function PlansPage() {
   return (
     <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto pb-12">
       <div>
-        <h1 className="text-2xl font-bold text-white">Plans & Shifts</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <h1 className="text-2xl font-black text-[var(--text-primary)]">Plans & Shifts</h1>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
           Configure operational study hours and membership plan offerings for your library.
         </p>
       </div>
 
       {actionError && (
-        <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-400 flex items-center justify-between">
+        <div className="rounded-xl border border-rose-300 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-300 flex items-center justify-between">
           <span>{actionError}</span>
-          <button onClick={() => setActionError(null)} className="text-red-400 font-bold hover:text-red-300">✕</button>
+          <button onClick={() => setActionError(null)} className="text-rose-500 hover:text-rose-700 dark:hover:text-rose-200 font-bold ml-2 cursor-pointer">✕</button>
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-2">
         {/* ── Shifts Section ── */}
-        <div className="rounded-2xl border border-surface-700 bg-surface-800 p-4 sm:p-6 space-y-5 sm:space-y-6">
+        <div
+          className="rounded-2xl border p-4 sm:p-6 space-y-5 sm:space-y-6 shadow-sm transition-all"
+          style={{
+            backgroundColor: 'var(--bg-surface)',
+            borderColor: 'var(--border-subtle)',
+          }}
+        >
           <div>
-            <h2 className="text-base sm:text-lg font-semibold text-white">Operational Shifts</h2>
-            <p className="text-xs text-slate-400">Define library shifts and study periods in 12-hour format.</p>
+            <h2 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">Operational Shifts</h2>
+            <p className="text-xs text-[var(--text-tertiary)]">Define library shifts and study periods in 12-hour format.</p>
           </div>
 
-          <form onSubmit={handleCreateShift} className="space-y-3 bg-surface-900/60 p-3.5 sm:p-4 rounded-xl border border-surface-700">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">+ Add New Shift</h3>
+          <form
+            onSubmit={handleCreateShift}
+            className="space-y-3.5 p-4 rounded-xl border transition-all"
+            style={{
+              backgroundColor: 'var(--bg-surface-subtle)',
+              borderColor: 'var(--border-subtle)',
+            }}
+          >
+            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">+ Add New Shift</h3>
             <div>
-              <label className="block text-xs font-medium text-slate-300">Shift Name</label>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">Shift Name</label>
               <input
                 type="text"
                 value={shiftName}
                 onChange={(e) => setShiftName(e.target.value)}
                 placeholder="e.g. Morning Shift"
-                className="mt-1 w-full rounded border border-surface-600 bg-surface-700 px-3 py-1.5 text-sm text-white"
+                className="w-full rounded-xl border px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                style={{
+                  backgroundColor: 'var(--bg-surface)',
+                  borderColor: 'var(--border-medium)',
+                }}
                 required
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-300">
-                  Start Time <span className="text-[10px] text-brand-400 font-normal">({formatTime12H(startTime)})</span>
+                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
+                  Start Time <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-normal">({formatTime12H(startTime)})</span>
                 </label>
                 <input
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="mt-1 w-full rounded border border-surface-600 bg-surface-700 px-3 py-1.5 text-sm text-white"
+                  className="w-full rounded-xl border px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  style={{
+                    backgroundColor: 'var(--bg-surface)',
+                    borderColor: 'var(--border-medium)',
+                  }}
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-300">
-                  End Time <span className="text-[10px] text-brand-400 font-normal">({formatTime12H(endTime)})</span>
+                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
+                  End Time <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-normal">({formatTime12H(endTime)})</span>
                 </label>
                 <input
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="mt-1 w-full rounded border border-surface-600 bg-surface-700 px-3 py-1.5 text-sm text-white"
+                  className="w-full rounded-xl border px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  style={{
+                    backgroundColor: 'var(--bg-surface)',
+                    borderColor: 'var(--border-medium)',
+                  }}
                   required
                 />
               </div>
@@ -228,19 +253,26 @@ export function PlansPage() {
             <button
               type="submit"
               disabled={createShift.isPending}
-              className="w-full rounded bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
+              className="w-full rounded-xl bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 px-4 py-2.5 text-xs font-bold !text-white shadow-md shadow-blue-950/20 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 cursor-pointer"
             >
               {createShift.isPending ? 'Adding…' : 'Save Shift'}
             </button>
           </form>
 
           {/* Shifts list */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-slate-400">Configured Shifts ({shifts.length})</h3>
+          <div className="space-y-2.5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Configured Shifts ({shifts.length})</h3>
             {shiftsLoading ? (
               <div className="space-y-2 animate-pulse">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded border border-surface-700 bg-surface-700/40">
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-3.5 rounded-xl border"
+                    style={{
+                      backgroundColor: 'var(--bg-surface-subtle)',
+                      borderColor: 'var(--border-subtle)',
+                    }}
+                  >
                     <div className="space-y-1.5 flex-1">
                       <Skeleton className="h-4 w-28" />
                       <Skeleton className="h-3 w-36" />
@@ -249,26 +281,37 @@ export function PlansPage() {
                 ))}
               </div>
             ) : shifts.length === 0 ? (
-              <p className="text-xs text-slate-500">No shifts created yet. Add one above.</p>
+              <p className="text-xs text-[var(--text-muted)] py-4 text-center">No shifts created yet. Add one above.</p>
             ) : (
               shifts.map((s) => (
-                <div key={s._id} className="flex items-center justify-between rounded border border-surface-700 bg-surface-700/40 p-3 hover:border-surface-600 transition">
+                <div
+                  key={s._id}
+                  className="flex items-center justify-between rounded-xl border p-3.5 hover:shadow-xs transition-all"
+                  style={{
+                    backgroundColor: 'var(--bg-surface-subtle)',
+                    borderColor: 'var(--border-subtle)',
+                  }}
+                >
                   <div>
-                    <p className="text-sm font-medium text-white">{s.name}</p>
-                    <p className="text-xs text-brand-300 font-mono mt-0.5">
+                    <p className="text-sm font-bold text-[var(--text-primary)]">{s.name}</p>
+                    <p className="text-xs text-indigo-600 dark:text-indigo-400 font-mono mt-0.5">
                       {formatTime12H(s.startTime)} – {formatTime12H(s.endTime)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleStartEditShift(s)}
-                      className="rounded bg-surface-600 hover:bg-surface-500 px-2 py-1 text-xs text-slate-200"
+                      className="rounded-lg border px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:text-indigo-600 hover:border-indigo-500 transition-all cursor-pointer"
+                      style={{
+                        backgroundColor: 'var(--bg-surface)',
+                        borderColor: 'var(--border-medium)',
+                      }}
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDeleteShift(s._id, s.name)}
-                      className="rounded bg-red-500/20 hover:bg-red-500/30 px-2 py-1 text-xs text-red-300"
+                      className="rounded-lg border border-rose-200 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-all cursor-pointer"
                     >
                       Delete
                     </button>
@@ -280,22 +323,39 @@ export function PlansPage() {
         </div>
 
         {/* ── Plans Section ── */}
-        <div className="rounded-2xl border border-surface-700 bg-surface-800 p-4 sm:p-6 space-y-5 sm:space-y-6">
+        <div
+          className="rounded-2xl border p-4 sm:p-6 space-y-5 sm:space-y-6 shadow-sm transition-all"
+          style={{
+            backgroundColor: 'var(--bg-surface)',
+            borderColor: 'var(--border-subtle)',
+          }}
+        >
           <div>
-            <h2 className="text-base sm:text-lg font-semibold text-white">Membership Plans</h2>
-            <p className="text-xs text-slate-400">Configure plans with pricing in rupees (unlimited capacity).</p>
+            <h2 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">Membership Plans</h2>
+            <p className="text-xs text-[var(--text-tertiary)]">Configure plans with pricing in rupees (unlimited capacity).</p>
           </div>
 
-          <form onSubmit={handleCreatePlan} className="space-y-3 bg-surface-900/60 p-3.5 sm:p-4 rounded-xl border border-surface-700">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">+ Add New Plan</h3>
+          <form
+            onSubmit={handleCreatePlan}
+            className="space-y-3.5 p-4 rounded-xl border transition-all"
+            style={{
+              backgroundColor: 'var(--bg-surface-subtle)',
+              borderColor: 'var(--border-subtle)',
+            }}
+          >
+            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">+ Add New Plan</h3>
             <div>
-              <label className="block text-xs font-medium text-slate-300">Plan Name</label>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">Plan Name</label>
               <input
                 type="text"
                 value={planName}
                 onChange={(e) => setPlanName(e.target.value)}
                 placeholder="e.g. Full Day Reserved"
-                className="mt-1 w-full rounded border border-surface-600 bg-surface-700 px-3 py-1.5 text-sm text-white"
+                className="w-full rounded-xl border px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                style={{
+                  backgroundColor: 'var(--bg-surface)',
+                  borderColor: 'var(--border-medium)',
+                }}
                 required
               />
             </div>
@@ -312,14 +372,18 @@ export function PlansPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Monthly Fee (₹)</label>
+                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">Monthly Fee (₹)</label>
                 <input
                   type="number"
                   min="0"
                   step="1"
                   value={feeRupees}
                   onChange={(e) => setFeeRupees(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm text-slate-900 dark:text-white"
+                  className="w-full rounded-xl border px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  style={{
+                    backgroundColor: 'var(--bg-surface)',
+                    borderColor: 'var(--border-medium)',
+                  }}
                   required
                 />
               </div>
@@ -339,31 +403,42 @@ export function PlansPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-300">Description (Optional)</label>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">Description (Optional)</label>
               <input
                 type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="e.g. Dedicated desk, Locker access"
-                className="mt-1 w-full rounded border border-surface-600 bg-surface-700 px-3 py-1.5 text-sm text-white"
+                className="w-full rounded-xl border px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                style={{
+                  backgroundColor: 'var(--bg-surface)',
+                  borderColor: 'var(--border-medium)',
+                }}
               />
             </div>
             <button
               type="submit"
               disabled={createPlan.isPending}
-              className="w-full rounded bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
+              className="w-full rounded-xl bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 px-4 py-2.5 text-xs font-bold !text-white shadow-md shadow-blue-950/20 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 cursor-pointer"
             >
               {createPlan.isPending ? 'Adding…' : 'Save Plan'}
             </button>
           </form>
 
           {/* Plans list */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-slate-400">Configured Plans ({plans.length})</h3>
+          <div className="space-y-2.5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Configured Plans ({plans.length})</h3>
             {plansLoading ? (
               <div className="space-y-2 animate-pulse">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded border border-surface-700 bg-surface-700/40">
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-3.5 rounded-xl border"
+                    style={{
+                      backgroundColor: 'var(--bg-surface-subtle)',
+                      borderColor: 'var(--border-subtle)',
+                    }}
+                  >
                     <div className="space-y-1.5 flex-1">
                       <Skeleton className="h-4 w-32" />
                       <Skeleton className="h-3 w-44" />
@@ -372,33 +447,50 @@ export function PlansPage() {
                 ))}
               </div>
             ) : plans.length === 0 ? (
-              <p className="text-xs text-slate-500">No plans configured yet. Add one above.</p>
+              <p className="text-xs text-[var(--text-muted)] py-4 text-center">No plans configured yet. Add one above.</p>
             ) : (
               plans.map((p) => (
-                <div key={p._id} className="flex items-center justify-between rounded border border-surface-700 bg-surface-700/40 p-3 hover:border-surface-600 transition">
+                <div
+                  key={p._id}
+                  className="flex items-center justify-between rounded-xl border p-3.5 hover:shadow-xs transition-all"
+                  style={{
+                    backgroundColor: 'var(--bg-surface-subtle)',
+                    borderColor: 'var(--border-subtle)',
+                  }}
+                >
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-white">{p.name}</p>
-                      <span className="rounded bg-brand-500/20 px-1.5 py-0.5 text-[10px] text-brand-300 capitalize">
+                      <p className="text-sm font-bold text-[var(--text-primary)]">{p.name}</p>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                          p.seatType === 'reserved'
+                            ? 'bg-[#EEF2FF] text-[#1E3A8A] border-[#C7D2FE] dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
+                            : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30'
+                        }`}
+                      >
                         {p.seatType}
                       </span>
                     </div>
-                    {p.description && <p className="text-xs text-slate-400 mt-0.5">{p.description}</p>}
+                    {p.description && <p className="text-xs text-[var(--text-secondary)] mt-0.5">{p.description}</p>}
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right">
-                      <p className="text-sm font-bold text-white">₹{(p.feePaise / 100).toFixed(0)}</p>
-                      <p className="text-[10px] text-slate-400">/ month</p>
+                      <p className="text-sm font-black text-emerald-700 dark:text-emerald-400">₹{((p.feePaise || (p as any).feePence || 0) / 100).toFixed(0)}</p>
+                      <p className="text-[10px] text-[var(--text-muted)]">/ month</p>
                     </div>
                     <button
                       onClick={() => handleStartEditPlan(p)}
-                      className="rounded bg-surface-600 hover:bg-surface-500 px-2 py-1 text-xs text-slate-200"
+                      className="rounded-lg border px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:text-indigo-600 hover:border-indigo-500 transition-all cursor-pointer"
+                      style={{
+                        backgroundColor: 'var(--bg-surface)',
+                        borderColor: 'var(--border-medium)',
+                      }}
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDeletePlan(p._id, p.name)}
-                      className="rounded bg-red-500/20 hover:bg-red-500/30 px-2 py-1 text-xs text-red-300"
+                      className="rounded-lg border border-rose-200 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-all cursor-pointer"
                     >
                       Delete
                     </button>
@@ -467,7 +559,7 @@ export function PlansPage() {
             <button
               type="submit"
               disabled={updateShift.isPending}
-              className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 disabled:opacity-50 shadow-sm"
+              className="rounded-xl bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 px-4 py-2 text-xs font-bold !text-white disabled:opacity-50 shadow-sm cursor-pointer"
             >
               {updateShift.isPending ? 'Saving…' : 'Save Changes'}
             </button>
@@ -554,7 +646,7 @@ export function PlansPage() {
             <button
               type="submit"
               disabled={updatePlan.isPending}
-              className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 disabled:opacity-50 shadow-sm"
+              className="rounded-xl bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 px-4 py-2 text-xs font-bold !text-white disabled:opacity-50 shadow-sm cursor-pointer"
             >
               {updatePlan.isPending ? 'Saving…' : 'Save Changes'}
             </button>

@@ -87,10 +87,10 @@ export function DateRangeDurationSelector({
     <div className="space-y-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/80 dark:bg-slate-900/80 p-3">
       <div className="flex items-center justify-between">
         <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-          <Calendar className="h-3.5 w-3.5 text-indigo-500" />
+          <Calendar className="h-3.5 w-3.5 text-[#1E3A8A] dark:text-blue-400" />
           {label}
         </label>
-        <span className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+        <span className="text-[11px] font-medium text-[#1E3A8A] dark:text-blue-400 flex items-center gap-1">
           <Sparkles className="h-3 w-3" /> Auto 30-Day Cycle
         </span>
       </div>
@@ -102,8 +102,8 @@ export function DateRangeDurationSelector({
           onClick={() => handleSelectDuration('30d')}
           className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
             durationOption === '30d'
-              ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-500'
-              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750'
+              ? 'bg-[#1E3A8A] dark:bg-blue-600 text-white shadow-sm ring-1 ring-[#1E3A8A] dark:ring-blue-500'
+              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-[#EEF2FF] hover:text-[#1E3A8A] dark:hover:bg-slate-750'
           }`}
         >
           1 Month (30 Days)
@@ -113,8 +113,8 @@ export function DateRangeDurationSelector({
           onClick={() => handleSelectDuration('60d')}
           className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
             durationOption === '60d'
-              ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-500'
-              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750'
+              ? 'bg-[#1E3A8A] dark:bg-blue-600 text-white shadow-sm ring-1 ring-[#1E3A8A] dark:ring-blue-500'
+              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-[#EEF2FF] hover:text-[#1E3A8A] dark:hover:bg-slate-750'
           }`}
         >
           2 Months (60 Days)
@@ -124,8 +124,8 @@ export function DateRangeDurationSelector({
           onClick={() => handleSelectDuration('90d')}
           className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
             durationOption === '90d'
-              ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-500'
-              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750'
+              ? 'bg-[#1E3A8A] dark:bg-blue-600 text-white shadow-sm ring-1 ring-[#1E3A8A] dark:ring-blue-500'
+              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-[#EEF2FF] hover:text-[#1E3A8A] dark:hover:bg-slate-750'
           }`}
         >
           3 Months (90 Days)
@@ -135,8 +135,8 @@ export function DateRangeDurationSelector({
           onClick={() => handleSelectDuration('custom')}
           className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
             durationOption === 'custom'
-              ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-500'
-              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750'
+              ? 'bg-[#1E3A8A] dark:bg-blue-600 text-white shadow-sm ring-1 ring-[#1E3A8A] dark:ring-blue-500'
+              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-[#EEF2FF] hover:text-[#1E3A8A] dark:hover:bg-slate-750'
           }`}
         >
           Custom Date

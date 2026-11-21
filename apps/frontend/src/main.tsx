@@ -34,9 +34,12 @@ createRoot(document.getElementById('root')!).render(
         <Toaster
           position="top-right"
           gutter={8}
+          containerStyle={{
+            zIndex: 99999,
+          }}
           toastOptions={{
-            duration: 3500,
-            className: '!rounded-xl !border !shadow-lg !text-xs !font-medium',
+            duration: 4000,
+            className: '!rounded-xl !border !shadow-2xl !text-xs !font-medium',
             style: {
               background: '#0f172a',
               color: '#f8fafc',

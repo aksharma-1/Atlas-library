@@ -1,5 +1,9 @@
 export { Card, StatCard } from './Card';
 export { Button, Badge } from './Button';
+export { Input, Textarea } from './Input';
+export type { InputProps, TextareaProps } from './Input';
+export { Tabs } from './Tabs';
+export type { TabItem } from './Tabs';
 export { Modal } from './Modal';
 export { ConfirmModal } from './ConfirmModal';
 export { CustomSelect } from './CustomSelect';
@@ -11,3 +15,6 @@ export type { PrintableCardProps } from '../PrintableCard';
 export { PrintableReceipt } from '../PrintableReceipt';
 export type { PrintableReceiptProps } from '../PrintableReceipt';
 export { Skeleton, StatCardSkeleton, TableSkeleton, SeatGridSkeleton, PageHeaderSkeleton } from './Skeleton';
+export { Logo } from './Logo';
+export type { LogoProps } from './Logo';
+

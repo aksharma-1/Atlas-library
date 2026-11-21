@@ -22,7 +22,7 @@ export function PrintableReceipt({
   payment,
   student,
   membership,
-  tenantName = 'StudySpace Library',
+  tenantName = 'AbhyasRoom Library',
   logoUrl: propLogoUrl,
 }: PrintableReceiptProps) {
   const { user } = useAuth();
@@ -303,7 +303,7 @@ export function PrintableReceipt({
             <button
               type="button"
               onClick={handlePrint}
-              className="flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-xs font-semibold !text-white shadow-sm transition whitespace-nowrap"
+              className="flex items-center gap-1.5 rounded-xl bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 px-4 py-2 text-xs font-bold !text-white shadow-sm transition whitespace-nowrap cursor-pointer"
             >
               <Printer className="h-3.5 w-3.5" />
               <span>Print</span>

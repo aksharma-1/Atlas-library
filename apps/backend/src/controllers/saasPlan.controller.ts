@@ -78,8 +78,8 @@ export async function getPublicSaasPlans(_req: Request, res: Response, next: Nex
       configDoc = await PlatformConfig.create({
         key: 'global',
         yearlyDiscountPercent: 20,
-        upiId: process.env.VITE_PLATFORM_UPI_ID || 'studyspace@upi',
-        upiName: process.env.VITE_PLATFORM_UPI_NAME || 'StudySpace OS',
+        upiId: process.env.VITE_PLATFORM_UPI_ID || 'abhyasroom@upi',
+        upiName: process.env.VITE_PLATFORM_UPI_NAME || 'AbhyasRoom',
         trialDurationDays: 14,
         trialMaxSeats: 50,
       });

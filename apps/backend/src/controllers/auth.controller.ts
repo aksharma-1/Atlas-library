@@ -340,6 +340,8 @@ export async function submitPaymentUtr(
         tenant.subscriptionStatus = nextSubscriptionStatus;
         tenant.lastUtrRef = trimmedUtr;
         tenant.lastPaymentSubmittedAt = new Date();
+        // If user was on trial, clear trial flag so they transition to a full paid plan once approved
+        tenant.isTrial = false;
         await tenant.save(createOptions);
 
         return createdPayment;

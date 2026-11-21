@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForgotPassword, useResetPassword } from '../hooks/useAuth';
 import { Eye, EyeOff } from 'lucide-react';
+import { Logo } from '../components/ui';
 
 const requestSchema = z.object({
   email: z.string().email('Enter a valid email address').trim().toLowerCase(),
@@ -87,18 +88,19 @@ export function ForgotPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-surface-900 px-4">
       <div className="w-full max-w-sm">
         {/* Brand */}
-        <div className="mb-8 text-center">
-          <span className="text-5xl">🔐</span>
-          <h1 className="mt-3 text-2xl font-black tracking-wide text-white">StudySpace OS</h1>
-          <p className="mt-1 text-sm text-slate-400">Account Recovery & Security</p>
+        <div className="mb-8 text-center space-y-2">
+          <div className="inline-flex justify-center">
+            <Logo size="lg" showDomain={true} />
+          </div>
+          <p className="text-xs text-[var(--text-tertiary)]">Account Recovery & Security · abhyasroom.in</p>
         </div>
 
-        <div className="rounded-xl border border-surface-700 bg-surface-800 p-8 shadow-2xl space-y-6">
+        <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-8 shadow-[var(--shadow-elevated)] space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">
               {step === 'request' ? 'Reset Your Password' : 'Enter 6-Digit Code'}
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-[var(--text-tertiary)] mt-1 font-normal">
               {step === 'request'
                 ? "Enter your registered email address and we'll send you a 6-digit recovery code."
                 : `We have sent a verification code to ${email}.`}

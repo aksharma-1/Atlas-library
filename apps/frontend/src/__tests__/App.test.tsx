@@ -49,9 +49,9 @@ describe('LoginPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders StudySpace OS platform branding', () => {
+  it('renders AbhyasRoom platform branding', () => {
     renderWithProviders(<LoginPage />);
-    expect(screen.getByText('StudySpace OS')).toBeInTheDocument();
+    expect(screen.getByAltText('AbhyasRoom')).toBeInTheDocument();
   });
 });
 

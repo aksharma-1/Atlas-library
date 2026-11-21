@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, Navigate } from 'react-router-dom';
 import { useRegister, useAuth } from '../hooks/useAuth';
+import { Logo } from '../components/ui';
 import { Eye, EyeOff } from 'lucide-react';
 
 const registerSchema = z.object({
@@ -50,126 +51,127 @@ export function RegisterPage() {
       <div className="w-full max-w-md">
         {/* Brand header */}
         <div className="mb-6 text-center">
-          <span className="text-5xl">🏛️</span>
-          <h1 className="mt-3 text-2xl font-black tracking-wide text-white">StudySpace OS</h1>
-          <p className="mt-1 text-xs text-slate-400">
-            Register your library or study space and start managing students & desks in minutes.
+          <div className="inline-flex justify-center">
+            <Logo size="xl" showDomain={true} />
+          </div>
+          <p className="mt-2 text-xs text-[var(--text-tertiary)] max-w-sm mx-auto font-normal">
+            Register your library or study space on abhyasroom.in and start managing desks in minutes.
           </p>
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border border-surface-700 bg-surface-800 p-8 shadow-2xl space-y-6">
-          <div className="border-b border-surface-700 pb-3">
-            <h2 className="text-base font-bold text-white">Create Library Account</h2>
-            <p className="text-xs text-slate-400">Step 1 of 3: Account & Library Details</p>
+        <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-8 shadow-[var(--shadow-elevated)] space-y-6">
+          <div className="border-b border-[var(--border-subtle)] pb-3">
+            <h2 className="text-base font-bold text-[var(--text-primary)]">Create Library Account</h2>
+            <p className="text-xs text-[var(--text-tertiary)]">Step 1 of 3: Account & Library Details</p>
           </div>
 
           {errorMessage && (
-            <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-xs text-red-300">
+            <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-3 text-xs text-rose-500 font-semibold">
               {errorMessage}
             </div>
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-300">Library / Space Name *</label>
+              <label className="block text-xs font-bold text-[var(--text-secondary)]">Library / Space Name *</label>
               <input
                 type="text"
                 {...register('libraryName')}
                 placeholder="e.g. Apex Study Library"
-                className="mt-1 w-full rounded-lg border border-surface-600 bg-surface-700 px-3 py-2 text-sm text-white placeholder-slate-400 outline-none focus:border-brand-500"
+                className="mt-1 w-full rounded-xl border border-[var(--border-medium)] bg-[var(--bg-surface-subtle)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--border-focus)] focus:ring-2 focus:ring-[#1E3A8A]/20 dark:focus:ring-blue-500/20"
               />
               {errors.libraryName && (
-                <p className="mt-1 text-xs text-red-400">{errors.libraryName.message}</p>
+                <p className="mt-1 text-xs text-rose-500 font-semibold">{errors.libraryName.message}</p>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-300">Owner Full Name *</label>
+                <label className="block text-xs font-bold text-[var(--text-secondary)]">Owner Full Name *</label>
                 <input
                   type="text"
                   {...register('name')}
                   placeholder="e.g. Rahul Sharma"
-                  className="mt-1 w-full rounded-lg border border-surface-600 bg-surface-700 px-3 py-2 text-sm text-white placeholder-slate-400 outline-none focus:border-brand-500"
+                  className="mt-1 w-full rounded-xl border border-[var(--border-medium)] bg-[var(--bg-surface-subtle)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--border-focus)] focus:ring-2 focus:ring-[#1E3A8A]/20 dark:focus:ring-blue-500/20"
                 />
                 {errors.name && (
-                  <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>
+                  <p className="mt-1 text-xs text-rose-500 font-semibold">{errors.name.message}</p>
                 )}
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-300">City / Location</label>
+                <label className="block text-xs font-bold text-[var(--text-secondary)]">City / Location</label>
                 <input
                   type="text"
                   {...register('city')}
                   placeholder="e.g. Indore"
-                  className="mt-1 w-full rounded-lg border border-surface-600 bg-surface-700 px-3 py-2 text-sm text-white placeholder-slate-400 outline-none focus:border-brand-500"
+                  className="mt-1 w-full rounded-xl border border-[var(--border-medium)] bg-[var(--bg-surface-subtle)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--border-focus)] focus:ring-2 focus:ring-[#1E3A8A]/20 dark:focus:ring-blue-500/20"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-300">Email Address *</label>
+                <label className="block text-xs font-bold text-[var(--text-secondary)]">Email Address *</label>
                 <input
                   type="email"
                   {...register('email')}
                   placeholder="owner@library.com"
-                  className="mt-1 w-full rounded-lg border border-surface-600 bg-surface-700 px-3 py-2 text-sm text-white placeholder-slate-400 outline-none focus:border-brand-500"
+                  className="mt-1 w-full rounded-xl border border-[var(--border-medium)] bg-[var(--bg-surface-subtle)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--border-focus)] focus:ring-2 focus:ring-[#1E3A8A]/20 dark:focus:ring-blue-500/20"
                 />
                 {errors.email && (
-                  <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>
+                  <p className="mt-1 text-xs text-rose-500 font-semibold">{errors.email.message}</p>
                 )}
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-300">Phone Number *</label>
+                <label className="block text-xs font-bold text-[var(--text-secondary)]">Phone Number *</label>
                 <input
                   type="tel"
                   {...register('phone')}
                   placeholder="9876543210"
-                  className="mt-1 w-full rounded-lg border border-surface-600 bg-surface-700 px-3 py-2 text-sm text-white placeholder-slate-400 outline-none focus:border-brand-500"
+                  className="mt-1 w-full rounded-xl border border-[var(--border-medium)] bg-[var(--bg-surface-subtle)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--border-focus)] focus:ring-2 focus:ring-[#1E3A8A]/20 dark:focus:ring-blue-500/20"
                 />
                 {errors.phone && (
-                  <p className="mt-1 text-xs text-red-400">{errors.phone.message}</p>
+                  <p className="mt-1 text-xs text-rose-500 font-semibold">{errors.phone.message}</p>
                 )}
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300">Choose Password *</label>
+              <label className="block text-xs font-bold text-[var(--text-secondary)]">Choose Password *</label>
               <div className="relative mt-1">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   {...register('password')}
                   placeholder="At least 6 characters"
-                  className="w-full rounded-lg border border-surface-600 bg-surface-700 pl-3 pr-10 py-2 text-sm text-white placeholder-slate-400 outline-none focus:border-brand-500"
+                  className="w-full rounded-xl border border-[var(--border-medium)] bg-[var(--bg-surface-subtle)] pl-3.5 pr-10 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition focus:border-[var(--border-focus)] focus:ring-2 focus:ring-[#1E3A8A]/20 dark:focus:ring-blue-500/20"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-200 focus:outline-none transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] focus:outline-none transition-colors cursor-pointer"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-xs text-red-400">{errors.password.message}</p>
+                <p className="mt-1 text-xs text-rose-500 font-semibold">{errors.password.message}</p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={registerMutation.isPending}
-              className="mt-2 w-full rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-brand-500 disabled:opacity-50"
+              className="mt-2 w-full rounded-xl bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 !text-white py-3 text-sm font-bold shadow-md shadow-blue-950/25 transition cursor-pointer disabled:opacity-50"
             >
               {registerMutation.isPending ? 'Creating Account…' : 'Continue to Library Setup →'}
             </button>
           </form>
 
-          <div className="pt-2 text-center text-xs text-slate-400">
+          <div className="pt-2 text-center text-xs text-[var(--text-tertiary)]">
             Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-brand-400 hover:text-brand-300">
+            <Link to="/login" className="font-bold text-[#1E3A8A] dark:text-blue-400 hover:underline">
               Sign In
             </Link>
           </div>

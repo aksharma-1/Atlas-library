@@ -405,7 +405,7 @@ export function StudentsPage() {
     return renderWhatsAppReminder(user?.whatsappReminderTemplate, {
       studentName: sName,
       seatNumber: sSeat,
-      libraryName: user?.tenantName || 'StudySpace Library',
+      libraryName: user?.tenantName || 'AbhyasRoom Library',
       phone: user?.phone || '',
     });
   };
@@ -442,7 +442,7 @@ export function StudentsPage() {
         </div>
         <button
           onClick={() => setShowRegisterModal(true)}
-          className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold !text-white shadow hover:bg-indigo-500 transition"
+          className="flex items-center gap-2 rounded-xl bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 px-4 py-2.5 text-xs font-bold !text-white shadow hover:scale-[1.01] transition cursor-pointer"
         >
           <UserPlus className="h-4 w-4" />
           Register New Student
@@ -450,15 +450,15 @@ export function StudentsPage() {
       </div>
 
       {/* Tabs navigation */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+      <div className="flex flex-wrap gap-2 border-b border-[var(--border-subtle)] pb-3">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => handleSelectTab(tab.id)}
-            className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
+            className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition select-none cursor-pointer ${
               activeTab === tab.id
-                ? 'bg-indigo-600 !text-white shadow-sm'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                ? 'bg-[#1E3A8A] dark:bg-blue-600 !text-white shadow-md shadow-blue-950/25'
+                : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border-subtle)] hover:bg-[#EEF2FF] hover:text-[#1E3A8A] dark:hover:bg-[var(--bg-surface-hover)] dark:hover:text-white'
             }`}
           >
             <span>{tab.icon}</span>
@@ -469,15 +469,15 @@ export function StudentsPage() {
 
       {/* Search Bar for All Members */}
       {activeTab === 'all' && (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
+        <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-sm">
           <div className="relative">
-            <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3.5 top-3 h-4 w-4 text-[var(--text-tertiary)]" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by student name, mobile number, or membership ID…"
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 pl-10 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              className="w-full rounded-xl border border-[var(--border-medium)] bg-[var(--bg-surface-subtle)] pl-10 pr-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
             />
           </div>
         </div>
@@ -485,7 +485,7 @@ export function StudentsPage() {
 
       {/* Tab 1: All Members Directory */}
       {activeTab === 'all' ? (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-sm">
           {/* Mobile Card List (< md) */}
           <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800/60">
             {studentsLoading ? (
@@ -1319,7 +1319,7 @@ export function StudentsPage() {
               <button
                 type="submit"
                 disabled={updateStudent.isPending}
-                className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold !text-white hover:bg-indigo-500 disabled:opacity-50 shadow-sm"
+                className="rounded-xl bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 px-4 py-2 text-xs font-bold !text-white disabled:opacity-50 shadow-sm cursor-pointer"
               >
                 {updateStudent.isPending ? 'Saving…' : 'Save Changes'}
               </button>
@@ -1723,7 +1723,7 @@ export function StudentsPage() {
                   parseFloat(regPaymentAmountRupees || '0') >
                     Math.max(0, Math.round(chosenPlan.feePaise / 100 - parseFloat(regDiscountRupees || '0'))))
               }
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 text-xs font-bold !text-white disabled:opacity-50 shadow-md transition"
+              className="rounded-xl bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 px-5 py-2.5 text-xs font-bold !text-white disabled:opacity-50 shadow-md transition cursor-pointer"
             >
               {createStudent.isPending ? 'Registering…' : '✓ Register & Complete'}
             </button>

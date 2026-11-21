@@ -2,68 +2,167 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ── Atlas / StudySpace Theme Tokens ─────────────────────────────────────────── */
+/* ── AbhyasRoom Official Brand Tokens ─────────────────────────────────────────── */
 @theme {
-  /* Brand accents */
+  /* AbhyasRoom Brand Palette */
+  --color-brand-navy: #1e3a8a;
+  --color-brand-orange: #f59e0b;
+  --color-brand-surface: #eef2ff;
+  --color-brand-darktext: #1f2937;
+
+  /* Brand Accents Ramp (Navy Dominant, Slate/Indigo Foundation) */
   --color-brand-50:  #eef2ff;
   --color-brand-100: #e0e7ff;
-  --color-brand-400: #818cf8;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
-  --color-brand-800: #3730a3;
-  --color-brand-900: #312e81;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
 
   /* Typography & Defaults */
-  --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --radius-card: 1rem;
 }
 
 /* ── Global Dark Theme (Default) ─────────────────────────────────────────── */
 :root, html.dark-mode {
-  --bg-app: #0b0f19;
-  --bg-card: #151d30;
-  --bg-card-subtle: #1a233a;
-  --bg-card-hover: #1e2942;
-  
-  --text-main: #f8fafc;
-  --text-muted: #cbd5e1;
-  --text-dim: #94a3b8;
-  --text-placeholder: #64748b;
+  /* Canvas & Surfaces */
+  --bg-canvas: #0b0f19;
+  --bg-surface: #131b2e;
+  --bg-surface-subtle: #18223a;
+  --bg-surface-elevated: #162035;
+  --bg-surface-hover: #1e2a47;
 
-  --border-subtle: #1e293b;   /* Slate-800: soft, elegant dark border (no harsh white) */
-  --border-glow: #6366f1;
+  /* Typography */
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --text-muted: #64748b;
 
-  --header-bg: rgba(15, 23, 42, 0.9);
+  /* Borders */
+  --border-subtle: #1e293b;
+  --border-medium: #334155;
+  --border-focus: #3b82f6;
+  --border-glow: #1e3a8a;
+
+  /* Brand & Accents (Dominant Navy #1E3A8A, Accent Orange #F59E0B) */
+  --brand-navy: #1e3a8a;
+  --brand-orange: #f59e0b;
+  --brand-surface: #eef2ff;
+  --brand-darktext: #1f2937;
+
+  --brand-primary: #2563eb;
+  --brand-hover: #1d4ed8;
+  --brand-subtle: rgba(30, 58, 138, 0.25);
+  --brand-text: #93c5fd;
+  --brand-accent: #f59e0b;
+  --brand-accent-hover: #d97706;
+  --brand-accent-subtle: rgba(245, 158, 11, 0.15);
+  --brand-accent-text: #fbbf24;
+
+  /* Status Colors */
+  --success-primary: #10b981;
+  --success-subtle: rgba(16, 185, 129, 0.15);
+  --success-text: #34d399;
+
+  --warning-primary: #f59e0b;
+  --warning-subtle: rgba(245, 158, 11, 0.15);
+  --warning-text: #fbbf24;
+
+  --danger-primary: #ef4444;
+  --danger-subtle: rgba(239, 68, 68, 0.15);
+  --danger-text: #f87171;
+
+  /* Backward Compatibility Aliases */
+  --bg-app: var(--bg-canvas);
+  --bg-main: var(--bg-canvas);
+  --bg-card: var(--bg-surface);
+  --bg-card-subtle: var(--bg-surface-subtle);
+  --bg-card-hover: var(--bg-surface-hover);
+  --text-main: var(--text-primary);
+  --text-dim: var(--text-tertiary);
+  --text-placeholder: var(--text-muted);
+  --header-bg: rgba(19, 27, 46, 0.9);
   --sidebar-bg: #0f1626;
   --input-bg: #111827;
-  --modal-bg: #151d30;
+  --modal-bg: var(--bg-surface-elevated);
 
+  /* Elevation Shadows */
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --shadow-elevated: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
   --shadow-glass: 0 10px 30px 0 rgba(0, 0, 0, 0.5);
   --shadow-subtle: 0 4px 16px 0 rgba(0, 0, 0, 0.3);
 }
 
-/* ── Global Light Theme (High-Contrast, Clean Modern SaaS) ──────────────── */
+/* ── Global Light Theme (High-Contrast, Crisp Modern SaaS) ──────────────── */
 html.light-mode {
-  --bg-app: #f8fafc;          /* Slate-50: Crisp, clean light canvas */
-  --bg-card: #ffffff;
-  --bg-card-subtle: #f1f5f9;  /* Slate-100 */
-  --bg-card-hover: #e2e8f0;   /* Slate-200 */
+  /* Canvas & Surfaces */
+  --bg-canvas: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-subtle: #f1f5f9;
+  --bg-surface-elevated: #ffffff;
+  --bg-surface-hover: #eef2ff;
 
-  /* High contrast colors for clean readability */
-  --text-main: #0f172a;       /* Slate-900: Pure crisp dark text */
-  --text-muted: #334155;      /* Slate-700: High-contrast body */
-  --text-dim: #64748b;        /* Slate-500: Clear secondary */
-  --text-placeholder: #94a3b8;/* Slate-400 */
+  /* Typography */
+  --text-primary: #1f2937;
+  --text-secondary: #374151;
+  --text-tertiary: #6b7280;
+  --text-muted: #9ca3af;
 
-  --border-subtle: #e2e8f0;   /* Slate-200: Soft, natural SaaS border */
-  --border-glow: #6366f1;
+  /* Borders */
+  --border-subtle: #e2e8f0;
+  --border-medium: #cbd5e1;
+  --border-focus: #1e3a8a;
+  --border-glow: #1e3a8a;
 
+  /* Brand & Accents (Dominant Navy #1E3A8A, Accent Orange #F59E0B, Light Surface #EEF2FF) */
+  --brand-navy: #1e3a8a;
+  --brand-orange: #f59e0b;
+  --brand-surface: #eef2ff;
+  --brand-darktext: #1f2937;
+
+  --brand-primary: #1e3a8a;
+  --brand-hover: #172554;
+  --brand-subtle: #eef2ff;
+  --brand-text: #1e3a8a;
+  --brand-accent: #f59e0b;
+  --brand-accent-hover: #d97706;
+  --brand-accent-subtle: #fffbeb;
+  --brand-accent-text: #b45309;
+
+  /* Status Colors */
+  --success-primary: #059669;
+  --success-subtle: #ecfdf5;
+  --success-text: #047857;
+
+  --warning-primary: #d97706;
+  --warning-subtle: #fffbeb;
+  --warning-text: #b45309;
+
+  --danger-primary: #dc2626;
+  --danger-subtle: #fef2f2;
+  --danger-text: #b91c1c;
+
+  /* Backward Compatibility Aliases */
+  --bg-app: var(--bg-canvas);
+  --bg-main: var(--bg-canvas);
+  --bg-card: var(--bg-surface);
+  --bg-card-subtle: var(--bg-surface-subtle);
+  --bg-card-hover: var(--bg-surface-hover);
+  --text-main: var(--text-primary);
+  --text-dim: var(--text-tertiary);
+  --text-placeholder: var(--text-muted);
   --header-bg: #ffffff;
-  --sidebar-bg: #f8fafc;      /* Subtle slate background for elegant sidebar distinction */
+  --sidebar-bg: #f8fafc;
   --input-bg: #ffffff;
-  --modal-bg: #ffffff;
+  --modal-bg: var(--bg-surface-elevated);
 
+  /* Elevation Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 8px 24px -4px rgba(0, 0, 0, 0.04);
+  --shadow-elevated: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
   --shadow-glass: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
   --shadow-subtle: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
 }
@@ -79,12 +178,19 @@ html {
 
 body {
   margin: 0;
-  background-color: var(--bg-app);
-  color: var(--text-main);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ── Smooth Theme Transitions ────────────────────────────────────────────── */
+body, div, header, nav, aside, main, button, input, select, textarea {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 0.18s;
+  transition-timing-function: ease;
 }
 
 /* ── Custom Landing Page Keyframes & Animation Utilities ───────────────── */
@@ -116,184 +222,138 @@ body {
   animation: pulseGlow 6s ease-in-out infinite;
 }
 
-/* ── Universal Theme Rules for Dark Mode (Stops bright/white borders) ───── */
-html.dark-mode .border-surface-700,
-html.dark-mode .border-surface-600,
-html.dark-mode .border {
-  border-color: #1e293b !important; /* Soft dark slate, never harsh white */
+/* ── Semantic System Classes ─────────────────────────────────────────────── */
+.app-canvas {
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
 }
 
-/* ── Universal Theme Rules for Light Mode ───────────────────────────────── */
-html.light-mode .bg-surface-900 {
-  background-color: var(--bg-app) !important;
+.app-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
-html.light-mode .bg-surface-800 {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
+.app-card-subtle {
+  background-color: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: 0.75rem;
 }
 
-html.light-mode .bg-surface-700 {
-  background-color: #f1f5f9 !important;
-  color: #0f172a !important;
+.app-input {
+  background-color: var(--bg-surface-subtle);
+  border: 1px solid var(--border-medium);
+  color: var(--text-primary);
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: all 0.15s ease;
 }
 
-/* Light mode table and card container borders */
-html.light-mode .border-surface-700,
-html.light-mode .border-surface-600,
-html.light-mode .border-surface-800,
-html.light-mode .border {
-  border-color: #e2e8f0 !important;
+.app-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
 }
 
-/* Modal and card surfaces in light mode */
-html.light-mode .glass-modal,
-html.light-mode [class*="bg-surface-800"] {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
+/* ── Universal Theme Mapping for Legacy Surface Classes ─────────────────── */
+.bg-surface-900 {
+  background-color: var(--bg-canvas) !important;
 }
 
-/* Text adjustments for light mode */
+.bg-surface-800 {
+  background-color: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+}
+
+.bg-surface-700 {
+  background-color: var(--bg-surface-subtle) !important;
+}
+
+.border-surface-800,
+.border-surface-700,
+.border-surface-600 {
+  border-color: var(--border-subtle) !important;
+}
+
+/* Light mode text mappings for legacy classes */
 html.light-mode .text-slate-100 {
-  color: #0f172a !important;
+  color: var(--text-primary) !important;
 }
 
 html.light-mode .text-slate-200,
 html.light-mode .text-slate-300 {
-  color: #1e293b !important;
+  color: var(--text-secondary) !important;
 }
 
 html.light-mode .text-slate-400 {
-  color: #475569 !important;
-}
-
-/* Keep accent pills and badges legible with distinct high-contrast borders in light mode */
-html.light-mode .bg-brand-600\/30 {
-  background-color: rgba(99, 102, 241, 0.15) !important;
-  color: #4338ca !important;
-}
-
-html.light-mode .text-brand-300 {
-  color: #4f46e5 !important;
-}
-
-html.light-mode .text-brand-400 {
-  color: #4338ca !important;
-}
-
-html.light-mode .text-emerald-300 {
-  color: #047857 !important;
-}
-
-html.light-mode .text-amber-300 {
-  color: #b45309 !important;
-}
-
-/* ── HIGH-CONTRAST TEXT OVERRIDES IN LIGHT MODE (Stops washed out text) ──── */
-html.light-mode h1:not([class*="text-white"]):not([class*="!text-white"]),
-html.light-mode h2:not([class*="text-white"]):not([class*="!text-white"]),
-html.light-mode h3:not([class*="text-white"]):not([class*="!text-white"]),
-html.light-mode h4:not([class*="text-white"]):not([class*="!text-white"]),
-html.light-mode p.text-white,
-html.light-mode span.text-white:not([class*="!text-white"]),
-html.light-mode .text-slate-100 {
-  color: #0f172a !important; /* Deep Slate-900 */
-}
-
-/* Explicit white elements (badges, avatar icons, colored chips) MUST STAY PURE WHITE */
-.text-white,
-[class*="from-indigo-600"] *,
-[class*="from-indigo-600"],
-[class*="bg-indigo-600"] *,
-[class*="bg-indigo-600"],
-[class*="bg-gradient-to-"] * {
-  color: #ffffff !important;
-}
-
-html.light-mode .text-slate-200,
-html.light-mode .text-slate-300 {
-  color: #334155 !important; /* High-contrast Slate-700 body text */
-}
-
-/* Stop gray/washed out secondary text in light mode */
-html.light-mode .text-slate-400 {
-  color: #475569 !important; /* Slate-600: strong readable body */
+  color: var(--text-tertiary) !important;
 }
 
 html.light-mode .text-slate-500 {
-  color: #64748b !important; /* Slate-500 */
+  color: var(--text-muted) !important;
 }
 
-/* Outline button in light mode */
-html.light-mode button[class*="border"]:not([class*="bg-brand"]):not([class*="bg-indigo"]):not([class*="bg-emerald"]):not([class*="bg-rose"]) {
-  color: #1e293b !important;
-  border-color: #cbd5e1 !important;
+/* Light mode heading auto-contrast (prevents dark mode text-white accidents) */
+html.light-mode h1:not([class*="!text-white"]):not([class*="text-transparent"]):not([class*="bg-clip-text"]),
+html.light-mode h2:not([class*="!text-white"]):not([class*="text-transparent"]):not([class*="bg-clip-text"]),
+html.light-mode h3:not([class*="!text-white"]):not([class*="text-transparent"]):not([class*="bg-clip-text"]),
+html.light-mode h4:not([class*="!text-white"]):not([class*="text-transparent"]):not([class*="bg-clip-text"]),
+html.light-mode p.text-white:not([class*="!text-white"]),
+html.light-mode span.text-white:not([class*="!text-white"]):not([class*="!bg-"]),
+html.light-mode label.text-white:not([class*="!text-white"]) {
+  color: var(--text-primary) !important;
 }
 
-html.light-mode button[class*="border"]:hover {
-  background-color: #f1f5f9 !important;
+/* Guard gradient clip text from ever getting solid color applied */
+.bg-clip-text,
+[class*="bg-clip-text"] {
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
 }
 
-/* ── PURE WHITE TEXT GUARANTEE ON SOLID BRAND/COLORED BUTTONS ────────────── */
-.bg-brand-600,
-.bg-brand-500,
-.bg-indigo-600,
-.bg-indigo-500,
-.bg-emerald-600,
-.bg-rose-600,
+/* Guaranteed pure white text on intentional colored buttons/badges */
+.text-white {
+  color: #ffffff;
+}
+
+button.bg-brand-600,
+button.bg-brand-500,
+button.bg-indigo-600,
+button.bg-indigo-500,
+button.bg-emerald-600,
+button.bg-rose-600,
 button[class*="bg-brand"],
 button[class*="bg-indigo"],
-button.bg-brand-600,
 a.bg-brand-600,
 a[class*="bg-brand"],
 a[class*="bg-indigo"] {
   color: #ffffff !important;
 }
 
-.bg-brand-600 *,
-.bg-brand-500 *,
-.bg-indigo-600 *,
-.bg-indigo-500 *,
-.bg-emerald-600 *,
-.bg-rose-600 *,
+button.bg-brand-600 *,
+button.bg-brand-500 *,
+button.bg-indigo-600 *,
+button.bg-indigo-500 *,
+button.bg-emerald-600 *,
+button.bg-rose-600 *,
 button[class*="bg-brand"] *,
-button[class*="bg-indigo"] * {
+button[class*="bg-indigo"] *,
+a.bg-brand-600 *,
+a.bg-indigo-600 *,
+a[class*="bg-indigo"] * {
   color: #ffffff !important;
-}
-
-/* Plan buttons unselected in light mode */
-html.light-mode .bg-surface-700 {
-  background-color: #f1f5f9 !important;
-  color: #1e293b !important;
-}
-
-html.light-mode button.bg-surface-700 {
-  background-color: #e2e8f0 !important;
-  color: #0f172a !important;
-}
-
-html.light-mode button.bg-surface-700:hover {
-  background-color: #cbd5e1 !important;
-}
-
-/* Form inputs & selects in light mode */
-html.light-mode input,
-html.light-mode select,
-html.light-mode textarea {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
-}
-
-html.light-mode input::placeholder,
-html.light-mode textarea::placeholder {
-  color: #64748b !important;
 }
 
 /* Tables */
 html.light-mode table thead {
-  background-color: #f8fafc !important;
-  color: #334155 !important;
+  background-color: var(--bg-surface-subtle) !important;
+  color: var(--text-secondary) !important;
   font-weight: 700 !important;
 }
 
@@ -302,7 +362,7 @@ html.light-mode table tbody tr {
 }
 
 html.light-mode table tbody tr:hover {
-  background-color: var(--bg-card-hover) !important;
+  background-color: var(--bg-surface-hover) !important;
 }
 
 /* ── Glassmorphism Utility Classes ────────────────────────────────────────── */
@@ -315,45 +375,43 @@ html.light-mode table tbody tr:hover {
 }
 
 .glass-card {
-  background-color: var(--bg-card);
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-subtle);
+  box-shadow: var(--shadow-card);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-card:hover {
-  border-color: var(--border-glow);
-  box-shadow: 0 4px 20px -2px rgba(99, 102, 241, 0.15);
+  border-color: var(--border-focus);
+  box-shadow: 0 6px 24px -2px rgba(99, 102, 241, 0.15);
   transform: translateY(-1px);
 }
 
 .glass-input {
   background-color: var(--input-bg);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-main);
+  border: 1px solid var(--border-medium);
+  color: var(--text-primary);
   transition: all 0.15s ease;
 }
 
 .glass-input:focus {
-  border-color: var(--color-brand-500);
+  border-color: var(--border-focus);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
 }
 
 .glass-modal {
   background-color: var(--modal-bg);
   border: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-glass);
+  box-shadow: var(--shadow-elevated);
 }
 
 /* ── Print Media Styles for ID Cards & Receipts ────────────────────────────── */
 @media print {
-  /* Hide all background layout, navigation, modals backdrop, and control buttons */
   body * {
     visibility: hidden;
   }
 
-  /* Show only the targeted print element and its children */
   #printable-card,
   #printable-card *,
   #printable-receipt,
@@ -376,6 +434,7 @@ html.light-mode table tbody tr:hover {
     page-break-inside: avoid;
   }
 }
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

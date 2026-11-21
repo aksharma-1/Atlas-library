@@ -5,8 +5,8 @@ import { z } from 'zod';
 import { Link, Navigate } from 'react-router-dom';
 import { useLogin, useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
-import { BookOpen, Moon, Sun, ArrowRight, Lock, Mail, Eye, EyeOff } from 'lucide-react';
-import { Button } from '../components/ui';
+import { Moon, Sun, ArrowRight, Lock, Mail, Eye, EyeOff } from 'lucide-react';
+import { Button, Logo } from '../components/ui';
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -53,12 +53,12 @@ export function LoginPage() {
         <button
           onClick={toggleTheme}
           title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-          className="rounded-xl p-2.5 border transition glass-card text-slate-300 hover:text-white cursor-pointer"
+          className="rounded-xl p-2.5 border transition border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer shadow-xs"
         >
           {theme === 'dark' ? (
             <Sun className="h-4 w-4 text-amber-400" />
           ) : (
-            <Moon className="h-4 w-4 text-indigo-400" />
+            <Moon className="h-4 w-4 text-indigo-600" />
           )}
         </button>
       </div>
@@ -66,24 +66,21 @@ export function LoginPage() {
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="mb-8 text-center space-y-2">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white shadow-xl shadow-indigo-500/30 border border-indigo-400/40">
-            <BookOpen className="h-8 w-8" />
+          <div className="inline-flex justify-center">
+            <Logo size="xl" showDomain={true} />
           </div>
-          <h1 className="text-3xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
-            StudySpace OS
-          </h1>
-          <p className="text-xs text-slate-400 max-w-xs mx-auto">
-            Universal cloud platform for study halls, reading rooms & libraries
+          <p className="text-xs text-[var(--text-tertiary)] max-w-xs mx-auto font-normal">
+            Universal cloud platform for study halls, reading rooms & libraries · abhyasroom.in
           </p>
         </div>
 
         {/* Glass Card */}
-        <div className="rounded-3xl border glass-panel p-8 shadow-2xl space-y-6">
+        <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-8 shadow-[var(--shadow-elevated)] space-y-6">
           <div>
-            <h2 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-main)' }}>
+            <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
               Sign in to your library account
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-[var(--text-tertiary)] mt-1 font-normal">
               Enter your credentials to access your administrative workspace.
             </p>
           </div>
@@ -93,12 +90,12 @@ export function LoginPage() {
             <div>
               <label
                 htmlFor="email"
-                className="mb-1.5 block text-xs font-semibold text-slate-300"
+                className="mb-1.5 block text-xs font-bold text-[var(--text-secondary)]"
               >
                 Email Address
               </label>
               <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-[var(--text-tertiary)]">
                   <Mail className="h-4 w-4" />
                 </div>
                 <input
@@ -106,12 +103,12 @@ export function LoginPage() {
                   type="email"
                   autoComplete="email"
                   {...register('email')}
-                  className="w-full rounded-xl glass-input pl-10 pr-4 py-2.5 text-sm outline-none"
+                  className="w-full rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-medium)] focus:border-[var(--border-focus)] focus:ring-2 focus:ring-indigo-500/20 pl-10 pr-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition"
                   placeholder="admin@atlas.com"
                 />
               </div>
               {errors.email && (
-                <p role="alert" className="mt-1 text-xs text-rose-400">
+                <p role="alert" className="mt-1 text-xs text-rose-500 font-semibold">
                   {errors.email.message}
                 </p>
               )}
@@ -122,19 +119,19 @@ export function LoginPage() {
               <div className="mb-1.5 flex items-center justify-between">
                 <label
                   htmlFor="password"
-                  className="block text-xs font-semibold text-slate-300"
+                  className="block text-xs font-bold text-[var(--text-secondary)]"
                 >
                   Password
                 </label>
                 <Link
                   to="/forgot-password"
-                  className="text-xs text-indigo-400 hover:text-indigo-300 transition"
+                  className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline transition"
                 >
                   Forgot password?
                 </Link>
               </div>
               <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-[var(--text-tertiary)]">
                   <Lock className="h-4 w-4" />
                 </div>
                 <input
@@ -142,13 +139,13 @@ export function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   {...register('password')}
-                  className="w-full rounded-xl glass-input pl-10 pr-10 py-2.5 text-sm outline-none"
+                  className="w-full rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-medium)] focus:border-[var(--border-focus)] focus:ring-2 focus:ring-[#1E3A8A]/20 dark:focus:ring-blue-500/20 pl-10 pr-10 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-200 focus:outline-none transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] focus:outline-none transition-colors cursor-pointer"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? (
@@ -159,7 +156,7 @@ export function LoginPage() {
                 </button>
               </div>
               {errors.password && (
-                <p role="alert" className="mt-1 text-xs text-rose-400">
+                <p role="alert" className="mt-1 text-xs text-rose-500 font-semibold">
                   {errors.password.message}
                 </p>
               )}
@@ -188,16 +185,16 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <div className="pt-4 border-t text-center text-xs text-slate-400" style={{ borderColor: 'var(--glass-border)' }}>
+          <div className="pt-4 border-t text-center text-xs text-[var(--text-tertiary)]" style={{ borderColor: 'var(--border-subtle)' }}>
             Don't have an account for your library?{' '}
-            <Link to="/register" className="font-bold text-indigo-400 hover:text-indigo-300">
+            <Link to="/register" className="font-bold text-[#1E3A8A] dark:text-blue-400 hover:underline">
               Register Library →
             </Link>
           </div>
         </div>
 
         <p className="mt-6 text-center text-xs text-slate-500">
-          StudySpace OS · Cloud Multi-Tenant Architecture
+          AbhyasRoom · abhyasroom.in Cloud Platform
         </p>
       </div>
     </div>

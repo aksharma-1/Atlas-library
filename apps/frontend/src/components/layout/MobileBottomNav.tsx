@@ -32,8 +32,8 @@ export function MobileBottomNav() {
             className={({ isActive }) =>
               `flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl text-[10px] font-semibold transition-all duration-150 ${
                 isActive
-                  ? 'text-indigo-600 dark:text-indigo-400 font-bold scale-105'
-                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                  ? 'text-[#1E3A8A] dark:text-blue-400 font-bold scale-105'
+                  : 'text-slate-500 hover:text-[#1E3A8A] dark:text-slate-400 dark:hover:text-white'
               }`
             }
           >

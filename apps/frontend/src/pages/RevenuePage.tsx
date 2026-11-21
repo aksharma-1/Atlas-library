@@ -37,10 +37,10 @@ export function RevenuePage() {
 
   // Method label map
   const methodBadgeColors: Record<string, string> = {
-    upi: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-    cash: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-    card: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-    bank_transfer: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+    upi: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20',
+    cash: 'bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20',
+    card: 'bg-[#EEF2FF] text-[#1E3A8A] border-[#C7D2FE] dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800',
+    bank_transfer: 'bg-purple-50 dark:bg-purple-500/10 text-purple-800 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20',
   };
 
   const methodIcons: Record<string, string> = {
@@ -53,7 +53,7 @@ export function RevenuePage() {
   return (
     <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto pb-12">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl glass-panel p-5 sm:p-8 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-xs">
+      <div className="relative overflow-hidden rounded-3xl p-6 sm:p-8 border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--shadow-card)]">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5 sm:gap-6">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
@@ -106,7 +106,7 @@ export function RevenuePage() {
             value={`₹${((stats?.thisMonthRevenuePaise || 0) / 100).toLocaleString('en-IN')}`}
             icon={<Calendar className="h-5 w-5" />}
             subtitle={`Last Month: ₹${((stats?.lastMonthRevenuePaise || 0) / 100).toLocaleString('en-IN')}`}
-            accentColor="indigo"
+            accentColor="brand"
           />
           <StatCard
             title="Lifetime Collected"
@@ -179,7 +179,7 @@ export function RevenuePage() {
                           isToday
                             ? 'bg-emerald-500 hover:bg-emerald-400'
                             : point.amountPaise > 0
-                            ? 'bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400'
+                            ? 'bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500'
                             : 'bg-slate-100 dark:bg-slate-800'
                         }`}
                       />

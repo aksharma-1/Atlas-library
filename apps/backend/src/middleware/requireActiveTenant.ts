@@ -62,7 +62,7 @@ export async function requireActiveTenant(
       }
 
       res.status(402).json({
-        error: 'Your library subscription has expired. Please renew your subscription to continue accessing StudyOS.',
+        error: 'Your library subscription has expired. Please renew your subscription to continue accessing AbhyasRoom (abhyasroom.in).',
         code: 'SUBSCRIPTION_EXPIRED',
         status: tenant.subscriptionStatus,
         subscriptionExpiresAt: tenant.subscriptionExpiresAt.toISOString(),

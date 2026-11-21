@@ -21,7 +21,7 @@ export function PrintableCard({
   onClose,
   student,
   membership,
-  tenantName = 'StudySpace Library',
+  tenantName = 'AbhyasRoom Library',
   logoUrl: propLogoUrl,
 }: PrintableCardProps) {
   const { user } = useAuth();
@@ -144,11 +144,11 @@ export function PrintableCard({
         <div className="flex justify-center py-1">
           <div
             id="printable-card"
-            className="w-full max-w-[450px] rounded-2xl overflow-hidden border border-slate-300 dark:border-indigo-900/60 bg-white dark:bg-slate-900 shadow-xl text-slate-900 dark:text-white relative select-none"
+            className="w-full max-w-[450px] rounded-2xl overflow-hidden border border-slate-300 dark:border-blue-900/60 bg-white dark:bg-slate-900 shadow-xl text-slate-900 dark:text-white relative select-none"
             style={{ maxWidth: '450px' }}
           >
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-700 px-5 py-3 flex items-center justify-between text-white shadow-sm">
+            <div className="bg-gradient-to-r from-[#1E3A8A] via-[#1E40AF] to-[#1E3A8A] px-5 py-3 flex items-center justify-between text-white shadow-sm">
               <div className="flex items-center gap-2.5">
                 {effectiveLogoUrl ? (
                   <div className="h-8 w-8 rounded-lg overflow-hidden bg-white/20 p-0.5 shrink-0 border border-white/30 flex items-center justify-center">
@@ -304,7 +304,7 @@ export function PrintableCard({
             <button
               type="button"
               onClick={handlePrint}
-              className="flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-xs font-semibold !text-white shadow-sm transition whitespace-nowrap"
+              className="flex items-center gap-1.5 rounded-xl bg-[#1E3A8A] hover:bg-[#172554] dark:bg-blue-600 dark:hover:bg-blue-500 px-4 py-2 text-xs font-bold !text-white shadow-sm transition whitespace-nowrap cursor-pointer"
             >
               <Printer className="h-3.5 w-3.5" />
               <span>Print</span>

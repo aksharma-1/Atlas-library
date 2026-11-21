@@ -88,6 +88,7 @@ export async function approveTenantSubscription(req: Request, res: Response, nex
     tenant.subscriptionStatus = 'active';
     tenant.onboardingStep = 'completed';
     tenant.subscriptionExpiresAt = baseDate;
+    tenant.isTrial = false;
 
     // Use MongoDB transaction to ensure Tenant update and SaasPayment update succeed atomically
     await withTransaction(async (session) => {

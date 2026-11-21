@@ -6,7 +6,6 @@ import {
   CalendarClock,
   CreditCard,
   UserCheck,
-  Sparkles,
   IndianRupee,
 } from 'lucide-react';
 
@@ -38,7 +37,7 @@ export function Sidebar() {
     >
       <div className="space-y-4">
         <div>
-          <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
             Operations
           </p>
           <nav className="mt-3 space-y-1">
@@ -49,8 +48,8 @@ export function Sidebar() {
                 className={({ isActive }) =>
                   `flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all duration-150 cursor-pointer ${
                     isActive
-                      ? 'bg-indigo-600 !text-white shadow-sm shadow-indigo-600/30'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800/60'
+                      ? 'bg-[var(--brand-primary)] !text-white shadow-sm shadow-blue-950/25 font-bold'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
                   }`
                 }
               >
@@ -59,7 +58,7 @@ export function Sidebar() {
                   <span className="tracking-tight">{item.label}</span>
                 </div>
                 {item.badge && (
-                  <span className="rounded-full bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold border border-indigo-200 dark:border-indigo-800">
+                  <span className="rounded-full bg-[var(--brand-subtle)] px-2 py-0.5 text-[10px] text-[var(--brand-text)] font-semibold border border-blue-200 dark:border-blue-800">
                     {item.badge}
                   </span>
                 )}
@@ -71,18 +70,18 @@ export function Sidebar() {
 
       {/* Cloud Info Card */}
       <div
-        className="rounded-xl p-3.5 border shadow-sm relative overflow-hidden transition-colors"
+        className="rounded-2xl p-3.5 border shadow-xs relative overflow-hidden transition-colors"
         style={{
-          backgroundColor: 'var(--bg-card)',
+          backgroundColor: 'var(--bg-surface-subtle)',
           borderColor: 'var(--border-subtle)',
         }}
       >
-        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-          <Sparkles className="h-4 w-4" />
-          <span className="text-[11px] font-bold uppercase tracking-wider">StudySpace Cloud</span>
+        <div className="flex items-center gap-2 text-[#1E3A8A] dark:text-blue-400">
+          <img src="/apple-touch-icon.png?v=2" alt="AbhyasRoom" className="h-4 w-4 rounded-md object-contain" />
+          <span className="text-[11px] font-bold uppercase tracking-wider">AbhyasRoom Cloud</span>
         </div>
-        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-normal">
-          Automated multi-shift allocation, real-time desk sync & WhatsApp reminders.
+        <p className="mt-1 text-[11px] text-[var(--text-tertiary)] leading-relaxed font-normal">
+          abhyasroom.in · Multi-shift allocation, real-time desk sync & WhatsApp reminders.
         </p>
       </div>
     </aside>
