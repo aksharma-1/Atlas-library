@@ -18,6 +18,8 @@ export interface SaasPlatformConfigDTO {
   yearlyDiscountPercent: number; // e.g. 20 for 20% discount
   upiId?: string;
   upiName?: string;
+  trialDurationDays?: number; // default: 14 days
+  trialMaxSeats?: number; // default: 50 seats
 }
 
 export interface SaasPlansResponse {
@@ -71,4 +73,6 @@ export interface UpdatePlatformConfigRequest {
   yearlyDiscountPercent?: number;
   upiId?: string;
   upiName?: string;
+  trialDurationDays?: number;
+  trialMaxSeats?: number;
 }

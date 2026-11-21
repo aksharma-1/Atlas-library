@@ -38,6 +38,8 @@ export interface AuthUser {
   isActive?: boolean;
   whatsappReminderTemplate?: string;
   logoUrl?: string;
+  trialUsed?: boolean;
+  isTrial?: boolean;
 }
 
 /** Payload for updating user & library profile */

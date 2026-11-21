@@ -69,6 +69,8 @@ export function SuperAdminPage() {
   const [yearlyDiscount, setYearlyDiscount] = useState<string>('20');
   const [configUpiId, setConfigUpiId] = useState('');
   const [configUpiName, setConfigUpiName] = useState('');
+  const [trialDurationDays, setTrialDurationDays] = useState<string>('14');
+  const [trialMaxSeats, setTrialMaxSeats] = useState<string>('50');
   const [configSuccess, setConfigSuccess] = useState(false);
 
   // Sync config when loaded
@@ -236,11 +238,25 @@ export function SuperAdminPage() {
       return;
     }
 
+    const trialDays = parseInt(trialDurationDays, 10);
+    if (isNaN(trialDays) || trialDays < 1 || trialDays > 365) {
+      alert('Trial duration must be between 1 and 365 days');
+      return;
+    }
+
+    const trialSeats = parseInt(trialMaxSeats, 10);
+    if (isNaN(trialSeats) || trialSeats < 1 || trialSeats > 5000) {
+      alert('Trial seat capacity must be between 1 and 5000 seats');
+      return;
+    }
+
     updatePlatformConfig.mutate(
       {
         yearlyDiscountPercent: discount,
         upiId: configUpiId.trim() || undefined,
         upiName: configUpiName.trim() || undefined,
+        trialDurationDays: trialDays,
+        trialMaxSeats: trialSeats,
       },
       {
         onSuccess: () => {
@@ -292,12 +308,14 @@ export function SuperAdminPage() {
                 setYearlyDiscount(String(currentDiscount));
                 setConfigUpiId(saasData?.config?.upiId || '');
                 setConfigUpiName(saasData?.config?.upiName || '');
+                setTrialDurationDays(String(saasData?.config?.trialDurationDays ?? 14));
+                setTrialMaxSeats(String(saasData?.config?.trialMaxSeats ?? 50));
               }}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                 mainTab === 'settings' ? 'bg-brand-600 !text-white shadow' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span>⚙️</span> Discount & UPI
+              <span>⚙️</span> Settings & UPI
             </button>
           </div>
 
@@ -467,9 +485,16 @@ export function SuperAdminPage() {
                         </td>
 
                         <td className="px-5 py-3.5">
-                          <span className="font-semibold text-brand-300 capitalize">
-                            {t.subscriptionTier || 'growth'}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-brand-300 capitalize">
+                              {t.subscriptionTier || 'growth'}
+                            </span>
+                            {t.isTrial && (
+                              <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                                Free Trial
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[11px] text-slate-400 mt-0.5">
                             Max {t.maxSeats || 150} Desks ({t.configuredSeats || 0} created)
                           </p>
@@ -713,6 +738,51 @@ export function SuperAdminPage() {
               <p className="text-[11px] text-slate-400 mt-1">
                 When a library switches to "Yearly Billing" on the onboarding screen, this discount will be automatically applied.
               </p>
+            </div>
+
+            <div className="border-t border-surface-700 pt-4 space-y-4">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <span>🎁</span> Free Trial Pack Settings
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-white">Trial Duration (Days)</label>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <input
+                      type="number"
+                      min="1"
+                      max="365"
+                      value={trialDurationDays}
+                      onChange={(e) => setTrialDurationDays(e.target.value)}
+                      className="w-32 rounded-lg border border-surface-600 bg-surface-700 px-3 py-2 text-sm font-bold text-white focus:border-brand-500"
+                      required
+                    />
+                    <span className="text-xs text-slate-400">days</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Number of days new libraries get free access upon starting their trial.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-white">Trial Seat Capacity (Max Desks)</label>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <input
+                      type="number"
+                      min="1"
+                      max="5000"
+                      value={trialMaxSeats}
+                      onChange={(e) => setTrialMaxSeats(e.target.value)}
+                      className="w-32 rounded-lg border border-surface-600 bg-surface-700 px-3 py-2 text-sm font-bold text-white focus:border-brand-500"
+                      required
+                    />
+                    <span className="text-xs text-slate-400">desks</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Maximum desks the library can configure during their trial period (default: 50).
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="border-t border-surface-700 pt-4 space-y-4">

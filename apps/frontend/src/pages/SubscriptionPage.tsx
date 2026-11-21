@@ -67,7 +67,7 @@ export function SubscriptionPage() {
               <div className="rounded-2xl p-3.5 border glass-card">
                 <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Active Plan</p>
                 <p className="text-base font-extrabold text-indigo-400 capitalize mt-0.5">
-                  {currentPlan?.name || currentTier} Tier
+                  {user?.isTrial ? '🎉 14-Day Free Trial' : `${currentPlan?.name || currentTier} Tier`}
                 </p>
               </div>
 

@@ -80,6 +80,8 @@ export async function getPublicSaasPlans(_req: Request, res: Response, next: Nex
         yearlyDiscountPercent: 20,
         upiId: process.env.VITE_PLATFORM_UPI_ID || 'studyspace@upi',
         upiName: process.env.VITE_PLATFORM_UPI_NAME || 'StudySpace OS',
+        trialDurationDays: 14,
+        trialMaxSeats: 50,
       });
     }
 
@@ -89,6 +91,8 @@ export async function getPublicSaasPlans(_req: Request, res: Response, next: Nex
         yearlyDiscountPercent: configDoc.yearlyDiscountPercent,
         upiId: configDoc.upiId,
         upiName: configDoc.upiName,
+        trialDurationDays: configDoc.trialDurationDays ?? 14,
+        trialMaxSeats: configDoc.trialMaxSeats ?? 50,
       },
     });
   } catch (err) {
@@ -113,6 +117,8 @@ export async function getAllSaasPlansAdmin(_req: Request, res: Response, next: N
       configDoc = await PlatformConfig.create({
         key: 'global',
         yearlyDiscountPercent: 20,
+        trialDurationDays: 14,
+        trialMaxSeats: 50,
       });
     }
 
@@ -122,6 +128,8 @@ export async function getAllSaasPlansAdmin(_req: Request, res: Response, next: N
         yearlyDiscountPercent: configDoc.yearlyDiscountPercent,
         upiId: configDoc.upiId,
         upiName: configDoc.upiName,
+        trialDurationDays: configDoc.trialDurationDays ?? 14,
+        trialMaxSeats: configDoc.trialMaxSeats ?? 50,
       },
     });
   } catch (err) {
@@ -213,7 +221,7 @@ export async function deleteSaasPlan(req: Request, res: Response, next: NextFunc
  */
 export async function updatePlatformConfig(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { yearlyDiscountPercent, upiId, upiName } = req.body;
+    const { yearlyDiscountPercent, upiId, upiName, trialDurationDays, trialMaxSeats } = req.body;
 
     const updateFields: Record<string, unknown> = {};
     if (yearlyDiscountPercent !== undefined) {
@@ -223,6 +231,22 @@ export async function updatePlatformConfig(req: Request, res: Response, next: Ne
         return;
       }
       updateFields.yearlyDiscountPercent = discount;
+    }
+    if (trialDurationDays !== undefined) {
+      const days = Number(trialDurationDays);
+      if (isNaN(days) || days < 1 || days > 365) {
+        res.status(400).json({ error: 'Trial duration must be between 1 and 365 days' });
+        return;
+      }
+      updateFields.trialDurationDays = days;
+    }
+    if (trialMaxSeats !== undefined) {
+      const seats = Number(trialMaxSeats);
+      if (isNaN(seats) || seats < 1 || seats > 5000) {
+        res.status(400).json({ error: 'Trial seat capacity must be between 1 and 5000' });
+        return;
+      }
+      updateFields.trialMaxSeats = seats;
     }
     if (upiId !== undefined) updateFields.upiId = String(upiId).trim();
     if (upiName !== undefined) updateFields.upiName = String(upiName).trim();

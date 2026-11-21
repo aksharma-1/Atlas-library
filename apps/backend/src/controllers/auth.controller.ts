@@ -359,6 +359,7 @@ export async function submitPaymentUtr(
       subscriptionStatus: nextSubscriptionStatus,
       subscriptionTier: chosenTier,
       isActive: tenant.isActive,
+      isTrial: false,
     };
 
     const token = generateToken(updatedPayload);
@@ -368,6 +369,73 @@ export async function submitPaymentUtr(
       token,
       paymentId: paymentRecord._id,
       message: 'Payment reference submitted successfully! Super-admin will verify and activate your library shortly.',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/v1/auth/start-trial
+ * Activates one-time 14-day free trial pack for eligible tenants during onboarding.
+ */
+export async function startFreeTrial(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user || !req.user.tenantId) {
+      res.status(401).json({ error: 'Unauthenticated or missing tenant context' });
+      return;
+    }
+
+    const tenant = await Tenant.findById(req.user.tenantId);
+    if (!tenant) {
+      res.status(404).json({ error: 'Library tenant not found' });
+      return;
+    }
+
+    if (tenant.trialUsed) {
+      res.status(400).json({
+        error: 'Free trial has already been used for this library. Please choose a subscription plan to continue.',
+      });
+      return;
+    }
+
+    // Read platform trial config
+    const config = await PlatformConfig.findOne({ key: 'global' });
+    const trialDays = config?.trialDurationDays ?? 14;
+    const trialSeats = config?.trialMaxSeats ?? 50;
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + trialDays);
+    // Align expiration to end of day in IST (23:59:59.999)
+    expiresAt.setHours(23, 59, 59, 999);
+
+    tenant.subscriptionStatus = 'active';
+    tenant.subscriptionTier = 'trial';
+    tenant.subscriptionExpiresAt = expiresAt;
+    tenant.maxSeats = trialSeats;
+    tenant.onboardingStep = 'completed';
+    tenant.trialUsed = true;
+    tenant.isTrial = true;
+    await tenant.save();
+
+    const updatedAuthUser: AuthUser = {
+      ...req.user,
+      subscriptionStatus: 'active',
+      subscriptionTier: 'trial',
+      subscriptionExpiresAt: expiresAt.toISOString(),
+      maxSeats: trialSeats,
+      onboardingStep: 'completed',
+      trialUsed: true,
+      isTrial: true,
+    };
+
+    const token = generateToken(updatedAuthUser);
+    res.cookie(AUTH_COOKIE, token, cookieOptions);
+
+    res.status(200).json({
+      message: `🎉 Congratulations! Your ${trialDays}-day free trial has been activated with ${trialSeats} seats capacity.`,
+      user: updatedAuthUser,
+      token,
     });
   } catch (err) {
     next(err);
@@ -489,6 +557,8 @@ export async function me(req: Request, res: Response, next: NextFunction): Promi
       isActive: tenant.isActive,
       logoUrl: tenant.logoUrl,
       whatsappReminderTemplate: tenant.whatsappReminderTemplate,
+      trialUsed: tenant.trialUsed,
+      isTrial: tenant.isTrial,
     };
 
     // If tenant status or active state changed in DB (e.g. approved or suspended by superadmin), re-issue updated cookie

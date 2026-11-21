@@ -136,6 +136,31 @@ export function useSubmitPaymentUtr() {
   });
 }
 
+/** useStartFreeTrial — Activates 14-day free trial */
+export function useStartFreeTrial() {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await apiClient.post<{ user: AuthUser; token?: string; message: string }>('/auth/start-trial');
+      if (data.token) {
+        setStoredToken(data.token);
+      }
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(ME_KEY, data.user);
+      toast.success(data.message || 'Free trial activated!');
+      navigate('/dashboard', { replace: true });
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.error || 'Failed to activate free trial';
+      toast.error(msg);
+    },
+  });
+}
+
 /** useSuperAdminTenants — Fetch all registered libraries for super-admin */
 export function useSuperAdminTenants() {
   return useQuery({

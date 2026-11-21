@@ -11,6 +11,7 @@ import {
   getProfile,
   updateProfile,
   uploadLogo,
+  startFreeTrial,
 } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/authenticate';
 import { authLimiter, passwordResetLimiter } from '../middleware/rateLimiter';
@@ -46,6 +47,9 @@ authRouter.post('/upload-logo', authenticate, uploadLogo);
 
 /** POST /api/v1/auth/configure-library — protected onboarding step 2 */
 authRouter.post('/configure-library', authenticate, configureLibrary);
+
+/** POST /api/v1/auth/start-trial — protected activate 14-day free trial */
+authRouter.post('/start-trial', authenticate, startFreeTrial);
 
 /** POST /api/v1/auth/submit-payment — protected submit UPI UTR */
 authRouter.post('/submit-payment', authenticate, submitPaymentUtr);

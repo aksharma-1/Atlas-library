@@ -37,6 +37,10 @@ export interface ITenant extends Document {
   whatsappReminderTemplate?: string;
   /** Library Logo URL hosted on Cloudinary or external storage */
   logoUrl?: string;
+  /** Whether this tenant has ever activated or used their one-time free trial */
+  trialUsed: boolean;
+  /** Whether the current active subscription is the free trial */
+  isTrial: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -118,6 +122,16 @@ const tenantSchema = new Schema<ITenant>(
       required: true,
       default: 0,
       min: 0,
+    },
+    trialUsed: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    isTrial: {
+      type: Boolean,
+      required: true,
+      default: false,
     },
   },
   {

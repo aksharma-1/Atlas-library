@@ -82,6 +82,8 @@ export async function loginUser(
     // Store only hosted URLs in JWT; base64 data URIs must never be put in JWT or cookies as they exceed header size limits
     logoUrl: tenant.logoUrl && !tenant.logoUrl.startsWith('data:') ? tenant.logoUrl : undefined,
     whatsappReminderTemplate: tenant.whatsappReminderTemplate,
+    trialUsed: tenant.trialUsed,
+    isTrial: tenant.isTrial,
   };
 
   const token = jwt.sign(payload, env.JWT_SECRET, {

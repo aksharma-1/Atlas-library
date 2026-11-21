@@ -6,16 +6,19 @@ import {
   useAuth,
   useConfigureLibrary,
   useSubmitPaymentUtr,
+  useStartFreeTrial,
   useLogout,
   usePublicSaasPlans,
 } from '../hooks/useAuth';
 import { ConfirmModal } from '../components/ui';
+import { Sparkles, Zap } from 'lucide-react';
 
 export function OnboardingPage() {
   const { user, isLoading } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const configureLibrary = useConfigureLibrary();
   const submitPaymentUtr = useSubmitPaymentUtr();
+  const startFreeTrial = useStartFreeTrial();
   const logout = useLogout();
   const { data: plansData, isLoading: isPlansLoading } = usePublicSaasPlans();
 
@@ -241,7 +244,49 @@ export function OnboardingPage() {
             {/* ── STEP 3: SaaS Subscription Plan ── */}
             {step === 3 && (
               <div className="space-y-6">
-                <div className="text-center space-y-3">
+                {/* ── Free Trial Eligibility Banner (Only for First-Time Users) ── */}
+                {!user?.trialUsed && (
+                  <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600/25 via-teal-600/20 to-indigo-600/25 border-2 border-emerald-500/50 p-5 sm:p-6 shadow-xl">
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="space-y-1.5">
+                        <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 px-3 py-0.5 text-xs font-bold text-emerald-300">
+                          <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+                          <span>Special Offer: Free Trial Pack Eligible</span>
+                        </div>
+                        <h3 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
+                          Start with {plansData?.config?.trialDurationDays ?? 14} Days Completely Free!
+                        </h3>
+                        <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
+                          Try out StudySpace OS without any upfront payment. Includes full access to visual seating maps,
+                          desk allocation up to <strong className="text-white font-semibold">{plansData?.config?.trialMaxSeats ?? 50} desks</strong>, student registration,
+                          ID cards, WhatsApp reminders, and payment receipts.
+                        </p>
+                      </div>
+
+                      <div className="shrink-0 flex flex-col items-center sm:items-end gap-1.5">
+                        <button
+                          type="button"
+                          disabled={startFreeTrial.isPending}
+                          onClick={() => startFreeTrial.mutate()}
+                          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-3 text-sm font-extrabold shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                        >
+                          <Zap className="h-4 w-4 fill-current" />
+                          <span>{startFreeTrial.isPending ? 'Activating Trial…' : `Start ${plansData?.config?.trialDurationDays ?? 14}-Day Free Trial Now →`}</span>
+                        </button>
+                        <span className="text-[10px] text-emerald-300/80">No credit card or payment required</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-center space-y-3 pt-2">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="h-px bg-surface-700 flex-1 max-w-xs" />
+                    <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold">
+                      {!user?.trialUsed ? 'Or Choose a Regular Plan' : 'Choose Your Plan'}
+                    </span>
+                    <div className="h-px bg-surface-700 flex-1 max-w-xs" />
+                  </div>
                   <h2 className="text-2xl font-black text-white">Choose Your Library Management Plan</h2>
                   <p className="text-xs text-slate-400 max-w-lg mx-auto">
                     Affordable pricing tailored for modern study libraries and learning hubs.
