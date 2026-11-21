@@ -152,7 +152,7 @@ export async function register(
 
     const token = generateToken(payload);
     res.cookie(AUTH_COOKIE, token, cookieOptions);
-    res.status(201).json({ user: payload });
+    res.status(201).json({ user: payload, token });
   } catch (err) {
     next(err);
   }
@@ -235,7 +235,7 @@ export async function configureLibrary(
 
     const token = generateToken(updatedPayload);
     res.cookie(AUTH_COOKIE, token, cookieOptions);
-    res.status(200).json({ user: updatedPayload, message: 'Library configured successfully' });
+    res.status(200).json({ user: updatedPayload, token, message: 'Library configured successfully' });
   } catch (err: any) {
     console.error('Error in configureLibrary:', err);
     next(err);
@@ -365,6 +365,7 @@ export async function submitPaymentUtr(
     res.cookie(AUTH_COOKIE, token, cookieOptions);
     res.status(200).json({
       user: updatedPayload,
+      token,
       paymentId: paymentRecord._id,
       message: 'Payment reference submitted successfully! Super-admin will verify and activate your library shortly.',
     });
@@ -397,7 +398,7 @@ export async function login(
     const { token, user } = await loginUser(email, password);
 
     res.cookie(AUTH_COOKIE, token, cookieOptions);
-    res.status(200).json({ user });
+    res.status(200).json({ user, token });
   } catch (err) {
     if (err instanceof Error) {
       if (err.message.includes('suspended') || err.message.includes('disabled')) {
@@ -491,16 +492,17 @@ export async function me(req: Request, res: Response, next: NextFunction): Promi
     };
 
     // If tenant status or active state changed in DB (e.g. approved or suspended by superadmin), re-issue updated cookie
+    let token: string | undefined = undefined;
     if (
       tenant.subscriptionStatus !== req.user.subscriptionStatus ||
       tenant.onboardingStep !== req.user.onboardingStep ||
       tenant.isActive !== req.user.isActive
     ) {
-      const token = generateToken(latestUser);
+      token = generateToken(latestUser);
       res.cookie(AUTH_COOKIE, token, cookieOptions);
     }
 
-    res.status(200).json({ user: latestUser });
+    res.status(200).json({ user: latestUser, ...(token ? { token } : {}) });
   } catch (err) {
     next(err);
   }
@@ -768,6 +770,7 @@ export async function updateProfile(req: Request, res: Response, next: NextFunct
     res.status(200).json({
       message: 'Profile updated successfully',
       user: updatedAuthUser,
+      token,
     });
   } catch (err) {
     next(err);
@@ -822,6 +825,7 @@ export async function uploadLogo(req: Request, res: Response, next: NextFunction
       message: 'Logo uploaded successfully',
       logoUrl: uploadedUrl,
       user: updatedAuthUser,
+      token,
     });
   } catch (err) {
     next(err);

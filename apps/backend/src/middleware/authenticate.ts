@@ -27,15 +27,27 @@ export function authenticate(
   res: Response,
   next: NextFunction,
 ): void {
-  const token: unknown = req.cookies[AUTH_COOKIE];
+  // 1. Primary: HttpOnly cookie (Browsers & Desktop)
+  let rawToken: string | undefined =
+    typeof req.cookies?.[AUTH_COOKIE] === 'string'
+      ? req.cookies[AUTH_COOKIE]
+      : undefined;
 
-  if (!token || typeof token !== 'string') {
+  // 2. Secondary Fallback: Authorization Bearer header (iOS Standalone PWA / WebViews where cross-domain cookies are dropped by ITP)
+  if (!rawToken) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      rawToken = authHeader.substring(7).trim();
+    }
+  }
+
+  if (!rawToken) {
     res.status(401).json({ error: 'Authentication required' });
     return;
   }
 
   try {
-    req.user = verifyToken(token);
+    req.user = verifyToken(rawToken);
     next();
   } catch {
     res.status(401).json({ error: 'Invalid or expired session' });

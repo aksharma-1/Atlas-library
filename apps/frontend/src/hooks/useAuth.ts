@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { apiClient } from '../api/client';
+import { apiClient, setStoredToken } from '../api/client';
 import type {
   AuthUser,
   LoginRequest,
@@ -19,7 +19,10 @@ const ME_KEY = ['auth', 'me'] as const;
 
 /** Fetch the currently authenticated user from GET /auth/me */
 async function fetchMe(): Promise<AuthUser> {
-  const { data } = await apiClient.get<{ user: AuthUser }>('/auth/me');
+  const { data } = await apiClient.get<{ user: AuthUser; token?: string }>('/auth/me');
+  if (data.token) {
+    setStoredToken(data.token);
+  }
   return data.user;
 }
 
@@ -48,10 +51,13 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: async (credentials: LoginRequest) => {
-      const { data } = await apiClient.post<{ user: AuthUser }>(
+      const { data } = await apiClient.post<{ user: AuthUser; token?: string }>(
         '/auth/login',
         credentials,
       );
+      if (data.token) {
+        setStoredToken(data.token);
+      }
       return data.user;
     },
     onSuccess: (user) => {
@@ -81,7 +87,10 @@ export function useRegister() {
       phone: string;
       city?: string;
     }) => {
-      const { data } = await apiClient.post<{ user: AuthUser }>('/auth/register', payload);
+      const { data } = await apiClient.post<{ user: AuthUser; token?: string }>('/auth/register', payload);
+      if (data.token) {
+        setStoredToken(data.token);
+      }
       return data.user;
     },
     onSuccess: (user) => {
@@ -97,7 +106,10 @@ export function useConfigureLibrary() {
 
   return useMutation({
     mutationFn: async (payload: { capacity: number; defaultShifts?: boolean }) => {
-      const { data } = await apiClient.post<{ user: AuthUser }>('/auth/configure-library', payload);
+      const { data } = await apiClient.post<{ user: AuthUser; token?: string }>('/auth/configure-library', payload);
+      if (data.token) {
+        setStoredToken(data.token);
+      }
       return data.user;
     },
     onSuccess: (user) => {
@@ -112,7 +124,10 @@ export function useSubmitPaymentUtr() {
 
   return useMutation({
     mutationFn: async (payload: { tier: string; utr: string }) => {
-      const { data } = await apiClient.post<{ user: AuthUser; message: string }>('/auth/submit-payment', payload);
+      const { data } = await apiClient.post<{ user: AuthUser; token?: string; message: string }>('/auth/submit-payment', payload);
+      if (data.token) {
+        setStoredToken(data.token);
+      }
       return data;
     },
     onSuccess: (data) => {
@@ -149,7 +164,10 @@ export function useUpdateProfile() {
 
   return useMutation({
     mutationFn: async (payload: UpdateProfileRequest) => {
-      const { data } = await apiClient.put<{ message: string; user: AuthUser }>('/auth/profile', payload);
+      const { data } = await apiClient.put<{ message: string; user: AuthUser; token?: string }>('/auth/profile', payload);
+      if (data.token) {
+        setStoredToken(data.token);
+      }
       return data;
     },
     onSuccess: (data) => {
@@ -170,10 +188,13 @@ export function useUploadLogo() {
 
   return useMutation({
     mutationFn: async (image: string) => {
-      const { data } = await apiClient.post<{ message: string; logoUrl: string; user: AuthUser }>(
+      const { data } = await apiClient.post<{ message: string; logoUrl: string; user: AuthUser; token?: string }>(
         '/auth/upload-logo',
         { image },
       );
+      if (data.token) {
+        setStoredToken(data.token);
+      }
       return data;
     },
     onSuccess: (data) => {
@@ -284,6 +305,8 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => apiClient.post('/auth/logout'),
     onSuccess: () => {
+      // Clear stored fallback token for PWA
+      setStoredToken(null);
       // Clear entire query cache and set auth/me to null
       queryClient.setQueryData(ME_KEY, null);
       queryClient.clear();
@@ -291,6 +314,7 @@ export function useLogout() {
       navigate('/login', { replace: true });
     },
     onError: () => {
+      setStoredToken(null);
       queryClient.setQueryData(ME_KEY, null);
       queryClient.clear();
       navigate('/login', { replace: true });
